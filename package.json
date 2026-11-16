@@ -24,7 +24,8 @@
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
-    "demo": "pnpm build && pnpm --filter @kalangu/example-clinic demo"
+    "demo": "pnpm build && pnpm --filter @kalangu/example-clinic demo",
+    "smoke": "pnpm --filter @kalangu/example-clinic smoke"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
