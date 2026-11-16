@@ -27,6 +27,7 @@
     "demo": "echo \"The 10-minute keypad-phone demo arrives with v0.1 - see docs/design.md section 8\""
   },
   "devDependencies": {
+    "@types/node": "^20.19.43",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   }
