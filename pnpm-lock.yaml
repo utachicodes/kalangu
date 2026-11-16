@@ -176,6 +176,21 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(@types/node@20.19.43)(vite@8.3.8(@types/node@20.19.43))
 
+  examples/clinic:
+    dependencies:
+      '@kalangu/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@kalangu/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
+      '@kalangu/sms':
+        specifier: workspace:*
+        version: link:../../packages/sms
+      '@kalangu/ussd':
+        specifier: workspace:*
+        version: link:../../packages/ussd
+
   packages/core: {}
 
   packages/sim:

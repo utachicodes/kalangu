@@ -24,7 +24,7 @@
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
-    "demo": "echo \"The 10-minute keypad-phone demo arrives with v0.1 - see docs/design.md section 8\""
+    "demo": "pnpm build && pnpm --filter @kalangu/example-clinic demo"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",

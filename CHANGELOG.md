@@ -48,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   user gets one apology SMS. Redialing while an answer is pending repeats
   the notice. Background work is pluggable (`BackgroundWork`) for
   serverless platforms; the default runs in-process.
+- `examples/clinic`: the clinic agent (opening hours, ask a nurse,
+  English/French) with a fake nurse model that takes 6 s against the 4 s
+  deadline. `pnpm demo` builds the workspace and runs it on the simulated
+  keypad phone; `src/server.ts` serves it on Africa's Talking with Node's
+  `http` module.
 - Design document `docs/design.md` for version 0.1: package layout, public
   API sketch, turn types (with `pay` reserved), engine and sessions keyed by
   phone number, deferral, the encoding-aware budgeter, Africa's Talking USSD
