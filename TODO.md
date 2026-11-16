@@ -33,7 +33,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [x] Deferral + pluggable background-work interface
 - [x] Clinic example agent with the fake slow model; `pnpm demo`
 - [x] README how-to and docs polish
-- [ ] CI: typecheck + vitest on push
+- [x] CI: typecheck + vitest on push (Node 22/24), runtime smoke test on Node 20
 
 ## Design review — open questions to settle (design doc §12)
 

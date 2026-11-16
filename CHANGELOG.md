@@ -54,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keypad phone; `src/server.ts` serves it on Africa's Talking with Node's
   `http` module.
 
+- CI on GitHub Actions: typecheck, tests and build on Node 22 and 24, and
+  a smoke test of the compiled packages on Node 20 (`pnpm smoke`).
+
 ### Changed
 
 - README: v0.1 status, package list, quick start, how to write an agent,

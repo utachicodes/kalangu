@@ -102,7 +102,8 @@ takes 6 seconds and the deadline is 4, so the screen says the answer will
 come by SMS, and a couple of seconds later it does. `x` hangs up mid-session
 (dial again to resume), `sms <text>` texts the agent, `q` quits.
 
-Requires Node 20 or later and pnpm. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The packages run on Node 20 or later; the test suite needs Node 22.12 or
+later. Requires pnpm. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Write an agent
 
