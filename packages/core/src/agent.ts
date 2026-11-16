@@ -112,7 +112,12 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
       const loaded = await store.load(event.phone);
       const record = loaded ?? freshRecord(event.phone, catalog.defaultLocale, now);
       if (loaded && now - loaded.updatedAt > resumeWindow) resetPosition(record);
+      const newGatewaySession =
+        channel.live &&
+        event.gatewaySessionId !== undefined &&
+        event.gatewaySessionId !== record.gatewaySessionId;
       if (event.gatewaySessionId) record.gatewaySessionId = event.gatewaySessionId;
+      if (newGatewaySession) event = { ...event, newSession: true };
 
       const turn = new TurnRun<M>(record, channel, event, {
         catalog,
@@ -190,8 +195,19 @@ class TurnRun<M> {
     const shown = record.turn;
 
     if (channel.live && event.newSession) {
-      // A fresh dial: resume where a dropped session left off, or start over.
-      return shown ? this.display(shown) : this.showStep(this.deps.steps.start);
+      const replay = event.inputs ?? (event.input !== "" ? [event.input] : []);
+      if (replay.length === 0) {
+        // A fresh dial: resume where a dropped session left off, or start over.
+        return shown ? this.display(shown) : this.showStep(this.deps.steps.start);
+      }
+      // A dial string with choices in it: start from the top and replay them.
+      let outcome = this.showStep(this.deps.steps.start);
+      for (const input of replay) {
+        const current = this.record.turn;
+        if (outcome.end || !current) break;
+        outcome = await this.answer(current, input);
+      }
+      return outcome;
     }
     if (!shown) return this.showStep(this.deps.steps.start);
     if (channel.kind === "sms" && shown.kind === "say") {

@@ -178,6 +178,12 @@ importers:
 
   packages/core: {}
 
+  packages/ussd:
+    dependencies:
+      '@kalangu/core':
+        specifier: workspace:*
+        version: link:../core
+
 packages:
 
   '@emnapi/core@2.0.0-beta.2':
