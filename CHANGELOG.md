@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Payments in `@kalangu/core` (prep, no real provider yet): the `pay` step,
+  `createAgent({ payments })` with a mandatory policy, the confirm screen
+  that ends the USSD session before the deposit is initiated, background
+  initiation, status polling with backoff and a 72-hour give-up
+  (`UNRESOLVED`), `agent.payments.settle(id)` for callback routes (re-checks
+  the provider, never trusts the body), and the outcome and receipt by SMS.
+  The `pay` turn amount is now a decimal string.
+
 - `@kalangu/core` package with the turn types (`say`, `choose`, `ask`,
   `confirm`, and `pay` reserved for 0.2), `parseTurn`/`isTurn` for
   validating turns from untyped sources, `assertNever` for exhaustive

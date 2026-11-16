@@ -14,12 +14,17 @@ import type { Channel, InboundEvent, Outcome, RouteAgent } from "./channel.js";
 import { systemClock, type Clock } from "./clock.js";
 import { createCatalog, type Catalog, type Messages, type Translate } from "./locales.js";
 import { consoleLogger, maskPhone, type Logger } from "./logger.js";
+import { createPaymentController, type PaymentController, type PaymentsConfig } from "./payments/controller.js";
+import type { PaymentRecord } from "./payments/store.js";
 import { interpret, type Rendered } from "./render.js";
 import { freshRecord, memoryStore, type SessionRecord, type SessionStore } from "./session.js";
 import {
   indexSteps,
   isStep,
   type Handler,
+  type PayStep,
+  type PayTarget,
+  type PaymentOutcome,
   type Reply,
   type Step,
   type StepIndex,
@@ -59,6 +64,11 @@ export interface AgentConfig<M = any> {
   resumeWindowMs?: number;
   /** Steps that handlers return but that aren't reachable from `start`. */
   steps?: readonly Step[];
+  /**
+   * Payments (docs/payments-design.md). Required when the agent has a `pay`
+   * step. Needs a provider, a durable store, a payee name and a policy.
+   */
+  payments?: PaymentsConfig;
 }
 
 export interface Agent<M = any> extends RouteAgent {
@@ -70,6 +80,12 @@ export interface Agent<M = any> extends RouteAgent {
   channel(id: string): Channel | undefined;
   readonly channels: readonly Channel[];
   readonly logger: Logger;
+  /**
+   * Present when `payments` is configured. A provider's callback route calls
+   * `settle` with the payment id; it re-checks the status with the provider
+   * rather than trusting the callback body.
+   */
+  readonly payments: { settle(id: string): Promise<void> } | undefined;
 }
 
 export const DEFAULT_RESUME_WINDOW_MS = 5 * 60 * 1000;
@@ -90,6 +106,9 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
   const clock = config.clock ?? systemClock;
   const catalog = createCatalog(config.defaultLocale ?? "en", config.messages);
   const steps = indexSteps(config.start, config.steps);
+  if (!config.payments && steps.all().some((step) => step.type === "pay")) {
+    throw new TypeError("This agent has a pay step but no `payments` config (provider, store, payeeName, policy)");
+  }
   const resumeWindow = config.resumeWindowMs ?? DEFAULT_RESUME_WINDOW_MS;
   const deadlineMs = checkDeadline(config.deadlineMs ?? DEFAULT_DEADLINE_MS, logger);
   const background = config.background ?? inProcessBackground(logger);
@@ -115,7 +134,12 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
   const errorText = (locale?: string) =>
     catalog.translator(locale && catalog.has(locale) ? locale : catalog.defaultLocale)("common.error");
 
+  const payments = config.payments
+    ? createPaymentController(config.payments, { clock, logger, mask, onFinal: (payment) => deliverPayment(payment) })
+    : undefined;
+
   const deps: Omit<RunDeps<M>, "saved"> = {
+    payments,
     catalog,
     steps,
     logger,
@@ -128,9 +152,65 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
     smsSender,
   };
 
+  /** Sends the outcome of a finished payment by SMS, from the pay step that started it. */
+  async function deliverPayment(payment: PaymentRecord): Promise<void> {
+    const sender = smsSender;
+    const step = steps.get(payment.stepId);
+    if (!sender?.send || !step || step.type !== "pay") {
+      logger.error("Payment outcome cannot be delivered", {
+        payment: payment.id,
+        phone: mask(payment.phone),
+        reason: !sender?.send ? "no SMS channel can send" : "its pay step no longer exists",
+      });
+      return;
+    }
+    const latest = (await store.load(payment.phone)) ?? freshRecord(payment.phone, payment.locale, clock.now());
+    const run = new TurnRun<M>(
+      latest,
+      sender,
+      { channel: sender.id, phone: payment.phone, input: "" },
+      { ...deps, saved: Promise.resolve() },
+    );
+    const outcome = await run.paymentOutcome(step, payment);
+    latest.channel = sender.id;
+    latest.updatedAt = clock.now();
+    await store.save(latest);
+    await sendWithRetry(sender, { to: payment.phone, text: outcome.text });
+    logger.info("Payment outcome sent", { payment: payment.id, phone: mask(payment.phone), status: payment.status });
+    if (payment.status === "COMPLETED") {
+      // A failed receipt never changes the payment (design §14, decision 7).
+      try {
+        await sendWithRetry(sender, { to: payment.phone, text: run.receipt(payment) });
+      } catch (err) {
+        logger.error("Receipt could not be sent", { payment: payment.id, error: describeError(err) });
+      }
+    }
+  }
+
+  async function sendWithRetry(sender: Channel, out: { to: string; text: string }): Promise<void> {
+    const waits = [1000, 5000];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await sender.send?.(out);
+        return;
+      } catch (err) {
+        const wait = waits[attempt];
+        if (wait === undefined) throw err;
+        await new Promise<void>((resolve) => clock.setTimeout(resolve, wait));
+      }
+    }
+  }
+
   const agent: Agent<M> = {
     channels: config.channels,
     logger,
+    payments: payments
+      ? {
+          settle: async (id) => {
+            await payments.settle(id);
+          },
+        }
+      : undefined,
     mask,
     errorText,
     background: (task) => background.run(task),
@@ -218,6 +298,7 @@ function checkDeadline(ms: number, logger: Logger): number {
 }
 
 interface RunDeps<M> {
+  payments: PaymentController | undefined;
   catalog: Catalog;
   steps: StepIndex;
   logger: Logger;
@@ -261,10 +342,10 @@ class TurnRun<M> {
       const replay = event.inputs ?? (event.input !== "" ? [event.input] : []);
       if (replay.length === 0) {
         // A fresh dial: resume where a dropped session left off, or start over.
-        return shown ? this.display(shown) : this.showStep(this.deps.steps.start);
+        return shown ? this.display(shown) : await this.showStep(this.deps.steps.start);
       }
       // A dial string with choices in it: start from the top and replay them.
-      let outcome = this.showStep(this.deps.steps.start);
+      let outcome = await this.showStep(this.deps.steps.start);
       for (const input of replay) {
         const current = this.record.turn;
         if (outcome.end || !current) break;
@@ -281,7 +362,7 @@ class TurnRun<M> {
   }
 
   /** Turns a handler's reply into what to show next. Public for deferred delivery. */
-  finish(reply: Reply, owner: Step): Outcome {
+  async finish(reply: Reply, owner: Step): Promise<Outcome> {
     if (reply === undefined || reply === null) {
       const ownerId = this.deps.steps.id(owner);
       const up = (ownerId && this.deps.steps.parent(ownerId)) || this.deps.steps.start;
@@ -339,6 +420,9 @@ class TurnRun<M> {
         return this.runHandler(step.handler, reading.value, step);
       case "yes":
       case "no": {
+        if (step.type === "pay") {
+          return reading.type === "yes" ? this.startPayment(step) : this.go(step.onDeclined, input.trim(), step);
+        }
         if (step.type !== "confirm") return this.showStep(this.deps.steps.start);
         return this.go(reading.type === "yes" ? step.onYes : step.onNo, input.trim(), step);
       }
@@ -348,7 +432,7 @@ class TurnRun<M> {
   }
 
   private go(target: Target, input: string, from: Step): Promise<Outcome> {
-    return isStep(target) ? Promise.resolve(this.showStep(target)) : this.runHandler(target, input, from);
+    return isStep(target) ? this.showStep(target) : this.runHandler(target, input, from);
   }
 
   private async runHandler(handler: Handler, input: string, owner: Step): Promise<Outcome> {
@@ -429,7 +513,7 @@ class TurnRun<M> {
     let text: string;
     if (failure === undefined) {
       try {
-        text = run.finish(reply, owner).text;
+        text = (await run.finish(reply, owner)).text;
       } catch (err) {
         failure = err;
         text = "";
@@ -457,8 +541,102 @@ class TurnRun<M> {
     });
   }
 
-  private showStep(step: Step): Outcome {
+  private async showStep(step: Step): Promise<Outcome> {
+    if (step.type === "pay") return this.showPay(step);
     return this.showTurn(this.turnFor(step), this.deps.steps.id(step) ?? null);
+  }
+
+  private paymentsOrThrow(): PaymentController {
+    if (!this.deps.payments) throw new TypeError("A pay step needs `payments` in createAgent");
+    return this.deps.payments;
+  }
+
+  /** Policy check and operator lookup first; the confirm screen only if both allow it. */
+  private async showPay(step: PayStep): Promise<Outcome> {
+    const payments = this.paymentsOrThrow();
+    const spec = await step.spec(this.context(""));
+    const reason = spec.reason === undefined ? "" : this.deps.catalog.localize(spec.reason, this.record.locale);
+    const result = await payments.offer(this.event.phone, { amount: spec.amount, currency: spec.currency, reason });
+    if (!result.ok) {
+      return this.runPayTarget(step.onFailed, this.refused(spec.amount, spec.currency, reason, result.message), step);
+    }
+
+    this.record.payIntent = {
+      amount: result.offer.amount,
+      currency: result.offer.currency,
+      reason: result.offer.reason,
+      provider: result.offer.provider,
+      providerPhone: result.offer.providerPhone,
+    };
+    const vars = { amount: spec.amount, currency: spec.currency, payee: payments.payeeName, reason };
+    const question = this.t(reason === "" ? "payments.confirmNoReason" : "payments.confirm", vars);
+    return this.showTurn({ kind: "confirm", question }, this.deps.steps.id(step) ?? null);
+  }
+
+  /** "Yes" on a pay confirm: record the payment, end the session, then initiate in the background. */
+  private async startPayment(step: PayStep): Promise<Outcome> {
+    const payments = this.paymentsOrThrow();
+    const intent = this.record.payIntent;
+    this.record.payIntent = null;
+    if (!intent) return this.showStep(step); // Nothing was offered under this session: start over.
+
+    const stepId = this.deps.steps.id(step) ?? "";
+    const begun = await payments.begin(this.event.phone, intent, { stepId, locale: this.record.locale });
+    if (!begun.ok) {
+      return this.runPayTarget(step.onFailed, this.refused(intent.amount, intent.currency, intent.reason, begun.message), step);
+    }
+    const { payment } = begun;
+    this.deps.background.run(() => payments.run(payment.id));
+    this.deps.logger.info("Payment started", {
+      payment: payment.id,
+      phone: this.deps.mask(this.event.phone),
+      amount: payment.amount,
+      currency: payment.currency,
+      provider: payment.provider,
+    });
+    return this.showTurn({ kind: "say", text: this.t("payments.pinPrompt") }, null);
+  }
+
+  private refused(amount: string, currency: string, reason: string, why: string): PaymentOutcome {
+    return {
+      status: "REFUSED",
+      amount,
+      currency,
+      reason,
+      failureMessage: this.t("payments.refused", { why }),
+    };
+  }
+
+  private async runPayTarget(target: PayTarget, outcome: PaymentOutcome, owner: Step): Promise<Outcome> {
+    if (isStep(target)) return this.showStep(target);
+    return this.finish(await target(outcome, this.context("")), owner);
+  }
+
+  /** What the user hears when a payment reaches a final status. */
+  async paymentOutcome(step: PayStep, payment: PaymentRecord): Promise<Outcome> {
+    const status = payment.status as PaymentOutcome["status"];
+    const payee = this.paymentsOrThrow().payeeName;
+    const outcome: PaymentOutcome = {
+      id: payment.id,
+      amount: payment.amount,
+      currency: payment.currency,
+      reason: payment.reason,
+      status,
+      // Never the provider's code: that stays in the store for the developer.
+      ...(status === "COMPLETED"
+        ? {}
+        : { failureMessage: status === "UNRESOLVED" ? this.t("payments.unresolved", { payee }) : this.t("payments.failed") }),
+    };
+    return this.runPayTarget(status === "COMPLETED" ? step.onPaid : step.onFailed, outcome, step);
+  }
+
+  receipt(payment: PaymentRecord): string {
+    return this.t("payments.receipt", {
+      amount: payment.amount,
+      currency: payment.currency,
+      payee: this.paymentsOrThrow().payeeName,
+      ref: payment.id.slice(0, 8),
+    });
   }
 
   private showTurn(turn: Turn, stepId: string | null): Outcome {
@@ -513,6 +691,8 @@ class TurnRun<M> {
           ...(step.yes !== undefined ? { yes: text(step.yes) } : {}),
           ...(step.no !== undefined ? { no: text(step.no) } : {}),
         };
+      case "pay":
+        throw new TypeError("A pay step is shown through showPay, not turnFor");
       default:
         return assertNever(step);
     }

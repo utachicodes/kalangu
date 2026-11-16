@@ -44,19 +44,21 @@ describe("createFakeProvider", () => {
     expect(result.status).toBe("ACCEPTED");
   });
 
-  it("reports initiated payments as COMPLETED via status", async () => {
-    const provider = createFakeProvider({ settleAfterMs: 50 });
+  it("reports PROCESSING until the delay has passed, then COMPLETED", async () => {
+    const provider = createFakeProvider({ settleAfterMs: 40 });
     await provider.initiate(payment);
+    expect(await provider.status("pay-1")).toMatchObject({ found: true, status: "PROCESSING" });
+    await new Promise((resolve) => setTimeout(resolve, 60));
     expect(await provider.status("pay-1")).toMatchObject({ found: true, status: "COMPLETED" });
   });
 
-  it("reports unknown payments as found completed (demo default)", async () => {
+  it("does not find a payment that was never initiated", async () => {
     const provider = createFakeProvider();
-    expect(await provider.status("never-initiated")).toMatchObject({ found: true, status: "COMPLETED" });
+    expect(await provider.status("never-initiated")).toEqual({ found: false });
   });
 
   it("can be configured to always fail", async () => {
-    const provider = createFakeProvider({ alwaysFail: true });
+    const provider = createFakeProvider({ alwaysFail: true, settleAfterMs: 0 });
     const result = await provider.initiate(payment);
     expect(result.status).toBe("ACCEPTED");
     expect(await provider.status("pay-1")).toMatchObject({ found: true, status: "FAILED" });

@@ -139,7 +139,7 @@ pay(
   (ctx) => ({ amount: "500", currency: "KES", reason: { en: "Consultation", fr: "Consultation" } }),
   {
     onPaid: say({ en: "Paid. See you on Monday.", fr: "Payé. À lundi." }),
-    onFailed: (payment, ctx) => `Payment not completed: ${payment.reason}`,
+    onFailed: (payment, ctx) => `Payment not completed: ${payment.failureMessage}`,
     onDeclined: menu("No problem", { … }),   // user said No on the confirm
   },
 )
@@ -155,6 +155,13 @@ pay(
   the USSD session has ended, so their output goes out **by SMS**, the same
   path as a deferred answer (v0.1 §4.6). `onFailed` receives a reason the
   user can read (§7.3), never a raw provider code.
+
+**As built (16 Nov 2026).** A refusal before the confirm screen runs
+`onFailed` inline on the live channel with `status: "REFUSED"` and no `id`.
+The receipt goes as a second SMS after the `onPaid` message, so a long
+`onPaid` text can never push the receipt over the segment cap. Refusal
+messages from the policy layer are English only for now; localizing them is
+still to do.
 
 ### 4.3 Flow
 

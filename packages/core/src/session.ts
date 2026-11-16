@@ -7,6 +7,15 @@ import type { Turn } from "./turns.js";
 
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
+export interface PayIntent {
+  amount: string;
+  currency: string;
+  reason: string;
+  /** Provider code and MSISDN chosen when the offer was made. */
+  provider: string;
+  providerPhone: string;
+}
+
 export interface SessionRecord {
   phone: string;
   locale: string;
@@ -19,6 +28,12 @@ export interface SessionRecord {
   data: { [key: string]: Json };
   /** The channel id of the last exchange. */
   channel: string | null;
+  /**
+   * The payment the user was last offered on a pay step: exactly what the
+   * confirm screen showed, so "Yes" pays that and nothing else. Optional so
+   * sessions stored before 0.2 still load.
+   */
+  payIntent?: PayIntent | null;
   /** Set while a deferred answer is still being produced. */
   deferred: { since: number } | null;
   updatedAt: number;

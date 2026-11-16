@@ -83,6 +83,24 @@ describe("memoryPaymentStore", () => {
     const totals = await store.totals("+254700000001", "KES", since);
     expect(totals.pending).toBe("1000.00");
     expect(totals.completed).toBe("500.00");
+    expect(totals.pendingCount).toBe(1);
+  });
+
+  it("failed and rejected payments never count toward totals", async () => {
+    const store = memoryPaymentStore();
+    await store.create(record({ id: "a", status: "FAILED" }));
+    await store.create(record({ id: "b", status: "REJECTED" }));
+    const totals = await store.totals("+254700000001", "KES", now - 1000);
+    expect(totals).toEqual({ pending: "0", completed: "0", pendingCount: 0 });
+  });
+
+  it("unknown payments stay pending and are reconciled; unresolved ones count as money at risk", async () => {
+    const store = memoryPaymentStore();
+    await store.create(record({ id: "a", amount: "100", status: "UNKNOWN", createdAt: now - 5000 }));
+    await store.create(record({ id: "b", amount: "200", status: "UNRESOLVED", createdAt: now - 5000 }));
+    expect((await store.pending(1000)).map((p) => p.id)).toEqual(["a"]);
+    const totals = await store.totals("+254700000001", "KES", now - 10000);
+    expect(totals).toEqual({ pending: "300.00", completed: "0", pendingCount: 1 });
   });
 
   it("copies records in and out so callers cannot mutate stored state", async () => {

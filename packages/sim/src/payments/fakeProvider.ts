@@ -2,8 +2,7 @@
  * Fake payment provider for the simulator and tests (docs/payments-design.md
  * §10, packages/sim).
  *
- * It prints a PIN prompt to the terminal and settles the payment after a
- * delay. No network, no real money, no pawaPay. Intended for local
+ * It settles a payment after a delay. No network, no real money, no pawaPay. Intended for local
  * development only — never configured with a real provider token.
  */
 
@@ -22,7 +21,7 @@ export interface FakeProviderOptions {
   readonly country?: string;
   /** Milliseconds before an initiated payment auto-settles. Default 3000. */
   readonly settleAfterMs?: number;
-  /** If true, status() reports FAILED instead of COMPLETED. */
+  /** If true, a payment settles as FAILED instead of COMPLETED. */
   readonly alwaysFail?: boolean;
   /** If true, resolve returns a refusal instead of a provider choice. */
   readonly alwaysRefuse?: boolean;
@@ -42,15 +41,7 @@ export function createFakeProvider(
   const alwaysFail = options.alwaysFail ?? false;
   const alwaysRefuse = options.alwaysRefuse ?? false;
 
-  const pending = new Map<string, ReturnType<typeof setTimeout>>();
-
-  function clearTimer(id: string): void {
-    const timer = pending.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      pending.delete(id);
-    }
-  }
+  const initiatedAt = new Map<string, number>();
 
   return {
     id: "fake",
@@ -69,24 +60,17 @@ export function createFakeProvider(
       };
       return choice;
     },
-    async initiate(_payment): Promise<InitiateResult> {
-      // Initiation is accepted; the final outcome arrives through status().
-      clearTimer(_payment.id);
-      const timer = setTimeout(() => {
-        pending.delete(_payment.id);
-      }, settleAfterMs);
-      pending.set(_payment.id, timer);
+    async initiate(payment): Promise<InitiateResult> {
+      // Accepted now; the outcome shows up in status() once the delay has passed.
+      if (!initiatedAt.has(payment.id)) initiatedAt.set(payment.id, Date.now());
       return { status: "ACCEPTED" };
     },
     async status(id: string): Promise<StatusResult> {
-      if (alwaysFail) {
-        return { found: true, status: "FAILED" };
-      }
-      if (!pending.has(id)) {
-        // Not seen or already settled: the demo default is completed.
-        return { found: true, status: "COMPLETED" };
-      }
-      return { found: true, status: "COMPLETED" };
+      const started = initiatedAt.get(id);
+      // Like the real thing, a payment that was never initiated is not found.
+      if (started === undefined) return { found: false };
+      if (Date.now() - started < settleAfterMs) return { found: true, status: "PROCESSING" };
+      return { found: true, status: alwaysFail ? "FAILED" : "COMPLETED" };
     },
   };
 }

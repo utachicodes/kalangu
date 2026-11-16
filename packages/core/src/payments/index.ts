@@ -7,7 +7,8 @@
  * port elsewhere.
  */
 
-export type { PaymentRecord, PaymentStatus } from "./store.js";
+export type { PaymentRecord, PaymentStatus, PaymentTotals } from "./store.js";
+export { isFinalPaymentStatus } from "./store.js";
 export type { PaymentStore } from "./store.js";
 export { memoryPaymentStore } from "./store.js";
 
@@ -28,3 +29,6 @@ export type {
   StatusResult,
   PaymentRoute,
 } from "./provider.js";
+
+export type { Offer, OfferResult, PaymentController, PaymentPolicyConfig, PaymentsConfig } from "./controller.js";
+export { DEFAULT_GIVE_UP_AFTER_MS, DEFAULT_POLL_SCHEDULE_MS, createPaymentController } from "./controller.js";

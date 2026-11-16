@@ -14,7 +14,15 @@ export type MessageKey =
   | "common.invalidNumber"
   | "common.typeAnswer"
   | "common.replyYesNo"
-  | "common.error";
+  | "common.error"
+  | "payments.confirm"
+  | "payments.confirmNoReason"
+  | "payments.pinPrompt"
+  | "payments.refused"
+  | "payments.notStarted"
+  | "payments.failed"
+  | "payments.unresolved"
+  | "payments.receipt";
 
 export type Messages = Readonly<Record<MessageKey, string>>;
 
@@ -29,6 +37,14 @@ export const en: Messages = {
   "common.typeAnswer": "Please type an answer.",
   "common.replyYesNo": "Reply {yes} or {no}",
   "common.error": "Sorry, something went wrong. Please try again later.",
+  "payments.confirm": "Pay {amount} {currency} to {payee} for {reason}?",
+  "payments.confirmNoReason": "Pay {amount} {currency} to {payee}?",
+  "payments.pinPrompt": "You will receive a prompt to enter your PIN.",
+  "payments.refused": "Sorry, this payment cannot be made. {why}",
+  "payments.notStarted": "Sorry, the payment could not be started. Nothing was charged.",
+  "payments.failed": "The payment was not completed. Nothing was charged.",
+  "payments.unresolved": "We could not confirm your payment. Please contact {payee} before paying again.",
+  "payments.receipt": "Receipt: {amount} {currency} paid to {payee}. Ref {ref}.",
 };
 
 export const fr: Messages = {
@@ -42,6 +58,14 @@ export const fr: Messages = {
   "common.typeAnswer": "Veuillez saisir une réponse.",
   "common.replyYesNo": "Répondez {yes} ou {no}",
   "common.error": "Désolé, une erreur est survenue. Veuillez réessayer plus tard.",
+  "payments.confirm": "Payer {amount} {currency} à {payee} pour {reason} ?",
+  "payments.confirmNoReason": "Payer {amount} {currency} à {payee} ?",
+  "payments.pinPrompt": "Vous allez recevoir une demande de saisie de votre code PIN.",
+  "payments.refused": "Désolé, ce paiement ne peut pas être effectué. {why}",
+  "payments.notStarted": "Désolé, le paiement n'a pas pu démarrer. Rien n'a été débité.",
+  "payments.failed": "Le paiement n'a pas abouti. Rien n'a été débité.",
+  "payments.unresolved": "Nous n'avons pas pu confirmer votre paiement. Contactez {payee} avant de payer à nouveau.",
+  "payments.receipt": "Reçu : {amount} {currency} payé à {payee}. Réf {ref}.",
 };
 
 export const BUILTIN_MESSAGES: Readonly<Record<string, Messages>> = { en, fr };

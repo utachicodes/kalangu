@@ -14,7 +14,14 @@ export type PaymentStatus =
   | "COMPLETED"
   | "FAILED"
   | "REJECTED"
-  | "UNKNOWN";
+  | "UNKNOWN"
+  /** No final status after the give-up window; money may have moved. */
+  | "UNRESOLVED";
+
+/** Statuses after which nothing more is expected from the provider. */
+export function isFinalPaymentStatus(status: PaymentStatus): boolean {
+  return status === "COMPLETED" || status === "FAILED" || status === "REJECTED" || status === "UNRESOLVED";
+}
 
 export interface PaymentRecord {
   /** Our UUIDv4, also sent to the provider as the idempotency key. */
@@ -39,6 +46,15 @@ export interface PaymentRecord {
   readonly notifiedAt?: number;
 }
 
+export interface PaymentTotals {
+  /** Amount of payments still in flight or of unknown outcome (money may move). */
+  readonly pending: string;
+  /** Amount of completed payments. Failed and rejected ones never count. */
+  readonly completed: string;
+  /** Payments still awaiting a provider outcome, for `maxPendingPerPhone`. */
+  readonly pendingCount: number;
+}
+
 export interface PaymentStore {
   /** Creates the record. Fails if the id already exists (idempotency anchor). */
   create(payment: PaymentRecord): Promise<void>;
@@ -58,7 +74,7 @@ export interface PaymentStore {
     phone: string,
     currency: string,
     sinceMs: number,
-  ): Promise<{ pending: string; completed: string }>;
+  ): Promise<PaymentTotals>;
 }
 
 /**
@@ -89,13 +105,7 @@ export function memoryPaymentStore(): PaymentStore & { readonly size: number } {
       const cutoff = Date.now() - olderThanMs;
       const out: PaymentRecord[] = [];
       for (const record of records.values()) {
-        if (
-          record.status !== "COMPLETED" &&
-          record.status !== "FAILED" &&
-          record.status !== "REJECTED" &&
-          record.status !== "UNKNOWN" &&
-          record.createdAt < cutoff
-        ) {
+        if (!isFinalPaymentStatus(record.status) && record.createdAt < cutoff) {
           out.push(structuredClone(record));
         }
       }
@@ -104,20 +114,20 @@ export function memoryPaymentStore(): PaymentStore & { readonly size: number } {
     async totals(phone, currency, sinceMs) {
       let pending = "0";
       let completed = "0";
+      let pendingCount = 0;
       for (const record of records.values()) {
-        if (record.phone !== phone || record.currency !== currency) continue;
-        if (record.createdAt < sinceMs) continue;
-        if (
-          record.status === "COMPLETED" ||
-          record.status === "REJECTED" ||
-          record.status === "FAILED"
-        ) {
+        if (record.phone !== phone || record.createdAt < sinceMs) continue;
+        const inFlight = !isFinalPaymentStatus(record.status);
+        // A payment still in flight blocks a new one whatever its currency.
+        if (inFlight) pendingCount += 1;
+        if (record.currency !== currency) continue;
+        if (record.status === "COMPLETED") {
           completed = addDecimal(completed, record.amount);
-        } else {
+        } else if (inFlight || record.status === "UNRESOLVED") {
           pending = addDecimal(pending, record.amount);
         }
       }
-      return { pending, completed };
+      return { pending, completed, pendingCount };
     },
     get size() {
       return records.size;

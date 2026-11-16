@@ -71,8 +71,8 @@ export type { LogFields, LogLevel, Logger } from "./logger.js";
 export { NotSupportedError, interpret, renderSms, renderUssd } from "./render.js";
 export type { ChannelKind, InterpretContext, Interpretation, RenderContext, Rendered } from "./render.js";
 export { freshRecord, memoryStore } from "./session.js";
-export type { Json, SessionRecord, SessionStore } from "./session.js";
-export { ask, choose, confirm, indexSteps, isStep, menu, say } from "./steps.js";
+export type { Json, PayIntent, SessionRecord, SessionStore } from "./session.js";
+export { ask, choose, confirm, indexSteps, isStep, menu, pay, say } from "./steps.js";
 export type {
   AskStep,
   Awaitable,
@@ -80,6 +80,11 @@ export type {
   Handler,
   MenuEntry,
   MenuStep,
+  PayHandler,
+  PayStep,
+  PaySpec,
+  PayTarget,
+  PaymentOutcome,
   Reply,
   SayStep,
   Step,
@@ -89,18 +94,28 @@ export type {
 } from "./steps.js";
 
 export {
+  DEFAULT_GIVE_UP_AFTER_MS,
+  DEFAULT_POLL_SCHEDULE_MS,
+  createPaymentController,
   createPolicyCheck,
   fromMinorUnits,
   isCurrency,
   maskPhoneForPolicy,
+  isFinalPaymentStatus,
   memoryPaymentStore,
   refusalMessage,
   toMinorUnits,
 } from "./payments/index.js";
 export type {
+  Offer,
+  OfferResult,
+  PaymentController,
+  PaymentPolicyConfig,
+  PaymentsConfig,
   PaymentRecord,
   PaymentStatus,
   PaymentStore,
+  PaymentTotals,
   PaymentLimits,
   PaymentRefusal,
   ProviderBounds,

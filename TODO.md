@@ -59,6 +59,18 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   - [x] Polling fallback for missed callbacks (§6.5)
 - [x] Review the design, especially §3 (USSD session vs PIN prompt) and the
   open questions in §14
+- [x] Prep code against the fake provider, no pawaPay (tested end to end):
+  - [x] Decimal-string `pay` turn amount
+  - [x] Policy layer, payment store, provider port, fake provider
+  - [x] `pay` step, `payments` config validation (no policy, no payments)
+  - [x] Confirm → end session → background initiate → poll → SMS outcome
+    and receipt; unknown outcomes keep polling, give up as `UNRESOLVED`
+  - [x] `agent.payments.settle(id)` re-checks status for callback routes
+- [ ] Per-locale policy refusal messages (English only today)
+- [ ] `reconcilePayments` for a cron or scheduler (§6.5): polling today lives
+  in the process that started the payment and is lost on restart
+- [ ] Atomic claim on `PaymentStore.update` for durable stores, so two
+  processes cannot notify or begin twice (§6.1)
 - [ ] Read pawaPay's terms of service (the v2 API docs were read on
   16 Nov 2026; the 24-country figure is the company's own claim)
 - [ ] Sandbox account; work through the verify-first list in §12
