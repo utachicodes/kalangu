@@ -23,6 +23,7 @@ is not done.
 |---|---|
 | `pnpm install && pnpm demo` | The clinic agent on a simulated keypad phone; no account or API key |
 | [docs/design.md](docs/design.md) | The v0.1 design: package layout, public API, turn types, sessions & deferral, the budgeter, Africa's Talking adapters, the simulator, the test plan |
+| [docs/payments-design.md](docs/payments-design.md) | The 0.2 payments design (pawaPay deposits): draft for review, no code yet |
 | [docs/design.md §12](docs/design.md#12-open-questions) | Seven open questions — the most useful feedback right now |
 | [TODO.md](TODO.md) | Build order and the verify-first checklist |
 | [CHANGELOG.md](CHANGELOG.md) | What has landed so far |
