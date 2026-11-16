@@ -21,7 +21,8 @@ export function runTerminal(agent: Agent, options: TerminalOptions = {}): Promis
   const output = options.output ?? process.stdout;
   const width = options.width ?? 34;
   const phone = new SimPhone(agent, options);
-  const rl = createInterface({ input, output, terminal: (output as { isTTY?: boolean }).isTTY === true });
+  const tty = (output as { isTTY?: boolean }).isTTY === true;
+  const rl = createInterface({ input, output, terminal: tty });
 
   const write = (text: string) => output.write(`${text}\n`);
   let prompt = "Dial> ";
@@ -34,7 +35,8 @@ export function runTerminal(agent: Agent, options: TerminalOptions = {}): Promis
 
   phone.onSms((sms) => {
     // Print above whatever the user is typing, then restore the prompt.
-    output.write("\r\x1b[K");
+    if (tty) output.write("\r\x1b[K");
+    else output.write("\n");
     write(formatSms(sms));
     if (!busy) showPrompt();
   });

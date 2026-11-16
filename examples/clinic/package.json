@@ -1,0 +1,24 @@
+{
+  "name": "@kalangu/example-clinic",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "Example Kalangu agent: a clinic line on USSD and SMS, with a fake slow nurse model.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "demo": "node dist/demo.js",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@kalangu/core": "workspace:*",
+    "@kalangu/sim": "workspace:*",
+    "@kalangu/sms": "workspace:*",
+    "@kalangu/ussd": "workspace:*"
+  }
+}

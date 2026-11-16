@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "types": ["node"],
+    "paths": {
+      "@kalangu/core": ["../../packages/core/src/index.ts"],
+      "@kalangu/sim": ["../../packages/sim/src/index.ts"],
+      "@kalangu/sms": ["../../packages/sms/src/index.ts"],
+      "@kalangu/ussd": ["../../packages/ussd/src/index.ts"]
+    }
+  },
+  "include": ["src", "test"]
+}
