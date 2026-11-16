@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from the documented fields.
 - Engine: a new gateway session id counts as a fresh dial, and a dial
   string with choices in it (`*384*1*2#`) is replayed from the start menu.
+- `@kalangu/sim`: terminal keypad-phone simulator. `SimPhone` drives an
+  agent directly (dial, press, hang up, text, inbox) for tests; `runTerminal`
+  puts a boxed-screen UI on top with `x` to hang up, `sms <text>` and `q`.
 - Design document `docs/design.md` for version 0.1: package layout, public
   API sketch, turn types (with `pay` reserved), engine and sessions keyed by
   phone number, deferral, the encoding-aware budgeter, Africa's Talking USSD
