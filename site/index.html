@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalangu — agents for every phone</title>
+<meta name="description" content="Kalangu is an open-source TypeScript toolkit for building AI agents that work on any phone, including basic keypad phones, over USSD and SMS.">
+<link rel="preload" href="assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face {
+  font-family: 'Inter Tight';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url(assets/inter-tight-latin.woff2) format('woff2');
+}
+
+:root {
+  --u: min(calc(100vw / 1440), calc(100vh / 960));
+  --ink: #0D0D0C;
+  --ink-56: rgba(13, 13, 12, .56);
+  --ink-42: rgba(13, 13, 12, .42);
+  --cream: #FBF6EF;
+  --hair: rgba(13, 13, 12, .12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: var(--cream);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ---------- Page frame ---------- */
+.page { position: relative; height: 100vh; display: flex; flex-direction: column; }
+
+/* ---------- Hero panel ---------- */
+.hero { position: relative; height: 75vh; overflow: hidden; isolation: isolate; }
+
+.bg { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+.layer {
+  position: absolute; inset: 0;
+  opacity: 0;
+  transform: scale(1.08);
+  will-change: opacity, transform;
+}
+.layer[data-i="0"] { /* Text — lemon cream */
+  background:
+    radial-gradient(60% 75% at 86% 76%, rgba(246,222,104,.85), rgba(246,222,104,0) 70%),
+    radial-gradient(45% 55% at 32% 105%, rgba(246,222,104,.45), rgba(246,222,104,0) 70%),
+    linear-gradient(180deg, #F2ECDF, #F4EBC6);
+}
+.layer[data-i="1"] { /* Ask — peach / apricot */
+  background:
+    radial-gradient(60% 75% at 86% 76%, rgba(249,150,84,.80), rgba(249,150,84,0) 70%),
+    radial-gradient(45% 55% at 32% 105%, rgba(249,150,84,.42), rgba(249,150,84,0) 70%),
+    linear-gradient(180deg, #F8DCC7, #F9CBA9);
+}
+.layer[data-i="2"] { /* Pay — warm sage mint */
+  background:
+    radial-gradient(60% 75% at 86% 76%, rgba(150,206,150,.85), rgba(150,206,150,0) 70%),
+    radial-gradient(45% 55% at 32% 105%, rgba(150,206,150,.45), rgba(150,206,150,0) 70%),
+    linear-gradient(180deg, #E9EBE0, #DFE9D4);
+}
+.layer[data-i="3"] { /* Speak — rose lilac */
+  background:
+    radial-gradient(60% 75% at 86% 76%, rgba(222,150,200,.82), rgba(222,150,200,0) 70%),
+    radial-gradient(45% 55% at 32% 105%, rgba(222,150,200,.42), rgba(222,150,200,0) 70%),
+    linear-gradient(180deg, #F0E4E6, #ECD6E2);
+}
+.grain {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  opacity: .18; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+}
+
+/* ---------- Nav ---------- */
+.nav {
+  height: calc(80 * var(--u));
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 calc(112 * var(--u));
+  border-bottom: 1px solid var(--hair);
+}
+.brand { display: flex; align-items: center; gap: calc(10 * var(--u)); font-weight: 600; font-size: calc(25 * var(--u)); letter-spacing: -.02em; }
+.brand i { width: calc(13 * var(--u)); height: calc(13 * var(--u)); border-radius: 50%; background: var(--ink); display: block; }
+.nav-r { display: flex; align-items: center; gap: calc(42 * var(--u)); font-size: calc(17 * var(--u)); font-weight: 500; }
+.nav-r > a:not(.btn) { display: flex; align-items: center; gap: calc(6 * var(--u)); }
+.nav-r > a:not(.btn):hover { opacity: .6; }
+.chev { width: calc(11 * var(--u)); height: calc(11 * var(--u)); }
+.btn {
+  display: inline-flex; align-items: center; gap: calc(10 * var(--u));
+  height: calc(48 * var(--u)); padding: 0 calc(22 * var(--u));
+  border: 1.4px solid var(--ink); border-radius: calc(7 * var(--u));
+  font-weight: 500; transition: background .2s, color .2s;
+}
+.btn:hover { background: var(--ink); color: #fff; }
+
+/* ---------- Headline ---------- */
+.hl {
+  position: absolute; left: calc(112 * var(--u)); top: calc(190 * var(--u));
+  font-size: calc(172 * var(--u)); line-height: .86; letter-spacing: -.032em; font-weight: 500;
+}
+.slot { display: grid; height: 1.02em; }
+.item { grid-area: 1 / 1; display: flex; align-items: center; gap: .03em; opacity: 0; will-change: opacity, transform, filter; }
+.ico { position: relative; width: 1.02em; height: 1.02em; flex: none; isolation: isolate; will-change: transform, opacity; }
+.ico img {
+  width: 100%; height: 100%; display: block;
+  filter: grayscale(1) brightness(1.1) contrast(1.08);
+}
+.ico .tint {
+  position: absolute; inset: 0; background: var(--tint); mix-blend-mode: color;
+  -webkit-mask: var(--src) center / contain no-repeat;
+          mask: var(--src) center / contain no-repeat;
+}
+.word { display: inline-block; transform-origin: 0 60%; will-change: opacity, transform, filter; padding-bottom: .04em; }
+.line2 { display: block; margin-top: -.02em; }
+
+/* ---------- CTA row ---------- */
+.row {
+  position: absolute; left: calc(112 * var(--u)); top: calc(578 * var(--u));
+  display: flex; align-items: center; gap: calc(14 * var(--u));
+}
+.cta { height: calc(58 * var(--u)); padding: 0 calc(24 * var(--u)) 0 calc(20 * var(--u)); font-size: calc(17 * var(--u)); background: rgba(255,255,255,0); }
+.cta svg { width: calc(22 * var(--u)); height: calc(22 * var(--u)); flex: none; }
+.cap { margin-left: calc(26 * var(--u)); font-size: calc(18.5 * var(--u)); line-height: 1.35; color: var(--ink-56); font-weight: 500; }
+
+/* ---------- Strip ---------- */
+.strip { position: relative; height: 25vh; background: var(--cream); }
+.notch { position: absolute; left: 0; right: 0; bottom: 100%; height: calc(62 * var(--u)); width: 100%; display: block; margin-bottom: -1px; }
+.notch path { fill: var(--cream); }
+.hint {
+  position: absolute; bottom: calc(100% + 18 * var(--u)); left: calc(1178 / 1440 * 100% + 28 * var(--u));
+  font-size: calc(15 * var(--u)); color: var(--ink-42); font-weight: 500; white-space: nowrap;
+}
+.hint:hover { color: var(--ink); }
+.strip-in {
+  height: 100%; display: flex; align-items: center;
+  padding: 0 calc(112 * var(--u)); gap: calc(64 * var(--u));
+}
+.lead { font-size: calc(29 * var(--u)); font-weight: 500; line-height: 1.12; letter-spacing: -.02em; min-width: calc(250 * var(--u)); }
+.stats { display: flex; gap: calc(64 * var(--u)); flex: 1; }
+.stat b { display: block; font-size: calc(54 * var(--u)); font-weight: 500; letter-spacing: -.035em; line-height: 1; }
+.stat span { display: block; margin-top: calc(10 * var(--u)); font-size: calc(16.5 * var(--u)); color: var(--ink-56); font-weight: 500; line-height: 1.3; }
+.drum { width: calc(96 * var(--u)); height: calc(120 * var(--u)); flex: none; margin-left: auto; color: var(--ink); }
+
+/* ---------- Phones ---------- */
+@media (max-width: 760px) {
+  :root { --u: calc(100vw / 760); }
+  body { overflow-x: hidden; overflow-y: auto; }
+  .page { height: auto; min-height: 100vh; }
+  .hero { height: auto; padding-bottom: 96px; }
+  .nav { height: 64px; padding: 0 16px; }
+  .brand { font-size: 21px; gap: 8px; }
+  .brand i { width: 11px; height: 11px; }
+  .nav-r > a:not(.btn) { display: none; }
+  .nav-r .btn { height: 40px; font-size: 14px; padding: 0 14px; border-radius: 6px; }
+  .hl { position: static; padding: 56px 16px 0; font-size: clamp(52px, 15.5vw, 88px); }
+  .row { position: static; flex-wrap: wrap; padding: 36px 16px 0; gap: 10px; }
+  .cta { height: 50px; font-size: 15px; padding: 0 18px 0 16px; border-radius: 7px; }
+  .cta svg { width: 19px; height: 19px; }
+  .cap { flex-basis: 100%; margin: 14px 0 0; font-size: 16px; }
+  .cap br, .stat br { display: none; }
+  .notch { height: 36px; }
+  .hint { font-size: 13px; bottom: calc(100% + 10px); left: auto; right: 16px; }
+  .strip { height: auto; }
+  .strip-in { display: grid; grid-template-columns: 1fr 1fr; gap: 28px 20px; padding: 28px 16px 40px; align-items: start; }
+  .lead { grid-column: 1 / -1; font-size: 24px; min-width: 0; }
+  .stats { display: contents; }
+  .stat b { font-size: 40px; }
+  .stat span { font-size: 14px; margin-top: 6px; }
+  .drum { width: 72px; height: 90px; margin: 0; justify-self: end; align-self: end; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <section class="hero" aria-label="Kalangu">
+    <div class="bg" aria-hidden="true">
+      <div class="layer" data-i="0"></div>
+      <div class="layer" data-i="1"></div>
+      <div class="layer" data-i="2"></div>
+      <div class="layer" data-i="3"></div>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <nav class="nav">
+      <a class="brand" href="./"><i></i>kalangu</a>
+      <div class="nav-r">
+        <a href="https://github.com/utachicodes/kalangu/blob/main/docs/design.md">Design <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg></a>
+        <a href="https://github.com/utachicodes/kalangu#roadmap">Roadmap <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg></a>
+        <a href="https://github.com/utachicodes/kalangu/blob/main/CONTRIBUTING.md">Contribute <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg></a>
+        <a class="btn" href="https://github.com/utachicodes/kalangu">Review v0.1</a>
+      </div>
+    </nav>
+
+    <h1 class="hl">
+      <span class="slot" id="slot" aria-live="off">
+        <span class="item" data-i="0"><span class="ico" style="--tint:#E9C22E;--src:url(assets/chat.webp)"><img src="assets/chat.webp" alt=""><span class="tint"></span></span><span class="word">Text</span></span>
+        <span class="item" data-i="1"><span class="ico" style="--tint:#F2772F;--src:url(assets/sparkle.webp)"><img src="assets/sparkle.webp" alt=""><span class="tint"></span></span><span class="word">Ask</span></span>
+        <span class="item" data-i="2"><span class="ico" style="--tint:#3FB874;--src:url(assets/coin.webp)"><img src="assets/coin.webp" alt=""><span class="tint"></span></span><span class="word">Pay</span></span>
+        <span class="item" data-i="3"><span class="ico" style="--tint:#C564C4;--src:url(assets/globe.webp)"><img src="assets/globe.webp" alt=""><span class="tint"></span></span><span class="word">Speak</span></span>
+      </span>
+      <span class="line2">on any phone</span>
+    </h1>
+
+    <div class="row">
+      <a class="btn cta" id="flash" href="https://github.com/utachicodes/kalangu/blob/main/docs/design.md">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+        Read the design
+      </a>
+      <a class="btn cta" href="https://github.com/utachicodes/kalangu/blob/main/docs/design.md#12-open-questions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 14.2h.01"/></svg>
+        Open questions
+      </a>
+      <p class="cap">Kalangu is an open-source TypeScript toolkit for AI agents <br>that work on USSD and SMS, keypad phones included.</p>
+    </div>
+  </section>
+
+  <section class="strip">
+    <svg class="notch" viewBox="0 0 1440 62" preserveAspectRatio="none" aria-hidden="true"><path d="M0 62 H1062 C1092 62 1098 54 1116 34 C1138 9 1146 1 1178 1 H1440 V62 Z"/></svg>
+    <a class="hint" href="https://github.com/utachicodes/kalangu#status-design-review">↓ Status: open for design review</a>
+    <div class="strip-in">
+      <p class="lead">Built in the open,<br>reviewed by you</p>
+      <div class="stats">
+        <div class="stat"><b>160</b><span>Characters per USSD screen, <br>never silently cut off</span></div>
+        <div class="stat"><b>4 s</b><span>Model deadline before <br>the answer goes by SMS</span></div>
+        <div class="stat"><b>0</b><span>API keys needed <br>to run the demo</span></div>
+      </div>
+      <!-- Line-art kalangu: hourglass talking drum with tension cords and a curved beater -->
+      <svg class="drum" viewBox="0 0 96 120" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <ellipse cx="40" cy="20" rx="24" ry="6"/>
+        <ellipse cx="40" cy="96" rx="24" ry="6"/>
+        <path d="M16 20c0 14 14 22 14 38s-14 24-14 38M64 20c0 14-14 22-14 38s14 24 14 38"/>
+        <path d="M20 25 34 91M30 26 46 92M40 26v70M50 26 34 92M60 25 46 91" opacity=".55"/>
+        <path d="M28 58h24"/>
+        <path d="M70 10c10 6 16 16 14 30"/>
+        <circle cx="68.6" cy="9.2" r="2.2"/>
+        <path d="M8 112h64"/>
+      </svg>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const SLOT = 1750, N = 4;
+  const ENTER = 500, ICON_DELAY = 60, LEAVE = 420, XFADE = 770;
+  const FLASH_SLOT = 3;           // "Speak" — the design button flashes black
+  const STILL_SLOT = 1;           // "Ask" — shown under reduced motion
+
+  const items = [...document.querySelectorAll('.item')];
+  const words = items.map(el => el.querySelector('.word'));
+  const icons = items.map(el => el.querySelector('.ico'));
+  const layers = [...document.querySelectorAll('.layer')];
+  const flash = document.getElementById('flash');
+  const slot = document.getElementById('slot');
+
+  const clamp = x => Math.max(0, Math.min(1, x));
+  const outCubic = x => 1 - Math.pow(1 - x, 3);
+  const inCubic = x => x * x * x;
+  const smooth = x => x * x * (3 - 2 * x);
+
+  // Expose the current word to assistive tech without announcing every cycle.
+  const label = ['Text', 'Ask', 'Pay', 'Speak'];
+  slot.setAttribute('aria-label', label.join(', '));
+
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) {
+    items.forEach((el, i) => { el.style.opacity = i === STILL_SLOT ? 1 : 0; });
+    layers.forEach((el, i) => { el.style.opacity = i === STILL_SLOT ? 1 : 0; });
+    return;
+  }
+
+  // One clock: a long Web Animation. A frame-by-frame recorder can seek it via
+  // window.kalanguClock.currentTime = ms; everything below derives from it.
+  const clock = document.createElement('div').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1e9 });
+  window.kalanguClock = clock;
+  // ?t=ms freezes the page at that moment on the clock (for screenshots and recorders).
+  const seek = new URLSearchParams(location.search).get('t');
+  if (seek !== null) { clock.currentTime = +seek || 0; clock.pause(); }
+
+  function render() {
+    const t = clock.currentTime || 0;
+    const idx = Math.floor(t / SLOT) % N;
+    const local = t % SLOT;
+
+    // Words + icons
+    items.forEach((el, i) => {
+      if (i !== idx) { el.style.opacity = 0; return; }
+
+      const e = outCubic(clamp(local / ENTER));
+      const q = inCubic(clamp((local - (SLOT - LEAVE)) / LEAVE));
+      el.style.opacity = 1 - q;
+      el.style.transform = `translateY(${-0.16 * q}em)`;
+      el.style.filter = q > 0 ? `blur(${8 * q}px)` : 'none';
+
+      const w = words[i];
+      w.style.opacity = e;
+      w.style.transform = `translateY(${0.32 * (1 - e)}em) scale(${0.96 + 0.04 * e})`;
+      w.style.filter = e < 1 ? `blur(${10 * (1 - e)}px)` : 'none';
+
+      const ei = outCubic(clamp((local - ICON_DELAY) / ENTER));
+      const bobY = Math.sin(t / 2600 * Math.PI * 2) * 0.028;
+      const bobR = Math.sin(t / 3400 * Math.PI * 2) * 3;
+      icons[i].style.opacity = ei;
+      icons[i].style.transform =
+        `translateY(${bobY}em) rotate(${-14 * (1 - ei) + bobR}deg) scale(${0.7 + 0.3 * ei})`;
+    });
+
+    // Panel colour: crossfade over a window straddling each word change.
+    const half = XFADE / 2;
+    let from = idx, to = idx, m = 0;
+    if (local < half) {               // just after a change
+      from = (idx + N - 1) % N; to = idx; m = smooth(0.5 + local / XFADE);
+    } else if (local > SLOT - half) { // just before a change
+      from = idx; to = (idx + 1) % N; m = smooth((local - (SLOT - half)) / XFADE);
+    }
+    if (t < half) { from = to = 0; m = 0; } // first word: no fade from nothing
+
+    layers.forEach((el, i) => {
+      // Slow drift so the panel is never frozen.
+      const ph = i * 1.7;
+      const dx = Math.sin(t / 9000 + ph) * 2.2;
+      const dy = Math.cos(t / 11000 + ph) * 1.6;
+      el.style.transform = `scale(1.08) translate(${dx}%, ${dy}%)`;
+      if (i === from && i === to) { el.style.opacity = 1; el.style.zIndex = 1; }
+      else if (i === from) { el.style.opacity = 1; el.style.zIndex = 1; }
+      else if (i === to) { el.style.opacity = m; el.style.zIndex = 2; }
+      else { el.style.opacity = 0; el.style.zIndex = 0; }
+    });
+
+    // Design button fills black while "Speak" holds, then releases.
+    let f = 0;
+    if (idx === FLASH_SLOT) {
+      f = Math.min(smooth(clamp((local - 300) / 250)), 1 - smooth(clamp((local - 1150) / 250)));
+    }
+    if (f > 0.001) {
+      const c = Math.round(13 + (255 - 13) * f);
+      flash.style.background = `rgba(13,13,12,${f})`;
+      flash.style.color = `rgb(${c},${c},${c - 1})`;
+    } else if (flash.style.background) {
+      flash.style.background = ''; flash.style.color = '';
+    }
+
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+
+  // Hidden tab: pause the clock so the cycle resumes where it left off.
+  document.addEventListener('visibilitychange', () => {
+    if (seek !== null) return;
+    document.hidden ? clock.pause() : clock.play();
+  });
+})();
+</script>
+</body>
+</html>
