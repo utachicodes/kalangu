@@ -1,0 +1,28 @@
+{
+  "name": "kalangu",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "Agents for every phone, not just smartphones. A TypeScript toolkit for building AI agents on USSD and SMS, with WhatsApp, voice and mobile money on the roadmap.",
+  "keywords": [
+    "ussd",
+    "sms",
+    "whatsapp",
+    "mobile-money",
+    "agents",
+    "ai",
+    "africa",
+    "conversational"
+  ],
+  "license": "MIT",
+  "author": "Abdoullah Ndao",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@12.6.0",
+  "scripts": {
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "demo": "echo \"The 10-minute keypad-phone demo arrives with v0.1 - see docs/design.md section 8\""
+  }
+}
