@@ -51,14 +51,18 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 
 ## Version 0.2 — payments (do not rush; money code needs care)
 
-- [ ] Read pawaPay's terms and sandbox docs before designing (the 24-country
-  figure is the company's own claim)
-- [ ] Design the policy layer: per-transaction limit, per-day per-user limit,
-  allowed currencies — refused before the user sees anything
-- [ ] State clearly what the library does not guarantee; the agent never sees
-  a PIN
-- [ ] Callback polling fallback design (MTN MoMo callbacks do not always
-  arrive)
+- [x] Draft the design: [docs/payments-design.md](docs/payments-design.md)
+  - [x] Policy layer: per-payment, per-day per-user and pending limits,
+    allowed currencies, refused before the user sees anything (§5)
+  - [x] What the library does not guarantee; the agent never sees a PIN
+    (§8, §9)
+  - [x] Polling fallback for missed callbacks (§6.5)
+- [ ] Review the design, especially §3 (USSD session vs PIN prompt) and the
+  open questions in §14
+- [ ] Read pawaPay's terms of service (the v2 API docs were read on
+  16 Nov 2026; the 24-country figure is the company's own claim)
+- [ ] Sandbox account; work through the verify-first list in §12
+- [ ] Then, and only then, payment code
 
 ## Version 0.3 — languages
 
