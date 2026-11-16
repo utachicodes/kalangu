@@ -27,7 +27,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [x] Budgeter: encoding-aware counting (GSM-7 160/153 vs UCS-2 70/67,
   extension-table chars count double), pagination, reserved nav numbers
 - [x] Engine + in-memory session store keyed by phone number
-- [ ] `@kalangu/ussd` adapter, validated against recorded request fixtures
+- [x] `@kalangu/ussd` adapter, validated against recorded request fixtures
 - [ ] Terminal keypad simulator
 - [ ] `@kalangu/sms` adapter, validated against recorded request fixtures
 - [ ] Deferral + pluggable background-work interface

@@ -55,7 +55,17 @@ export interface InboundEvent {
   input: string;
   /** True on the first request of a live session (a fresh dial). */
   newSession?: boolean;
+  /**
+   * The gateway's id for this live session. When it changes, the engine
+   * treats the request as a new session even if input is present.
+   */
   gatewaySessionId?: string;
+  /**
+   * Every input of this live session so far, oldest first (USSD `text`
+   * split on `*`). Used to replay a dial string such as `*384*1*2#`, whose
+   * first request already carries `1*2`.
+   */
+  inputs?: readonly string[];
 }
 
 export interface Outcome {

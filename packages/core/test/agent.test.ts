@@ -296,6 +296,45 @@ describe("sessions", () => {
     expect(record).toMatchObject({ locale: "fr", data: { name: "Awa" } });
   });
 
+  it("replays a dial string that carries choices", async () => {
+    const { agent } = setup(clinic);
+    const out = await agent.handle({
+      channel: "ussd",
+      phone: PHONE,
+      input: "1",
+      inputs: ["1"],
+      gatewaySessionId: "ATUid_1",
+    });
+    expect(out).toMatchObject({ text: "Open Monday to Saturday, 8:00 to 18:00.", end: true });
+  });
+
+  it("treats a new gateway session as a fresh dial, not an answer to an old screen", async () => {
+    const { agent } = setup(clinic);
+    await agent.handle({ channel: "ussd", phone: PHONE, input: "", gatewaySessionId: "ATUid_1" });
+    await agent.handle({ channel: "ussd", phone: PHONE, input: "2", inputs: ["2"], gatewaySessionId: "ATUid_1" });
+    // Dropped while on "Type your question"; redialed with *384*1*3#.
+    const out = await agent.handle({
+      channel: "ussd",
+      phone: PHONE,
+      input: "3",
+      inputs: ["3"],
+      gatewaySessionId: "ATUid_2",
+    });
+    expect(out.text).toBe("Book for Monday?\n1. Yes\n2. No");
+  });
+
+  it("stops replaying once a screen ends the session", async () => {
+    const { agent } = setup(clinic);
+    const out = await agent.handle({
+      channel: "ussd",
+      phone: PHONE,
+      input: "9",
+      inputs: ["1", "9"],
+      gatewaySessionId: "ATUid_1",
+    });
+    expect(out).toMatchObject({ text: "Open Monday to Saturday, 8:00 to 18:00.", end: true });
+  });
+
   it("stores the gateway session id for correlation only", async () => {
     const { agent, store } = setup(clinic);
     await agent.handle({ channel: "ussd", phone: PHONE, input: "", newSession: true, gatewaySessionId: "ATUid_1" });
