@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of truncating), and USSD screen helpers (`toUssdSafe` safe
   character set with transliteration, `optionNumbers` skipping reserved
   `98`/`00`, `paginateText` and `paginateMenu` with a `98. More` line).
+- Engine in `@kalangu/core`: step builders (`menu`, `choose`, `ask`,
+  `say`, `confirm`), `createAgent` with `handle()` and a standard
+  `Request`/`Response` `requestHandler`, USSD and SMS renderers with a
+  matching input interpreter, channel helpers (`ussdChannel`,
+  `smsChannel`), an in-memory session store keyed by phone number with
+  resume-on-redial, `en`/`fr` messages with per-step localized text, and a
+  logger that masks phone numbers by default.
 - Design document `docs/design.md` for version 0.1: package layout, public
   API sketch, turn types (with `pay` reserved), engine and sessions keyed by
   phone number, deferral, the encoding-aware budgeter, Africa's Talking USSD

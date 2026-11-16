@@ -39,3 +39,42 @@ export {
   toUssdSafe,
 } from "./budget/ussd.js";
 export type { MenuLayout, SafeText, UssdBudget } from "./budget/ussd.js";
+
+export { createAgent, DEFAULT_RESUME_WINDOW_MS } from "./agent.js";
+export type { Agent, AgentConfig } from "./agent.js";
+export { smsChannel, ussdChannel } from "./channel.js";
+export type {
+  Channel,
+  InboundEvent,
+  Outcome,
+  RenderedOutbound,
+  Route,
+  RouteAgent,
+  SmsChannelOptions,
+  UssdChannelOptions,
+} from "./channel.js";
+export { systemClock } from "./clock.js";
+export type { Clock } from "./clock.js";
+export { BUILTIN_MESSAGES, createCatalog, en, fr } from "./locales.js";
+export type { Catalog, MessageKey, Messages, Text, Translate } from "./locales.js";
+export { consoleLogger, maskPhone, silentLogger } from "./logger.js";
+export type { LogFields, LogLevel, Logger } from "./logger.js";
+export { NotSupportedError, interpret, renderSms, renderUssd } from "./render.js";
+export type { ChannelKind, InterpretContext, Interpretation, RenderContext, Rendered } from "./render.js";
+export { freshRecord, memoryStore } from "./session.js";
+export type { Json, SessionRecord, SessionStore } from "./session.js";
+export { ask, choose, confirm, indexSteps, isStep, menu, say } from "./steps.js";
+export type {
+  AskStep,
+  Awaitable,
+  ConfirmStep,
+  Handler,
+  MenuEntry,
+  MenuStep,
+  Reply,
+  SayStep,
+  Step,
+  StepIndex,
+  Target,
+  TurnContext,
+} from "./steps.js";
