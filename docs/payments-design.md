@@ -437,16 +437,38 @@ provider other than pawaPay.
 
 ---
 
-## 14. Open questions
+## 14. Decisions (16 Nov 2026)
 
-1. **`amount` as a decimal string** in the `pay` turn (§4.1)? Recommended.
-2. **Re-check the callback with check-status** (one extra request per
-   payment) or trust a verified signature alone? Recommended: re-check.
-3. **Polling schedule and 72-hour give-up** (§6.5): too long, too short?
-4. **Unknown operator**: refuse (proposed), or show an operator menu?
-5. **PIN-prompt revival SMS** (§7.1): helpful, or noise when the prompt
-   simply took a few seconds?
-6. **One pending payment per user** (`maxPendingPerPhone: 1`) as the
-   default?
-7. **Where receipts go when SMS sending fails**: retry policy, and whether
-   to surface it in `onPaid`.
+Settled as defaults for the 0.2 build. Items marked *revisit* change if
+sandbox testing (§12) contradicts them.
+
+1. **`amount` is a decimal string** in the `pay` turn. Done (`parseTurn`
+   accepts `/^\d+(\.\d{1,2})?$/`, positive only).
+2. **Re-check every callback with check-status.** One extra request per
+   payment is cheap next to the cost of crediting a forged or replayed
+   callback. A verified signature alone is not enough.
+3. **Polling: backoff, give up at 72 hours.** Poll at 1, 2, 5, 15 and 60
+   minutes, then hourly. At 72 hours mark the payment `UNRESOLVED`, alert
+   the developer through the logger, and tell the user to contact the
+   payee. Never auto-fail a payment whose status is unknown. *Revisit*
+   against the provider's actual settlement windows.
+4. **Unknown operator: refuse.** Guessing an operator can charge the wrong
+   wallet. An operator menu is deferred until a country needs it.
+5. **Revival SMS: send once, after 60 seconds with no final status**, not
+   immediately. Never more than once per payment. Short enough to help,
+   late enough not to be noise. *Revisit* with operator timing data.
+6. **`maxPendingPerPhone` defaults to 1.** Raising it is an explicit
+   opt-in in the policy.
+7. **Receipt SMS failure: retry 3 times with backoff, then log and
+   continue.** The payment's status is never affected by a failed
+   receipt. `onPaid` is not blocked on it, and the receipt can be
+   re-sent from the stored record.
+
+### §3 (USSD session vs PIN prompt)
+
+The design stands: **on USSD, end our session first, then initiate the
+deposit.** It is the safe order whichever way operators behave, and it
+removes the 10-second bound from the provider call. The cost is one extra
+screen of friction. What remains unknown is operator behaviour, which only
+a real phone can show (§12, item 1). Until then the engine is built to
+this decision and nothing depends on the opposite being true.

@@ -26,8 +26,8 @@ describe("renderUssd", () => {
   });
 
   it("refuses pay until 0.2", () => {
-    expect(() => renderUssd({ kind: "pay", amount: 5, currency: "KES" }, ctx)).toThrow(NotSupportedError);
-    expect(() => renderSms({ kind: "pay", amount: 5, currency: "KES" }, ctx)).toThrow(NotSupportedError);
+    expect(() => renderUssd({ kind: "pay", amount: "5", currency: "KES" }, ctx)).toThrow(NotSupportedError);
+    expect(() => renderSms({ kind: "pay", amount: "5", currency: "KES" }, ctx)).toThrow(NotSupportedError);
   });
 
   it("warns about removed characters", () => {

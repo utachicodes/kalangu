@@ -45,7 +45,8 @@ export interface ConfirmTurn {
  */
 export interface PayTurn {
   readonly kind: "pay";
-  readonly amount: number;
+  /** Decimal string such as "500" or "2500.50"; never a float (docs/payments-design.md §4.1). */
+  readonly amount: string;
   /** ISO 4217 code, e.g. "KES", "XOF". */
   readonly currency: string;
   readonly reason?: string;
@@ -136,8 +137,8 @@ export function parseTurn(value: unknown): Turn {
     case "pay": {
       onlyKeys(obj, ["kind", "amount", "currency", "reason"]);
       const amount = obj["amount"];
-      if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
-        throw new TurnError("amount", `expected a positive finite number, got ${describe(amount)}`);
+      if (typeof amount !== "string" || !/^\d+(\.\d{1,2})?$/.test(amount) || !/[1-9]/.test(amount)) {
+        throw new TurnError("amount", `expected a positive decimal string such as "500" or "2500.50", got ${describe(amount)}`);
       }
       const currency = obj["currency"];
       if (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) {
