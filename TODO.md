@@ -57,7 +57,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   - [x] What the library does not guarantee; the agent never sees a PIN
     (§8, §9)
   - [x] Polling fallback for missed callbacks (§6.5)
-- [ ] Review the design, especially §3 (USSD session vs PIN prompt) and the
+- [x] Review the design, especially §3 (USSD session vs PIN prompt) and the
   open questions in §14
 - [ ] Read pawaPay's terms of service (the v2 API docs were read on
   16 Nov 2026; the 24-country figure is the company's own claim)
