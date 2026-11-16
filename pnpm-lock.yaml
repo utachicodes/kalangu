@@ -178,6 +178,12 @@ importers:
 
   packages/core: {}
 
+  packages/sim:
+    dependencies:
+      '@kalangu/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/ussd:
     dependencies:
       '@kalangu/core':
