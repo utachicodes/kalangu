@@ -21,8 +21,13 @@
   },
   "packageManager": "pnpm@12.6.0",
   "scripts": {
+    "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "demo": "echo \"The 10-minute keypad-phone demo arrives with v0.1 - see docs/design.md section 8\""
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
   }
 }
