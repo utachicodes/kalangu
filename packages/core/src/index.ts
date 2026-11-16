@@ -87,3 +87,29 @@ export type {
   Target,
   TurnContext,
 } from "./steps.js";
+
+export {
+  createPolicyCheck,
+  fromMinorUnits,
+  isCurrency,
+  maskPhoneForPolicy,
+  memoryPaymentStore,
+  refusalMessage,
+  toMinorUnits,
+} from "./payments/index.js";
+export type {
+  PaymentRecord,
+  PaymentStatus,
+  PaymentStore,
+  PaymentLimits,
+  PaymentRefusal,
+  ProviderBounds,
+  PolicyCheck,
+  PaymentProvider,
+  ProviderChoice,
+  ProviderOutcome,
+  Refusal,
+  InitiateResult,
+  StatusResult,
+  PaymentRoute,
+} from "./payments/index.js";
