@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "types": ["node"],
+    "paths": {
+      "@kalangu/core": ["../core/src/index.ts"]
+    }
+  },
+  "include": ["src", "test"]
+}
