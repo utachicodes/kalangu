@@ -7,6 +7,8 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [x] Read the official Africa's Talking USSD and SMS docs — done; findings in
   design doc §2, corrections in §2.5
 - [ ] Claim the `@kalangu` npm scope (found unclaimed 16 Nov 2026)
+  (packages are ready to publish: see [RELEASING.md](RELEASING.md); needs your
+  npm login, which this repo's tooling does not have)
 - [ ] Claim the GitHub organisation / repo name
 - [ ] Domain
 - [ ] Trademark search (a Hausa word — check local usage in target markets)
