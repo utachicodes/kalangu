@@ -184,6 +184,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/sms:
+    dependencies:
+      '@kalangu/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/ussd:
     dependencies:
       '@kalangu/core':
