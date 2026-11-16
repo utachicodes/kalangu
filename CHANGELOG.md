@@ -53,6 +53,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deadline. `pnpm demo` builds the workspace and runs it on the simulated
   keypad phone; `src/server.ts` serves it on Africa's Talking with Node's
   `http` module.
+
+### Changed
+
+- README: v0.1 status, package list, quick start, how to write an agent,
+  and known limits. CONTRIBUTING updated for working on the code.
+- Design document: corrected which French letters are in GSM-7, and added
+  §14 listing where the implementation differs from the design.
 - Design document `docs/design.md` for version 0.1: package layout, public
   API sketch, turn types (with `pay` reserved), engine and sessions keyed by
   phone number, deferral, the encoding-aware budgeter, Africa's Talking USSD

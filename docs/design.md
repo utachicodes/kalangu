@@ -1,6 +1,7 @@
 # Kalangu — v0.1 design
 
-Status: **draft for review**. No implementation yet.
+Status: **draft for review**. v0.1 is implemented in this repository;
+§14 lists where the code differs from this document.
 Date: 2026-11-16. Scope: version 0.1 only (core, ussd, sms, sim, one example).
 Payments, WhatsApp, voice and language detection are explicitly out of scope.
 
@@ -506,9 +507,11 @@ export const clinic = createAgent({
 export default clinic.requestHandler;   // standard Request → Response
 ```
 
-A French option is in the menu on purpose: it exercises the budgeter's UCS-2
-path only when the answer contains a non-GSM-7 char — French accents are in
-the GSM-7 basic set except for a few (œ, Œ, ŷ…) — and shows locale switching.
+A French option is in the menu on purpose: it shows locale switching and
+exercises the budgeter's UCS-2 path. Only some French letters are in the
+GSM-7 basic set (é, è, à, ù, É, Ç); others (ç, â, ê, î, ô, û, ë, ï, œ) are
+not, so many French answers are sent as UCS-2 at 70 characters per SMS.
+(An earlier draft said most French accents were GSM-7; that was wrong.)
 
 ---
 
@@ -572,3 +575,39 @@ terminal simulator → SMS adapter → deferral → clinic example → README.
 
 `pnpm demo` target: `examples/clinic` runs the simulator against the
 clinic agent. Nothing needs a gateway account or an API key.
+
+---
+
+## 14. Where v0.1 differs from this document
+
+Decided while building; each is open to review like the rest.
+
+1. **Every handler on a live channel runs under the deadline**, not only
+   handlers that call `ctx.model`. Any slow handler (a database, an API)
+   threatens the 10 s bound the same way. Menus with no handler still never
+   wait.
+2. **A late failure sends one apology SMS** (`common.error`) besides being
+   logged. The user was told to expect an SMS; silence would leave them
+   waiting.
+3. **No process-level `unhandledRejection` handler.** A library changing
+   process-wide behaviour surprises its host; every background task has its
+   own logged `catch` instead.
+4. **Resume window.** A dropped session resumes on redial within 5 minutes
+   (`resumeWindowMs`); after that the user starts at the top, keeping their
+   data and locale. A pending deferral is forgotten after 15 minutes.
+5. **Dial strings are replayed.** A new gateway session id counts as a
+   fresh dial, and `*384*1*2#` (whose first request already has `text=1*2`)
+   is replayed from the start menu.
+6. **Handler signature** is `(input, ctx)` everywhere, including menu
+   entries; the §9 sketch's `(ctx) => …` entries become `(_input, ctx) => …`.
+   Locale changes go through `ctx.locale`, not `ctx.session.locale`.
+   A handler that returns nothing goes back to the menu above.
+7. **Localized step text.** Titles, labels and messages accept
+   `{ en: "...", fr: "..." }` as well as plain strings.
+8. **An SMS turn is one message** that the network concatenates, capped at
+   4 segments, rather than separate messages: concatenated parts arrive in
+   order.
+9. **Locale strings are TypeScript modules**, not JSON files, so they ship
+   with the compiled package without a copy step.
+10. **The simulator** dials, prints boxed screens, and also has
+    `sms <text>` to text the agent; `SimPhone` is exported for tests.

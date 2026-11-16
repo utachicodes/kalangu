@@ -12,17 +12,28 @@ between towns across West Africa for centuries by imitating the tones of
 speech — a long-distance, low-bandwidth messaging network that needed no
 literacy and no smartphone. That is the job this toolkit does for agents.
 
-## Status: design review
+## Status: v0.1 in progress
 
-**Nothing is published on npm and no code ships yet.** This repository
-currently contains the v0.1 design, which is open for review:
+**Nothing is published on npm yet.** The v0.1 packages are built and
+tested in this repository; the design is still open for review, and the
+verify-first checklist in [TODO.md](TODO.md) (real operators, real costs)
+is not done.
 
 | Start here | What it is |
 |---|---|
+| `pnpm install && pnpm demo` | The clinic agent on a simulated keypad phone; no account or API key |
 | [docs/design.md](docs/design.md) | The v0.1 design: package layout, public API, turn types, sessions & deferral, the budgeter, Africa's Talking adapters, the simulator, the test plan |
 | [docs/design.md §12](docs/design.md#12-open-questions) | Seven open questions — the most useful feedback right now |
 | [TODO.md](TODO.md) | Build order and the verify-first checklist |
 | [CHANGELOG.md](CHANGELOG.md) | What has landed so far |
+
+| Package | What it does |
+|---|---|
+| `@kalangu/core` | Turns, steps, the budgeter, the engine, sessions, deferral. No runtime dependencies |
+| `@kalangu/ussd` | Africa's Talking USSD callbacks |
+| `@kalangu/sms` | Africa's Talking SMS: send, incoming messages, delivery reports |
+| `@kalangu/sim` | Terminal keypad-phone simulator, and a scriptable phone for tests |
+| `examples/clinic` | The example agent behind `pnpm demo` |
 
 ## The problem
 
@@ -74,19 +85,78 @@ simulated SMS — with no API key and no gateway account.
   real account or operator (§2.5).
 - The seven open questions in §12 are where your judgement matters most —
   they change defaults, not implementation details.
-- Open an issue or comment inline. Nothing is sacred yet; changing a design
-  is cheaper than changing code.
+- Open an issue or comment inline. Nothing is sacred yet; the code is
+  young enough that changing a design is still cheap.
 - If you run USSD services today: question #7 in [TODO.md](TODO.md) is for
   you — would deferral-to-SMS suit your users?
 
-## Local setup
+## Try it
 
 ```sh
-pnpm install    # workspace scaffolding; packages land with v0.1
-pnpm demo       # arrives with v0.1
+pnpm install
+pnpm demo
 ```
 
+Dial `*384*1#`, choose `2`, and ask a question. The example's fake nurse
+takes 6 seconds and the deadline is 4, so the screen says the answer will
+come by SMS, and a couple of seconds later it does. `x` hangs up mid-session
+(dial again to resume), `sms <text>` texts the agent, `q` quits.
+
 Requires Node 20 or later and pnpm. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Write an agent
+
+```ts
+import { ask, createAgent, menu, say } from "@kalangu/core";
+import { africasTalkingSms } from "@kalangu/sms";
+import { africasTalkingUssd } from "@kalangu/ussd";
+
+const agent = createAgent({
+  model: myModel, // anything; handlers get it as ctx.model
+  channels: [
+    africasTalkingUssd({ code: "*384*1#", path: "/ussd" }),
+    africasTalkingSms({ username: "...", apiKey: "...", senderId: "CLINIC", path: "/sms" }),
+  ],
+  start: menu("Clinic line", {
+    "Opening hours": say("Open Monday to Saturday, 8:00 to 18:00."),
+    "Ask a nurse": ask("Type your question", (question, ctx) => ctx.model.answer(question)),
+  }),
+});
+
+export default agent.requestHandler; // standard Request -> Response
+```
+
+- **Steps**: `menu`/`choose` (numbered options), `ask` (free text, or
+  `{ input: "number" }`), `confirm` (yes/no), `say` (final message). Text can
+  be a string or `{ en: "...", fr: "..." }`.
+- **Handlers** get `(input, ctx)` and return a string (a final message), a
+  step (shown next), or nothing (back to the menu above). `ctx.session` is
+  per-phone state, `ctx.locale` switches language.
+- **Deadline**: on USSD a handler has 4 s (`deadlineMs`, at most 10 s).
+  After that the user is told an SMS is coming, and the answer is sent by
+  SMS when it is ready. Fixed menus never wait.
+- **Serverless**: deferred answers run after the response is sent. Pass
+  `background: { run: (task) => ctx.waitUntil(task()) }` (or a queue) on
+  platforms that freeze the process, or those answers are never sent.
+- **Sessions** are in memory by default and keyed by phone number; pass a
+  durable `sessionStore` for production.
+- **Callbacks are not signed** by the gateway. Use hard-to-guess paths and,
+  where you can, allow only the gateway's IP addresses.
+
+[`examples/clinic/src/server.ts`](examples/clinic/src/server.ts) runs the
+example on Africa's Talking (sandbox or live) with Node's `http` module.
+
+## Known limits (v0.1)
+
+- A `*` typed inside a free-text USSD answer splits it; the gateway sends
+  no way to tell it apart from a separator. Numeric input is unaffected.
+- USSD screens are restricted to printable ASCII: accents are dropped
+  (`é` → `e`), letters such as `ŋ` are transliterated (`ng`), and anything
+  else is removed with a warning.
+- A redial while an answer is still pending repeats the "SMS shortly"
+  notice instead of waiting.
+- Payments (`pay` turn), WhatsApp, voice and language detection are later
+  versions.
 
 ## License
 
