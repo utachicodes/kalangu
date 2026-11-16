@@ -40,8 +40,17 @@ export {
 } from "./budget/ussd.js";
 export type { MenuLayout, SafeText, UssdBudget } from "./budget/ussd.js";
 
-export { createAgent, DEFAULT_RESUME_WINDOW_MS } from "./agent.js";
+export {
+  DEADLINE_MAX_MS,
+  DEADLINE_WARN_MS,
+  DEFAULT_DEADLINE_MS,
+  DEFAULT_RESUME_WINDOW_MS,
+  DEFERRAL_TTL_MS,
+  createAgent,
+} from "./agent.js";
 export type { Agent, AgentConfig } from "./agent.js";
+export { inProcessBackground } from "./background.js";
+export type { BackgroundWork } from "./background.js";
 export { smsChannel, ussdChannel } from "./channel.js";
 export type {
   Channel,

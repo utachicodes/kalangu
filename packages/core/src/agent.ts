@@ -2,8 +2,13 @@
  * The engine (docs/design.md §4.3): loads the caller's session, reads their
  * input against what they were last shown, runs the matching step or
  * handler, renders the result for the channel, and saves the session.
+ *
+ * Handlers on a live channel (USSD) run under a deadline (§4.6). If one
+ * misses it, the user gets the "we'll text you" screen, the handler keeps
+ * running in the background, and its answer arrives by SMS.
  */
 
+import { inProcessBackground, type BackgroundWork } from "./background.js";
 import { toUssdSafe } from "./budget/ussd.js";
 import type { Channel, InboundEvent, Outcome, RouteAgent } from "./channel.js";
 import { systemClock, type Clock } from "./clock.js";
@@ -39,6 +44,14 @@ export interface AgentConfig<M = any> {
   logPhoneNumbers?: boolean;
   clock?: Clock;
   /**
+   * How long a handler on a live channel may take before the answer is
+   * deferred to SMS, in ms. Default 4000. Above 8000 logs a warning; above
+   * 10000 is refused, since gateways expect a reply within 10 s.
+   */
+  deadlineMs?: number;
+  /** Where deferred answers and SMS replies run. Default: in this process. */
+  background?: BackgroundWork;
+  /**
    * How long a dropped session can be resumed by redialing, in ms.
    * After that the user starts from the top (their data and locale stay).
    * Default 5 minutes.
@@ -60,6 +73,11 @@ export interface Agent<M = any> extends RouteAgent {
 }
 
 export const DEFAULT_RESUME_WINDOW_MS = 5 * 60 * 1000;
+export const DEFAULT_DEADLINE_MS = 4000;
+export const DEADLINE_WARN_MS = 8000;
+export const DEADLINE_MAX_MS = 10_000;
+/** A deferral older than this is treated as lost (e.g. the process restarted). */
+export const DEFERRAL_TTL_MS = 15 * 60 * 1000;
 
 export function createAgent<M = any>(config: AgentConfig<M>): Agent<M> {
   const store = config.sessionStore ?? memoryStore();
@@ -73,6 +91,8 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
   const catalog = createCatalog(config.defaultLocale ?? "en", config.messages);
   const steps = indexSteps(config.start, config.steps);
   const resumeWindow = config.resumeWindowMs ?? DEFAULT_RESUME_WINDOW_MS;
+  const deadlineMs = checkDeadline(config.deadlineMs ?? DEFAULT_DEADLINE_MS, logger);
+  const background = config.background ?? inProcessBackground(logger);
   const mask = (phone: string) => (config.logPhoneNumbers ? phone : maskPhone(phone));
 
   const channels = new Map<string, Channel>();
@@ -87,12 +107,25 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
       routes.set(route.path, { channel, route });
     }
   }
+  const smsSender = config.channels.find((c) => c.kind === "sms" && c.send);
+  if (!smsSender && config.channels.some((c) => c.live)) {
+    logger.warn("No SMS channel can send: answers that miss the deadline cannot be delivered");
+  }
 
   const errorText = (locale?: string) =>
     catalog.translator(locale && catalog.has(locale) ? locale : catalog.defaultLocale)("common.error");
 
-  const background = (task: () => Promise<void>) => {
-    task().catch((err: unknown) => logger.error("Background task failed", { error: describeError(err) }));
+  const deps: Omit<RunDeps<M>, "saved"> = {
+    catalog,
+    steps,
+    logger,
+    model: config.model as M,
+    mask,
+    store,
+    clock,
+    background,
+    deadlineMs,
+    smsSender,
   };
 
   const agent: Agent<M> = {
@@ -100,7 +133,7 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
     logger,
     mask,
     errorText,
-    background,
+    background: (task) => background.run(task),
     channel: (id) => channels.get(id),
     withChannels: (next) => buildAgent({ ...config, channels: next }),
 
@@ -112,6 +145,7 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
       const loaded = await store.load(event.phone);
       const record = loaded ?? freshRecord(event.phone, catalog.defaultLocale, now);
       if (loaded && now - loaded.updatedAt > resumeWindow) resetPosition(record);
+      if (record.deferred && now - record.deferred.since > DEFERRAL_TTL_MS) record.deferred = null;
       const newGatewaySession =
         channel.live &&
         event.gatewaySessionId !== undefined &&
@@ -119,13 +153,9 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
       if (event.gatewaySessionId) record.gatewaySessionId = event.gatewaySessionId;
       if (newGatewaySession) event = { ...event, newSession: true };
 
-      const turn = new TurnRun<M>(record, channel, event, {
-        catalog,
-        steps,
-        logger,
-        model: config.model as M,
-        mask,
-      });
+      let markSaved!: () => void;
+      const saved = new Promise<void>((resolve) => (markSaved = resolve));
+      const turn = new TurnRun<M>(record, channel, event, { ...deps, saved });
 
       let outcome: Outcome;
       try {
@@ -149,12 +179,17 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
 
       record.channel = channel.id;
       record.updatedAt = clock.now();
-      await store.save(record);
+      try {
+        await store.save(record);
+      } finally {
+        markSaved();
+      }
       logger.debug("Turn", {
         channel: channel.id,
         phone: mask(event.phone),
         step: outcome.stepId,
         end: outcome.end,
+        deferred: outcome.deferred,
       });
       return outcome;
     },
@@ -169,13 +204,36 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
   return agent;
 }
 
+function checkDeadline(ms: number, logger: Logger): number {
+  if (!Number.isFinite(ms) || ms <= 0) throw new RangeError(`deadlineMs must be a positive number, got ${ms}`);
+  if (ms > DEADLINE_MAX_MS) {
+    throw new RangeError(
+      `deadlineMs is ${ms}; gateways expect a USSD reply within ${DEADLINE_MAX_MS} ms, so the most allowed is ${DEADLINE_MAX_MS}`,
+    );
+  }
+  if (ms > DEADLINE_WARN_MS) {
+    logger.warn(`deadlineMs is ${ms}; above ${DEADLINE_WARN_MS} ms leaves little room before the gateway gives up`);
+  }
+  return ms;
+}
+
 interface RunDeps<M> {
   catalog: Catalog;
   steps: StepIndex;
   logger: Logger;
   model: M;
   mask: (phone: string) => string;
+  store: SessionStore;
+  clock: Clock;
+  background: BackgroundWork;
+  deadlineMs: number;
+  /** The channel deferred answers go out on. */
+  smsSender: Channel | undefined;
+  /** Resolves once this turn's record has been saved. */
+  saved: Promise<void>;
 }
+
+type Race<T> = { done: true; value: T } | { done: false };
 
 /** One inbound event's worth of work. Mutates `record`; the caller saves it. */
 class TurnRun<M> {
@@ -192,8 +250,13 @@ class TurnRun<M> {
 
   async run(): Promise<Outcome> {
     const { record, channel, event } = this;
-    const shown = record.turn;
 
+    if (record.deferred) {
+      // An earlier answer is still on its way; say so again rather than block.
+      return this.deferredNotice();
+    }
+
+    const shown = record.turn;
     if (channel.live && event.newSession) {
       const replay = event.inputs ?? (event.input !== "" ? [event.input] : []);
       if (replay.length === 0) {
@@ -215,6 +278,30 @@ class TurnRun<M> {
       return this.showStep(this.deps.steps.start);
     }
     return this.answer(shown, event.input);
+  }
+
+  /** Turns a handler's reply into what to show next. Public for deferred delivery. */
+  finish(reply: Reply, owner: Step): Outcome {
+    if (reply === undefined || reply === null) {
+      const ownerId = this.deps.steps.id(owner);
+      const up = (ownerId && this.deps.steps.parent(ownerId)) || this.deps.steps.start;
+      return this.showStep(up);
+    }
+    if (typeof reply === "string") return this.showTurn({ kind: "say", text: reply }, null);
+    if (isStep(reply)) {
+      if (!this.deps.steps.id(reply)) {
+        throw new TypeError(
+          "A handler returned a step that isn't part of the agent. Declare it in the tree or pass it in createAgent({ steps }).",
+        );
+      }
+      return this.showStep(reply);
+    }
+    if (typeof reply === "object" && (reply as { kind?: unknown }).kind === "say") {
+      return this.showTurn(reply, null);
+    }
+    throw new TypeError(
+      "A handler may return a string, a say turn, a step, or nothing. For questions, return an ask, choose or confirm step.",
+    );
   }
 
   private async answer(shown: Turn, input: string): Promise<Outcome> {
@@ -266,32 +353,108 @@ class TurnRun<M> {
 
   private async runHandler(handler: Handler, input: string, owner: Step): Promise<Outcome> {
     const ctx = this.context(input);
-    const reply = await handler(input, ctx);
-    return this.resolve(reply, owner);
+    const work = Promise.resolve().then(() => handler(input, ctx));
+    if (!this.channel.live) return this.finish(await work, owner);
+
+    const result = await this.race(work);
+    if (result.done) return this.finish(result.value, owner);
+    return this.defer(work, owner);
   }
 
-  /** Turns a handler's reply into what to show next. */
-  private resolve(reply: Reply, owner: Step): Outcome {
-    if (reply === undefined || reply === null) {
-      const ownerId = this.deps.steps.id(owner);
-      const up = (ownerId && this.deps.steps.parent(ownerId)) || this.deps.steps.start;
-      return this.showStep(up);
+  /** Settles with the handler's reply, or `{ done: false }` at the deadline. */
+  private race(work: Promise<Reply>): Promise<Race<Reply>> {
+    const { clock, deadlineMs } = this.deps;
+    return new Promise((resolve, reject) => {
+      const timer = clock.setTimeout(() => resolve({ done: false }), deadlineMs);
+      work.then(
+        (value) => {
+          clock.clearTimeout(timer);
+          resolve({ done: true, value });
+        },
+        (err: unknown) => {
+          clock.clearTimeout(timer);
+          reject(err);
+        },
+      );
+    });
+  }
+
+  /** Ends the live session with the notice and finishes the answer by SMS. */
+  private defer(work: Promise<Reply>, owner: Step): Outcome {
+    const { record, deps, event } = this;
+    const sender = deps.smsSender;
+    if (!sender?.send) {
+      work.catch(() => {}); // Nobody will read it; don't let it go unhandled.
+      throw new Error("A handler missed the deadline and no SMS channel can send the answer");
     }
-    if (typeof reply === "string") return this.showTurn({ kind: "say", text: reply }, null);
-    if (isStep(reply)) {
-      if (!this.deps.steps.id(reply)) {
-        throw new TypeError(
-          "A handler returned a step that isn't part of the agent. Declare it in the tree or pass it in createAgent({ steps }).",
-        );
+    record.deferred = { since: deps.clock.now() };
+    deps.logger.info("Answer deferred to SMS", {
+      channel: this.channel.id,
+      phone: deps.mask(event.phone),
+      step: record.stepId,
+      deadlineMs: deps.deadlineMs,
+    });
+    deps.background.run(() => this.deliverLater(work, owner, sender));
+    return this.deferredNotice();
+  }
+
+  private deferredNotice(): Outcome {
+    const outcome = this.showTurn({ kind: "say", text: this.t("common.deferredNotice") }, null);
+    return { ...outcome, deferred: true };
+  }
+
+  /** Waits for the late answer, renders it for SMS, saves the session, and sends it. */
+  private async deliverLater(work: Promise<Reply>, owner: Step, sender: Channel): Promise<void> {
+    const { deps, event } = this;
+    let reply: Reply;
+    let failure: unknown;
+    try {
+      reply = await work;
+    } catch (err) {
+      failure = err;
+    }
+    await deps.saved;
+
+    // Start from the stored record (other turns may have happened) but keep
+    // what the handler changed. Last write wins, as documented.
+    const latest = (await deps.store.load(event.phone)) ?? structuredClone(this.record);
+    latest.data = this.record.data;
+    latest.locale = this.record.locale;
+    latest.deferred = null;
+
+    const run = new TurnRun<M>(latest, sender, { channel: sender.id, phone: event.phone, input: "" }, {
+      ...deps,
+      saved: Promise.resolve(),
+    });
+    let text: string;
+    if (failure === undefined) {
+      try {
+        text = run.finish(reply, owner).text;
+      } catch (err) {
+        failure = err;
+        text = "";
       }
-      return this.showStep(reply);
+    } else {
+      text = "";
     }
-    if (typeof reply === "object" && (reply as { kind?: unknown }).kind === "say") {
-      return this.showTurn(reply, null);
+    if (failure !== undefined) {
+      deps.logger.error("Deferred answer failed", {
+        phone: deps.mask(event.phone),
+        step: deps.steps.id(owner),
+        error: describeError(failure),
+      });
+      resetPosition(latest);
+      text = deps.catalog.translator(latest.locale)("common.error");
     }
-    throw new TypeError(
-      "A handler may return a string, a say turn, a step, or nothing. For questions, return an ask, choose or confirm step.",
-    );
+
+    latest.channel = sender.id;
+    latest.updatedAt = deps.clock.now();
+    await deps.store.save(latest);
+    await sender.send?.({ to: event.phone, text });
+    deps.logger.info(failure === undefined ? "Deferred answer sent" : "Deferred apology sent", {
+      channel: sender.id,
+      phone: deps.mask(event.phone),
+    });
   }
 
   private showStep(step: Step): Outcome {
