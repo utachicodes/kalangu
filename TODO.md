@@ -23,7 +23,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 
 ## v0.1 build order (each piece independently testable)
 
-- [ ] Turn types: `say`, `choose`, `ask`, `confirm`; `pay` reserved in the union
+- [x] Turn types: `say`, `choose`, `ask`, `confirm`; `pay` reserved in the union
 - [ ] Budgeter: encoding-aware counting (GSM-7 160/153 vs UCS-2 70/67,
   extension-table chars count double), pagination, reserved nav numbers
 - [ ] Engine + in-memory session store keyed by phone number
