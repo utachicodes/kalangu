@@ -41,6 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   raises `SmsSendError` with the gateway's own codes (including the `409`
   DND rejection), answers incoming messages by SMS in the background, and
   logs delivery reports.
+- Deferral in `@kalangu/core`: handlers on a live channel run under a
+  deadline (default 4000 ms; warns above 8000, refuses above 10000). A
+  missed deadline ends the session with the localized notice and the
+  answer is sent by SMS when it arrives; a late failure is logged and the
+  user gets one apology SMS. Redialing while an answer is pending repeats
+  the notice. Background work is pluggable (`BackgroundWork`) for
+  serverless platforms; the default runs in-process.
 - Design document `docs/design.md` for version 0.1: package layout, public
   API sketch, turn types (with `pay` reserved), engine and sessions keyed by
   phone number, deferral, the encoding-aware budgeter, Africa's Talking USSD

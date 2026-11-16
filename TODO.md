@@ -30,7 +30,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [x] `@kalangu/ussd` adapter, validated against recorded request fixtures
 - [x] Terminal keypad simulator
 - [x] `@kalangu/sms` adapter, validated against recorded request fixtures
-- [ ] Deferral + pluggable background-work interface
+- [x] Deferral + pluggable background-work interface
 - [ ] Clinic example agent with the fake slow model; `pnpm demo`
 - [ ] README how-to and docs polish
 - [ ] CI: typecheck + vitest on push
