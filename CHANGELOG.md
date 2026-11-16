@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@kalangu/sim`: terminal keypad-phone simulator. `SimPhone` drives an
   agent directly (dial, press, hang up, text, inbox) for tests; `runTerminal`
   puts a boxed-screen UI on top with `x` to hang up, `sms <text>` and `q`.
+- `@kalangu/sms`: Africa's Talking SMS adapter. Sends through the legacy
+  `/version1/messaging` endpoint behind an `SmsTransport` seam (HTTP 201
+  success, sandbox domain switch, `bulkSMSMode`, `enqueue` only when set),
+  raises `SmsSendError` with the gateway's own codes (including the `409`
+  DND rejection), answers incoming messages by SMS in the background, and
+  logs delivery reports.
 - Design document `docs/design.md` for version 0.1: package layout, public
   API sketch, turn types (with `pay` reserved), engine and sessions keyed by
   phone number, deferral, the encoding-aware budgeter, Africa's Talking USSD
