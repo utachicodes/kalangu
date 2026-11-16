@@ -1,7 +1,8 @@
 # Contributing
 
-Kalangu is at the **design stage**: the useful contribution right now is
-reviewing [docs/design.md](docs/design.md), not code.
+Kalangu's v0.1 packages are in this repository but nothing is published
+yet. Reviewing [docs/design.md](docs/design.md) is still the most useful
+contribution; code contributions are welcome too.
 
 ## Reviewing the design
 
@@ -16,9 +17,10 @@ reviewing [docs/design.md](docs/design.md), not code.
    design are always welcome — the brief for this project explicitly asks
    for that over workarounds.
 
-## When code lands (v0.1)
+## Working on the code
 
-- `pnpm install`, then `pnpm test` and `pnpm typecheck` at the root.
+- `pnpm install`, then `pnpm test`, `pnpm typecheck` and `pnpm build` at the
+  root. `pnpm demo` runs the example on the simulator.
 - Build order and test priorities are in `docs/design.md` §10 and §13.
   `@kalangu/core` must keep **zero runtime dependencies** and must never
   import a model SDK or a gateway SDK.

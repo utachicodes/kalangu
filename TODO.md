@@ -32,7 +32,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [x] `@kalangu/sms` adapter, validated against recorded request fixtures
 - [x] Deferral + pluggable background-work interface
 - [x] Clinic example agent with the fake slow model; `pnpm demo`
-- [ ] README how-to and docs polish
+- [x] README how-to and docs polish
 - [ ] CI: typecheck + vitest on push
 
 ## Design review — open questions to settle (design doc §12)
