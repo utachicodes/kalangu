@@ -71,8 +71,10 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   payments whose in-process polling died with a restart
 - [x] README note: on serverless, `reconcile()` on a schedule is the only
   reliable path (§6.5)
-- [ ] Atomic claim on `PaymentStore.update` for durable stores, so two
-  processes cannot notify or begin twice (§6.1)
+- [x] Atomic store primitives (`transition`, `claimNotification`,
+  `withPhoneLock`) so two processes cannot notify or begin twice (§6.1)
+- [ ] Session store compare-and-set, so a double-tapped Yes cannot start two
+  payments when `maxPendingPerPhone` is above 1
 - [ ] Read pawaPay's terms of service (the v2 API docs were read on
   16 Nov 2026; the 24-country figure is the company's own claim)
 - [ ] Sandbox account; work through the verify-first list in §12

@@ -74,6 +74,7 @@ export interface ReconcileOptions {
 export const DEFAULT_POLL_SCHEDULE_MS: readonly number[] = [60_000, 120_000, 300_000, 900_000, 3_600_000];
 export const DEFAULT_GIVE_UP_AFTER_MS = 72 * 3_600_000;
 const DAY_MS = 24 * 3_600_000;
+const NON_FINAL: readonly PaymentStatus[] = ["CREATED", "ACCEPTED", "PROCESSING", "IN_RECONCILIATION", "UNKNOWN"];
 
 /** What the user is shown and, on "Yes", exactly what is paid. */
 export interface Offer {
@@ -134,8 +135,9 @@ export function createPaymentController(
   const schedule = config.pollScheduleMs ?? DEFAULT_POLL_SCHEDULE_MS;
   const giveUpAfterMs = config.giveUpAfterMs ?? DEFAULT_GIVE_UP_AFTER_MS;
   const newId = config.newId ?? (() => globalThis.crypto.randomUUID());
-  // Serialises settling per payment within this process. A durable store
-  // shared by several processes must make `update` atomic itself.
+  // Saves duplicate provider calls when one process settles the same payment
+  // twice at once. Correctness across processes does not depend on it: that
+  // comes from the store's `transition`, `claimNotification` and `withPhoneLock`.
   const settling = new Map<string, Promise<PaymentRecord | null>>();
 
   const sleep = (ms: number) => new Promise<void>((resolve) => clock.setTimeout(resolve, ms));
@@ -157,9 +159,9 @@ export function createPaymentController(
 
   async function finalize(payment: PaymentRecord): Promise<void> {
     if (payment.notifiedAt !== undefined) return;
-    // Claim first, so a duplicate callback cannot notify the user twice.
-    const claimed = await store.update(payment.id, { notifiedAt: clock.now() });
-    if (claimed.notifiedAt === undefined) return;
+    // Claim first, atomically: of any number of racing callers, one wins.
+    const claimed = await store.claimNotification(payment.id, clock.now());
+    if (!claimed) return;
     try {
       await deps.onFinal(claimed);
     } catch (err) {
@@ -173,11 +175,22 @@ export function createPaymentController(
 
   async function apply(id: string, status: PaymentStatus, failureCode?: string): Promise<PaymentRecord> {
     const final = isFinalPaymentStatus(status);
-    const next = await store.update(id, {
-      status,
-      ...(failureCode !== undefined ? { failureCode } : {}),
-      ...(final ? { finalizedAt: clock.now() } : {}),
-    });
+    const next = await store.transition(
+      id,
+      {
+        status,
+        ...(failureCode !== undefined ? { failureCode } : {}),
+        ...(final ? { finalizedAt: clock.now() } : {}),
+      },
+      NON_FINAL,
+    );
+    if (!next) {
+      // Already final: someone else got there first. Their outcome stands.
+      const current = await store.get(id);
+      if (!current) throw new Error(`Payment ${id} not found`);
+      await finalize(current);
+      return current;
+    }
     if (final) await finalize(next);
     return next;
   }
@@ -246,25 +259,29 @@ export function createPaymentController(
       };
     },
 
-    async begin(phone, offer, where) {
-      const refused = await checkPolicy(phone, offer.amount, offer.currency);
-      if (refused) return refused;
-      const now = clock.now();
-      const payment: PaymentRecord = {
-        id: newId(),
-        phone,
-        provider: offer.provider,
-        amount: fromMinorUnits(toMinorUnits(offer.amount, offer.currency)),
-        currency: offer.currency,
-        reason: offer.reason,
-        stepId: where.stepId,
-        locale: where.locale,
-        status: "CREATED",
-        createdAt: now,
-        updatedAt: now,
-      };
-      await store.create(payment);
-      return { ok: true, payment };
+    begin(phone, offer, where) {
+      // Check and create under one lock, or two simultaneous "Yes" answers
+      // could both pass a limit that only one of them should.
+      return store.withPhoneLock(phone, async () => {
+        const refused = await checkPolicy(phone, offer.amount, offer.currency);
+        if (refused) return refused;
+        const now = clock.now();
+        const payment: PaymentRecord = {
+          id: newId(),
+          phone,
+          provider: offer.provider,
+          amount: fromMinorUnits(toMinorUnits(offer.amount, offer.currency)),
+          currency: offer.currency,
+          reason: offer.reason,
+          stepId: where.stepId,
+          locale: where.locale,
+          status: "CREATED",
+          createdAt: now,
+          updatedAt: now,
+        };
+        await store.create(payment);
+        return { ok: true as const, payment };
+      });
     },
 
     async run(id) {

@@ -58,8 +58,34 @@ export interface PaymentTotals {
 export interface PaymentStore {
   /** Creates the record. Fails if the id already exists (idempotency anchor). */
   create(payment: PaymentRecord): Promise<void>;
-  /** Atomically applies a partial change and returns the updated record. */
+  /** Applies a partial change and returns the updated record. */
   update(id: string, change: Partial<PaymentRecord>): Promise<PaymentRecord>;
+  /**
+   * Compare-and-set on the status: applies `change` only if the record's
+   * current status is one of `from`, atomically, and returns the updated
+   * record. Returns null (changing nothing) when the record is missing or in
+   * another status. This is what keeps a final status final when two
+   * processes, or a late callback, disagree.
+   */
+  transition(
+    id: string,
+    change: Partial<PaymentRecord>,
+    from: readonly PaymentStatus[],
+  ): Promise<PaymentRecord | null>;
+  /**
+   * Compare-and-set on `notifiedAt`: sets it to `at` only if it is unset,
+   * atomically. Returns the updated record to exactly one caller and null to
+   * every other, so the user hears each outcome once however many processes
+   * race to deliver it.
+   */
+  claimNotification(id: string, at: number): Promise<PaymentRecord | null>;
+  /**
+   * Runs `work` while holding a lock for this phone number, across every
+   * process that shares the store (a Postgres advisory lock, a Redis lock).
+   * The engine checks the payment limits and records the payment inside it,
+   * so two simultaneous "Yes" answers cannot both pass a limit of one.
+   */
+  withPhoneLock<T>(phone: string, work: () => Promise<T>): Promise<T>;
   get(id: string): Promise<PaymentRecord | null>;
   /**
    * Payments older than the threshold that are not yet final, for
@@ -83,6 +109,7 @@ export interface PaymentStore {
  */
 export function memoryPaymentStore(): PaymentStore & { readonly size: number } {
   const records = new Map<string, PaymentRecord>();
+  const locks = new Map<string, Promise<unknown>>();
   return {
     async create(payment) {
       if (records.has(payment.id)) {
@@ -96,6 +123,30 @@ export function memoryPaymentStore(): PaymentStore & { readonly size: number } {
       const next: PaymentRecord = structuredClone({ ...current, ...change, updatedAt: Date.now() });
       records.set(id, next);
       return next;
+    },
+    async transition(id, change, from) {
+      const current = records.get(id);
+      if (!current || !from.includes(current.status)) return null;
+      const next: PaymentRecord = structuredClone({ ...current, ...change, updatedAt: Date.now() });
+      records.set(id, next);
+      return structuredClone(next);
+    },
+    async claimNotification(id, at) {
+      const current = records.get(id);
+      if (!current || current.notifiedAt !== undefined) return null;
+      const next: PaymentRecord = { ...current, notifiedAt: at, updatedAt: Date.now() };
+      records.set(id, next);
+      return structuredClone(next);
+    },
+    withPhoneLock(phone, work) {
+      const previous = locks.get(phone) ?? Promise.resolve();
+      const run = previous.then(work, work);
+      const tail = run.catch(() => {});
+      locks.set(phone, tail);
+      void tail.then(() => {
+        if (locks.get(phone) === tail) locks.delete(phone);
+      });
+      return run;
     },
     async get(id) {
       const record = records.get(id);

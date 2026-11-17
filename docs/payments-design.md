@@ -232,6 +232,10 @@ Payments get their own durable store, separate from sessions:
 interface PaymentStore {
   create(payment: PaymentRecord): Promise<void>;          // fails if the id exists
   update(id: string, change: Partial<PaymentRecord>): Promise<PaymentRecord>;
+  // Atomic primitives (see below): the store, not the engine, makes these safe.
+  transition(id: string, change: Partial<PaymentRecord>, from: PaymentStatus[]): Promise<PaymentRecord | null>;
+  claimNotification(id: string, at: number): Promise<PaymentRecord | null>;
+  withPhoneLock<T>(phone: string, work: () => Promise<T>): Promise<T>;
   get(id: string): Promise<PaymentRecord | null>;
   pending(olderThanMs: number): Promise<PaymentRecord[]>; // for reconciliation
   totals(phone: string, currency: string, sinceMs: number): Promise<{ pending: string; completed: string }>;
@@ -256,6 +260,22 @@ interface PaymentRecord {
 }
 ```
 
+- **Three operations must be atomic across every process that shares the
+  store.** The in-memory store gets them for free; a durable store has to
+  provide them:
+  - `transition(id, change, from)` is a compare-and-set on `status`. It
+    keeps a final status final when a stale status check or a late callback
+    arrives after another process has recorded the outcome. In SQL:
+    `UPDATE … SET … WHERE id = $1 AND status = ANY($2)`.
+  - `claimNotification(id, at)` is a compare-and-set on `notifiedAt`, so of
+    any number of racing deliverers exactly one gets the claim. In SQL:
+    `UPDATE … SET notified_at = $2 WHERE id = $1 AND notified_at IS NULL`.
+  - `withPhoneLock(phone, work)` serialises the limit check and the create
+    for one phone, so two simultaneous "Yes" answers cannot both pass a
+    limit of one. In Postgres, `pg_advisory_xact_lock(hashtext(phone))`.
+  Known gap: with `maxPendingPerPhone` above 1, a double-tapped "Yes" can
+  still start two payments, since sessions have no compare-and-set. The
+  default of 1 prevents it.
 - An in-memory store ships **for tests and the simulator only**. Using it
   with a real provider logs an error at startup: a restart would forget
   pending payments.

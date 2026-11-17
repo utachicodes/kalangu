@@ -500,3 +500,85 @@ describe("reconcile", () => {
     expect((await t.store.get("a"))?.status).toBe("PROCESSING"); // retried next sweep
   });
 });
+
+describe("two processes sharing one store", () => {
+  function twoProcesses() {
+    const first = setup({ payments: { policy: { currencies: ["KES"], maxPerPayment: { KES: "5000" }, maxPendingPerPhone: 1 } } });
+    const frozen: Clock = { now: () => first.clock.now(), setTimeout: () => 0, clearTimeout: () => {} };
+    const second = setup({ provider: first.fake, shared: { store: first.store, sessions: first.sessions, clock: frozen } });
+    return { first, second };
+  }
+
+  it("notifies once when both processes deliver the same finished-but-unannounced payment", async () => {
+    const { first, second } = twoProcesses();
+    const now = first.clock.now();
+    // Final in the store, outcome never sent: e.g. the process died right after the status landed.
+    await first.store.create({
+      id: "done", phone: PHONE, provider: "TEST_MOMO", amount: "500.00", currency: "KES", reason: "Consultation",
+      stepId: "start.1", locale: "en", status: "COMPLETED", createdAt: now - 1000, updatedAt: now - 1000,
+    });
+    await Promise.all([first.agent.payments!.settle("done"), second.agent.payments!.settle("done")]);
+    await flush();
+    expect(first.sent.length + second.sent.length).toBe(2); // the outcome and the receipt, once
+  });
+
+  it("notifies once when both processes see the final status at the same time", async () => {
+    const { first, second } = twoProcesses();
+    await toConfirm(first);
+    await first.press("1");
+    await flush();
+    const id = first.fake.initiated[0]!.id;
+    first.fake.set(id, { found: true, status: "COMPLETED" });
+    await Promise.all([first.agent.payments!.settle(id), second.agent.payments!.settle(id)]);
+    await flush();
+    expect(first.sent.length + second.sent.length).toBe(2);
+  });
+
+  it("starts one payment when two Yes answers race past the limit check", async () => {
+    const first = setup();
+    // Slow the limit check so both answers are inside it at once; without a lock both pass.
+    const real = first.store.totals.bind(first.store);
+    first.store.totals = async (...args) => {
+      const result = await real(...args);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return result;
+    };
+    await first.dial();
+    await first.press("1");
+    // Same session copy answered twice at once, e.g. a double-tapped Yes on SMS.
+    const record = await first.sessions.load(PHONE);
+    const second = setup({
+      provider: first.fake,
+      shared: { store: first.store, sessions: first.sessions, clock: first.clock },
+      payments: { newId: () => "ffffffff-0000-4000-8000-000000000002" }, // distinct from the first process's ids
+    });
+    await Promise.all([first.press("1"), (async () => { await first.sessions.save(record!); return second.press("1"); })()]);
+    await flush();
+    expect(first.store.size).toBe(1);
+    expect(first.fake.initiated).toHaveLength(1);
+  });
+
+  it("never lets a stale status read overwrite a final one", async () => {
+    const { first } = twoProcesses();
+    await toConfirm(first);
+    await first.press("1");
+    await flush();
+    const id = first.fake.initiated[0]!.id;
+
+    // This process asks the provider and is slow to get the answer, which is already out of date.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    first.fake.provider.status = async () => {
+      await gate;
+      return { found: true, status: "IN_RECONCILIATION" };
+    };
+    const stale = first.agent.payments!.settle(id);
+    await flush();
+
+    // Meanwhile another process records the real outcome.
+    await first.store.transition(id, { status: "COMPLETED", finalizedAt: Date.now() }, ["ACCEPTED", "PROCESSING"]);
+    release();
+    await stale;
+    expect((await first.store.get(id))?.status).toBe("COMPLETED");
+  });
+});

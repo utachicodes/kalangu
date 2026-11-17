@@ -120,4 +120,59 @@ describe("memoryPaymentStore", () => {
     await store.create(record({ id: "pay-2", phone: "+254700000002" }));
     expect(store.size).toBe(2);
   });
+
+  describe("atomic operations", () => {
+    it("claimNotification gives exactly one of many racing callers the claim", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record({ status: "COMPLETED" }));
+      const results = await Promise.all(Array.from({ length: 10 }, (_, i) => store.claimNotification("pay-1", 1000 + i)));
+      expect(results.filter((r) => r !== null)).toHaveLength(1);
+      expect((await store.get("pay-1"))?.notifiedAt).toBeDefined();
+      expect(await store.claimNotification("pay-1", 5)).toBeNull();
+    });
+
+    it("claimNotification on a missing payment returns null", async () => {
+      expect(await memoryPaymentStore().claimNotification("nope", 1)).toBeNull();
+    });
+
+    it("transition applies only from the listed statuses", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record({ status: "PROCESSING" }));
+      const done = await store.transition("pay-1", { status: "COMPLETED" }, ["CREATED", "ACCEPTED", "PROCESSING"]);
+      expect(done?.status).toBe("COMPLETED");
+      // Final now: a late PROCESSING must not win.
+      expect(await store.transition("pay-1", { status: "PROCESSING" }, ["CREATED", "ACCEPTED", "PROCESSING"])).toBeNull();
+      expect((await store.get("pay-1"))?.status).toBe("COMPLETED");
+    });
+
+    it("transition on a missing payment returns null", async () => {
+      expect(await memoryPaymentStore().transition("nope", { status: "FAILED" }, ["CREATED"])).toBeNull();
+    });
+
+    it("withPhoneLock runs work for one phone one at a time, in order", async () => {
+      const store = memoryPaymentStore();
+      const log: string[] = [];
+      const job = (name: string, ms: number) => () =>
+        (async () => {
+          log.push(`${name} start`);
+          await new Promise((resolve) => setTimeout(resolve, ms));
+          log.push(`${name} end`);
+          return name;
+        })();
+      const out = await Promise.all([
+        store.withPhoneLock("+1", job("a", 20)),
+        store.withPhoneLock("+1", job("b", 1)),
+        store.withPhoneLock("+2", job("c", 1)), // another phone is not blocked
+      ]);
+      expect(out).toEqual(["a", "b", "c"]);
+      expect(log.indexOf("a end")).toBeLessThan(log.indexOf("b start"));
+      expect(log.indexOf("c start")).toBeLessThan(log.indexOf("a end"));
+    });
+
+    it("withPhoneLock releases the lock when work throws", async () => {
+      const store = memoryPaymentStore();
+      await expect(store.withPhoneLock("+1", async () => { throw new Error("boom"); })).rejects.toThrow("boom");
+      expect(await store.withPhoneLock("+1", async () => "ok")).toBe("ok");
+    });
+  });
 });

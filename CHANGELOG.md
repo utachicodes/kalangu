@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   settles non-final payments, re-initiates fresh never-initiated ones,
   fails old never-started ones, and marks payments past the give-up window
   `UNRESOLVED`. It reports what it did and survives a failing payment.
+- `PaymentStore` gains three atomic operations a durable store must
+  implement: `transition` (a final status stays final), `claimNotification`
+  (each outcome is announced once) and `withPhoneLock` (limits cannot be
+  raced past). Fixes a bug where two processes could both notify the user.
 - Payment refusals (policy rules and provider reasons) are localized in `en`
   and `fr` through `payments.refusal.*` messages, which can be overridden.
 
