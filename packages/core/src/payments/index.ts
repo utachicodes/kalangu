@@ -31,4 +31,10 @@ export type {
 } from "./provider.js";
 
 export type { Offer, OfferResult, PaymentController, PaymentRefused, RefusalReason, ReconcileOptions, ReconcileReport, PaymentPolicyConfig, PaymentsConfig } from "./controller.js";
-export { DEFAULT_GIVE_UP_AFTER_MS, DEFAULT_POLL_SCHEDULE_MS, createPaymentController } from "./controller.js";
+export {
+  DEFAULT_GIVE_UP_AFTER_MS,
+  DEFAULT_POLL_REPEAT_MS,
+  DEFAULT_POLL_SCHEDULE_MS,
+  MAX_NOTIFY_ATTEMPTS,
+  createPaymentController,
+} from "./controller.js";

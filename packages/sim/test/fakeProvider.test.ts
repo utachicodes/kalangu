@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFakeProvider } from "../src/index.js";
 
 const payment = {
   id: "pay-1",
   phone: "+254700000001",
   provider: "FAKE_MOMO",
+  providerPhone: "254700000001",
   amount: "1000.00",
   currency: "KES",
   reason: "Consultation",
@@ -16,6 +17,10 @@ const payment = {
 };
 
 describe("createFakeProvider", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("resolves to a provider choice with a sanitised phone", async () => {
     const provider = createFakeProvider({ provider: "FAKE_MOMO", country: "XA" });
     const choice = await provider.resolve("+254700000001", "1000", "KES");
@@ -45,10 +50,14 @@ describe("createFakeProvider", () => {
   });
 
   it("reports PROCESSING until the delay has passed, then COMPLETED", async () => {
-    const provider = createFakeProvider({ settleAfterMs: 40 });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(1_000_000);
+    const provider = createFakeProvider({ settleAfterMs: 3000 });
     await provider.initiate(payment);
     expect(await provider.status("pay-1")).toMatchObject({ found: true, status: "PROCESSING" });
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    vi.setSystemTime(1_000_000 + 2999);
+    expect(await provider.status("pay-1")).toMatchObject({ found: true, status: "PROCESSING" });
+    vi.setSystemTime(1_000_000 + 3000);
     expect(await provider.status("pay-1")).toMatchObject({ found: true, status: "COMPLETED" });
   });
 

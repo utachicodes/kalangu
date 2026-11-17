@@ -465,7 +465,7 @@ class TurnRun<M> {
   }
 
   /** Settles with the handler's reply, or `{ done: false }` at the deadline. */
-  private race(work: Promise<Reply>): Promise<Race<Reply>> {
+  private race<T>(work: Promise<T>): Promise<Race<T>> {
     const { clock, deadlineMs } = this.deps;
     return new Promise((resolve, reject) => {
       const timer = clock.setTimeout(() => resolve({ done: false }), deadlineMs);
@@ -573,9 +573,33 @@ class TurnRun<M> {
   /** Policy check and operator lookup first; the confirm screen only if both allow it. */
   private async showPay(step: PayStep): Promise<Outcome> {
     const payments = this.paymentsOrThrow();
-    const spec = await step.spec(this.context(""));
-    const reason = spec.reason === undefined ? "" : this.deps.catalog.localize(spec.reason, this.record.locale);
-    const result = await payments.offer(this.event.phone, { amount: spec.amount, currency: spec.currency, reason });
+    const prepare = async () => {
+      const spec = await step.spec(this.context(""));
+      const reason = spec.reason === undefined ? "" : this.deps.catalog.localize(spec.reason, this.record.locale);
+      const result = await payments.offer(this.event.phone, { amount: spec.amount, currency: spec.currency, reason });
+      return { spec, reason, result };
+    };
+    const work = prepare();
+    let prepared: Awaited<ReturnType<typeof prepare>>;
+    if (this.channel.live) {
+      // Looking up the operator is a network call. On a live channel it gets the same
+      // deadline as a handler; offering a payment has no side effects, so on a miss the
+      // user is told to try again and the late answer is dropped.
+      const raced = await this.race(work);
+      if (!raced.done) {
+        work.catch(() => {});
+        this.deps.logger.warn("Payment preparation missed the deadline", {
+          channel: this.channel.id,
+          phone: this.deps.mask(this.event.phone),
+          deadlineMs: this.deps.deadlineMs,
+        });
+        return this.showTurn({ kind: "say", text: this.t("payments.unavailable") }, null);
+      }
+      prepared = raced.value;
+    } else {
+      prepared = await work;
+    }
+    const { spec, reason, result } = prepared;
     if (!result.ok) {
       return this.runPayTarget(step.onFailed, this.refused(spec.amount, spec.currency, reason, result.reason), step);
     }
@@ -587,8 +611,10 @@ class TurnRun<M> {
       provider: result.offer.provider,
       providerPhone: result.offer.providerPhone,
     };
-    const vars = { amount: spec.amount, currency: spec.currency, payee: payments.payeeName, reason };
-    const question = this.t(reason === "" ? "payments.confirmNoReason" : "payments.confirm", vars);
+    // Render the offer that was accepted, the same one "Yes" will pay.
+    const { offer } = result;
+    const vars = { amount: offer.amount, currency: offer.currency, payee: payments.payeeName, reason: offer.reason };
+    const question = this.t(offer.reason === "" ? "payments.confirmNoReason" : "payments.confirm", vars);
     return this.showTurn({ kind: "confirm", question }, this.deps.steps.id(step) ?? null);
   }
 
@@ -616,7 +642,12 @@ class TurnRun<M> {
       return this.runPayTarget(step.onFailed, this.refused(intent.amount, intent.currency, intent.reason, begun.reason), step);
     }
     const { payment } = begun;
-    this.deps.background.run(() => payments.run(payment.id));
+    // Not before this turn's session is saved: a provider that rejects at once would
+    // otherwise deliver the outcome against a session this turn then overwrites.
+    this.deps.background.run(async () => {
+      await this.deps.saved;
+      await payments.run(payment.id);
+    });
     this.deps.logger.info("Payment started", {
       payment: payment.id,
       phone: this.deps.mask(this.event.phone),
@@ -639,7 +670,19 @@ class TurnRun<M> {
 
   private async runPayTarget(target: PayTarget, outcome: PaymentOutcome, owner: Step): Promise<Outcome> {
     if (isStep(target)) return this.showStep(target);
-    return this.finish(await target(outcome, this.context("")), owner);
+    const reply = await target(outcome, this.context(""));
+    if ((reply === undefined || reply === null) && this.fallbackFor(owner) === owner) {
+      // "Back to the menu above" would land on this same pay step and offer the payment
+      // again (a root pay step has no menu above it). End with a plain message instead.
+      return this.showTurn({ kind: "say", text: outcome.failureMessage ?? this.t("payments.paid") }, null);
+    }
+    return this.finish(reply, owner);
+  }
+
+  /** The step a handler that returns nothing goes back to. */
+  private fallbackFor(owner: Step): Step {
+    const ownerId = this.deps.steps.id(owner);
+    return (ownerId && this.deps.steps.parent(ownerId)) || this.deps.steps.start;
   }
 
   /** What the user hears when a payment reaches a final status. */

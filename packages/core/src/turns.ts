@@ -140,6 +140,10 @@ export function parseTurn(value: unknown): Turn {
       if (typeof amount !== "string" || !/^\d+(\.\d{1,2})?$/.test(amount) || !/[1-9]/.test(amount)) {
         throw new TurnError("amount", `expected a positive decimal string such as "500" or "2500.50", got ${describe(amount)}`);
       }
+      const [whole = "", frac = ""] = amount.split(".");
+      if (!Number.isSafeInteger(Number(`${whole}${frac.padEnd(2, "0")}`))) {
+        throw new TurnError("amount", `${describe(amount)} is too large to handle exactly`);
+      }
       const currency = obj["currency"];
       if (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency)) {
         throw new TurnError("currency", `expected an ISO 4217 code such as "KES", got ${describe(currency)}`);

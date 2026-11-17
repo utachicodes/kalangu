@@ -71,6 +71,15 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   payments whose in-process polling died with a restart
 - [x] README note: on serverless, `reconcile()` on a schedule is the only
   reliable path (§6.5)
+- [x] Address the CodeRabbit review of the payments PR: old in-flight payments
+  counted by the pending limit, failed outcome deliveries retried by
+  `reconcile`, outcome delivery waits for the turn's session save, `reconcile`
+  gives up when a status check keeps failing, root pay step refusal no longer
+  loops, operator lookup under the USSD deadline, provider phone stored,
+  exact decimal totals, provider minimum, `"100.0"` accepted for NONE
+  decimals, ids immutable
+- [ ] Make outcome delivery and a concurrent turn safe together (known limit,
+  payments design §9): needs a way to retry `onPaid` without running it twice
 - [x] Atomic store primitives (`transition`, `claimNotification`,
   `withPhoneLock`) so two processes cannot notify or begin twice (§6.1)
 - [x] Session store compare-and-set, so a double-tapped Yes cannot start two

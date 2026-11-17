@@ -38,6 +38,8 @@ export interface PaymentsConfig {
    * it repeats hourly until `giveUpAfterMs`. Default 1, 2, 5, 15, 60 minutes.
    */
   readonly pollScheduleMs?: readonly number[];
+  /** Wait between status checks once `pollScheduleMs` is used up, in ms. Default hourly. */
+  readonly pollRepeatMs?: number;
   /** Mark a payment UNRESOLVED after this long without a final status. Default 72 h. */
   readonly giveUpAfterMs?: number;
   /** Id source, for tests. Default `crypto.randomUUID`. */
@@ -53,6 +55,8 @@ export interface ReconcileReport {
   readonly failed: number;
   readonly unresolved: number;
   readonly stillPending: number;
+  /** Final payments whose outcome had not reached the user and was delivered now. */
+  readonly redelivered: number;
   /** Payments whose check threw (provider down, store error); retried next sweep. */
   readonly errors: number;
 }
@@ -73,6 +77,9 @@ export interface ReconcileOptions {
 
 export const DEFAULT_POLL_SCHEDULE_MS: readonly number[] = [60_000, 120_000, 300_000, 900_000, 3_600_000];
 export const DEFAULT_GIVE_UP_AFTER_MS = 72 * 3_600_000;
+export const DEFAULT_POLL_REPEAT_MS = 3_600_000;
+/** After this many failed deliveries the outcome stays in the store for a human. */
+export const MAX_NOTIFY_ATTEMPTS = 5;
 const DAY_MS = 24 * 3_600_000;
 const NON_FINAL: readonly PaymentStatus[] = ["CREATED", "ACCEPTED", "PROCESSING", "IN_RECONCILIATION", "UNKNOWN"];
 
@@ -134,6 +141,7 @@ export function createPaymentController(
   const policy = buildPolicy(config.policy);
   const schedule = config.pollScheduleMs ?? DEFAULT_POLL_SCHEDULE_MS;
   const giveUpAfterMs = config.giveUpAfterMs ?? DEFAULT_GIVE_UP_AFTER_MS;
+  const pollRepeatMs = config.pollRepeatMs ?? DEFAULT_POLL_REPEAT_MS;
   const newId = config.newId ?? (() => globalThis.crypto.randomUUID());
   // Saves duplicate provider calls when one process settles the same payment
   // twice at once. Correctness across processes does not depend on it: that
@@ -165,11 +173,16 @@ export function createPaymentController(
     try {
       await deps.onFinal(claimed);
     } catch (err) {
-      logger.error("Payment outcome could not be delivered", {
-        payment: payment.id,
-        phone: mask(payment.phone),
-        error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
-      });
+      // Give the claim back, so the next reconcile sweep tries again instead of
+      // the user never hearing the outcome.
+      await store.releaseNotification(payment.id);
+      const attempts = (claimed.notifyAttempts ?? 0) + 1;
+      logger.error(
+        attempts >= MAX_NOTIFY_ATTEMPTS
+          ? "Payment outcome could not be delivered; giving up, it stays in the store"
+          : "Payment outcome could not be delivered; reconcile will retry",
+        { payment: payment.id, phone: mask(payment.phone), attempts, error: describe(err) },
+      );
     }
   }
 
@@ -270,6 +283,7 @@ export function createPaymentController(
           id: newId(),
           phone,
           provider: offer.provider,
+          providerPhone: offer.providerPhone,
           amount: fromMinorUnits(toMinorUnits(offer.amount, offer.currency)),
           currency: offer.currency,
           reason: offer.reason,
@@ -291,7 +305,7 @@ export function createPaymentController(
       if (isFinalPaymentStatus(updated.status)) return;
 
       for (let i = 0; ; i++) {
-        const wait = schedule[Math.min(i, schedule.length - 1)] ?? 3_600_000;
+        const wait = schedule[i] ?? pollRepeatMs;
         await sleep(wait);
         let current: PaymentRecord | null = null;
         try {
@@ -315,6 +329,7 @@ export function createPaymentController(
       let failed = 0;
       let unresolved = 0;
       let stillPending = 0;
+      let redelivered = 0;
       let errors = 0;
 
       for (const payment of pending) {
@@ -338,10 +353,34 @@ export function createPaymentController(
         } catch (err) {
           errors++;
           logger.error("Reconciliation failed for a payment", { payment: payment.id, error: describe(err) });
+          // A provider that keeps failing must not keep a payment pending forever.
+          if (clock.now() - payment.createdAt >= giveUpAfterMs) {
+            try {
+              await giveUp(payment);
+              unresolved++;
+            } catch (giveUpErr) {
+              logger.error("Could not mark a payment unresolved", { payment: payment.id, error: describe(giveUpErr) });
+            }
+          }
         }
       }
-      logger.info("Payments reconciled", { checked: pending.length, completed, failed, unresolved, stillPending, errors });
-      return { checked: pending.length, completed, failed, unresolved, stillPending, errors };
+
+      // Final payments whose outcome never reached the user (the SMS failed, or the
+      // process died between recording the status and sending it).
+      for (const payment of await store.unnotified()) {
+        if ((payment.notifyAttempts ?? 0) >= MAX_NOTIFY_ATTEMPTS) continue;
+        if (clock.now() - (payment.finalizedAt ?? payment.updatedAt) < minAgeMs) continue;
+        try {
+          await finalize(payment);
+          if ((await store.get(payment.id))?.notifiedAt !== undefined) redelivered++;
+        } catch (err) {
+          errors++;
+          logger.error("Redelivering a payment outcome failed", { payment: payment.id, error: describe(err) });
+        }
+      }
+
+      logger.info("Payments reconciled", { checked: pending.length, completed, failed, unresolved, stillPending, redelivered, errors });
+      return { checked: pending.length, completed, failed, unresolved, stillPending, redelivered, errors };
     },
 
     settle(id) {

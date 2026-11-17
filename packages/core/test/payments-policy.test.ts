@@ -33,6 +33,12 @@ describe("toMinorUnits / fromMinorUnits", () => {
     expect(toMinorUnits("10", "XOF")).toBe(1000);
   });
 
+  it("refuses amounts too large to keep exact", () => {
+    expect(toMinorUnits("90071992547409.91", "KES")).toBe(9007199254740991);
+    expect(() => toMinorUnits("90071992547409.93", "KES")).toThrow(/too large/);
+    expect(() => toMinorUnits("99999999999999999999", "KES")).toThrow(/too large/);
+  });
+
   it("round-trips", () => {
     expect(fromMinorUnits(toMinorUnits("2500.50", "KES"))).toBe("2500.50");
   });
@@ -154,6 +160,27 @@ describe("createPolicyCheck", () => {
     expect(out).toMatchObject({ reason: "decimals" });
   });
 
+  it("accepts whole amounts written with a zero fraction when the provider uses NONE decimals", () => {
+    const check = createPolicyCheck(limits());
+    for (const amount of ["100", "100.0", "100.00"]) {
+      const out = check.check({
+        amount, currency: "KES", pendingCount: 0, completedTodayMinorUnits: 0,
+        providerBounds: { decimals: "NONE" },
+      });
+      expect(out, amount).toBeNull();
+    }
+    expect(
+      check.check({ amount: "100.05", currency: "KES", pendingCount: 0, completedTodayMinorUnits: 0, providerBounds: { decimals: "NONE" } }),
+    ).toMatchObject({ reason: "decimals" });
+  });
+
+  it("enforces the provider's minimum amount", () => {
+    const check = createPolicyCheck(limits());
+    const base = { currency: "KES", pendingCount: 0, completedTodayMinorUnits: 0, providerBounds: { minAmount: 10000 } };
+    expect(check.check({ ...base, amount: "99.99" })).toMatchObject({ reason: "amount-bounds" });
+    expect(check.check({ ...base, amount: "100" })).toBeNull();
+  });
+
   it("allows fractional amounts when the provider uses TWO_PLACES", () => {
     const check = createPolicyCheck(limits());
     const out = check.check({
@@ -176,6 +203,15 @@ describe("createPolicyCheck", () => {
       providerBounds: { closed: true },
     });
     expect(out).toMatchObject({ reason: "provider-closed" });
+  });
+
+  it("requires a per-payment limit for every accepted currency", () => {
+    expect(() =>
+      createPolicyCheck({ ...limits(), currencies: ["KES", "UGX"] }),
+    ).toThrow(/UGX/);
+    expect(() =>
+      createPolicyCheck({ ...limits({ maxPerPayment: new Map() }), currencies: ["KES"] }),
+    ).toThrow(/KES/);
   });
 
   it("throws on invalid config", () => {

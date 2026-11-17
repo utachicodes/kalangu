@@ -28,6 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   store declares `atomic: true` when it honours it; `SessionRecord.version`
   is bumped on every save. An agent with `payments` requires an atomic store,
   and a double-tapped "Yes" now starts exactly one payment.
+- Review fixes in payments: payments still in flight count toward the pending
+  limit however old; an outcome that failed to send is released and retried
+  by `reconcile` (`unnotified`, `releaseNotification`, `notifyAttempts`,
+  report field `redelivered`); outcome delivery waits for the turn's session
+  save; `reconcile` marks a payment unresolved when its status check keeps
+  failing; a refused root `pay` step ends with a message instead of looping;
+  looking up the operator on a live channel honours the USSD deadline;
+  `PaymentRecord.providerPhone`; `pollRepeatMs`; exact decimal sums; the
+  provider minimum amount; `"100.0"` accepted for providers without decimals;
+  amounts too large to hold exactly refused; payment ids cannot change.
 - Payment refusals (policy rules and provider reasons) are localized in `en`
   and `fr` through `payments.refusal.*` messages, which can be overridden.
 

@@ -79,6 +79,7 @@ describe("parseTurn: rejects bad input with a path", () => {
     ["pay with negative", { kind: "pay", amount: "-5", currency: "KES" }, "amount"],
     ["pay with NaN", { kind: "pay", amount: "NaN", currency: "KES" }, "amount"],
     ["pay with Infinity", { kind: "pay", amount: "Infinity", currency: "KES" }, "amount"],
+    ["pay with an amount too large to keep exact", { kind: "pay", amount: "90071992547409.93", currency: "KES" }, "amount"],
     ["pay with number amount", { kind: "pay", amount: 500, currency: "KES" }, "amount"],
     ["pay with three decimals", { kind: "pay", amount: "5.123", currency: "KES" }, "amount"],
     ["pay with exponent", { kind: "pay", amount: "1e3", currency: "KES" }, "amount"],

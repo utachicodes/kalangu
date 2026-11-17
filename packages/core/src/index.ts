@@ -95,7 +95,9 @@ export type {
 
 export {
   DEFAULT_GIVE_UP_AFTER_MS,
+  DEFAULT_POLL_REPEAT_MS,
   DEFAULT_POLL_SCHEDULE_MS,
+  MAX_NOTIFY_ATTEMPTS,
   createPaymentController,
   createPolicyCheck,
   fromMinorUnits,

@@ -29,6 +29,8 @@ export interface PaymentRecord {
   /** Personal data: masked in logs, never displayed unmasked by tooling. */
   readonly phone: string;
   readonly provider: string;
+  /** The payer's number in the provider's own format (MSISDN, no "+"), as resolved when offered. */
+  readonly providerPhone: string;
   /** Decimal string, e.g. "500.00". Never a float. */
   readonly amount: string;
   readonly currency: string;
@@ -44,6 +46,8 @@ export interface PaymentRecord {
   readonly finalizedAt?: number;
   /** Set when onPaid/onFailed has been sent; makes the outcome exactly once. */
   readonly notifiedAt?: number;
+  /** How many times delivering the outcome failed and was released for retry. */
+  readonly notifyAttempts?: number;
 }
 
 export interface PaymentTotals {
@@ -79,6 +83,14 @@ export interface PaymentStore {
    * race to deliver it.
    */
   claimNotification(id: string, at: number): Promise<PaymentRecord | null>;
+  /**
+   * Undoes a claim after delivery failed, so a later sweep can try again, and
+   * counts the failure in `notifyAttempts`. Only the process that holds the
+   * claim calls it.
+   */
+  releaseNotification(id: string): Promise<void>;
+  /** Final payments whose outcome has not been delivered, for the reconcile sweep. */
+  unnotified(): Promise<PaymentRecord[]>;
   /**
    * Runs `work` while holding a lock for this phone number, across every
    * process that shares the store (a Postgres advisory lock, a Redis lock).
@@ -120,13 +132,15 @@ export function memoryPaymentStore(): PaymentStore & { readonly size: number } {
     async update(id, change) {
       const current = records.get(id);
       if (!current) throw new Error(`Payment ${id} not found`);
+      assertSameId(id, change);
       const next: PaymentRecord = structuredClone({ ...current, ...change, updatedAt: Date.now() });
       records.set(id, next);
-      return next;
+      return structuredClone(next);
     },
     async transition(id, change, from) {
       const current = records.get(id);
       if (!current || !from.includes(current.status)) return null;
+      assertSameId(id, change);
       const next: PaymentRecord = structuredClone({ ...current, ...change, updatedAt: Date.now() });
       records.set(id, next);
       return structuredClone(next);
@@ -137,6 +151,24 @@ export function memoryPaymentStore(): PaymentStore & { readonly size: number } {
       const next: PaymentRecord = { ...current, notifiedAt: at, updatedAt: Date.now() };
       records.set(id, next);
       return structuredClone(next);
+    },
+    async releaseNotification(id) {
+      const current = records.get(id);
+      if (!current || current.notifiedAt === undefined) return;
+      const next: { -readonly [K in keyof PaymentRecord]: PaymentRecord[K] } = {
+        ...current,
+        notifyAttempts: (current.notifyAttempts ?? 0) + 1,
+        updatedAt: Date.now(),
+      };
+      delete next.notifiedAt;
+      records.set(id, next);
+    },
+    async unnotified() {
+      const out: PaymentRecord[] = [];
+      for (const record of records.values()) {
+        if (isFinalPaymentStatus(record.status) && record.notifiedAt === undefined) out.push(structuredClone(record));
+      }
+      return out;
     },
     withPhoneLock(phone, work) {
       const previous = locks.get(phone) ?? Promise.resolve();
@@ -167,8 +199,11 @@ export function memoryPaymentStore(): PaymentStore & { readonly size: number } {
       let completed = "0";
       let pendingCount = 0;
       for (const record of records.values()) {
-        if (record.phone !== phone || record.createdAt < sinceMs) continue;
+        if (record.phone !== phone) continue;
         const inFlight = !isFinalPaymentStatus(record.status);
+        // The window limits what counts as done today. A payment still in flight
+        // counts however old it is: its money may yet move and it still blocks a new one.
+        if (!inFlight && record.createdAt < sinceMs) continue;
         // A payment still in flight blocks a new one whatever its currency.
         if (inFlight) pendingCount += 1;
         if (record.currency !== currency) continue;
@@ -186,18 +221,21 @@ export function memoryPaymentStore(): PaymentStore & { readonly size: number } {
   };
 }
 
-function addDecimal(a: string, b: string): string {
-  const toCents = (s: string) => {
-    const [whole, frac = ""] = s.split(".");
-    return Number(`${whole}${(frac + "00").slice(0, 2)}`);
-  };
-  return fromMinorUnits(toCents(a) + toCents(b));
+/** The record's id is its identity; no update may change it. */
+function assertSameId(id: string, change: Partial<PaymentRecord>): void {
+  if (change.id !== undefined && change.id !== id) {
+    throw new Error(`A payment's id cannot change (${id} to ${change.id})`);
+  }
 }
 
-function fromMinorUnits(minorUnits: number): string {
-  const abs = Math.abs(minorUnits);
-  const whole = Math.floor(abs / 100);
-  const cents = abs % 100;
-  const sign = minorUnits < 0 ? "-" : "";
-  return `${sign}${whole}.${cents.toString().padStart(2, "0")}`;
+/** Adds two decimal strings exactly, in integers, however large. */
+function addDecimal(a: string, b: string): string {
+  const toCents = (s: string) => {
+    const [whole = "0", frac = ""] = s.split(".");
+    return BigInt(`${whole}${(frac + "00").slice(0, 2)}`);
+  };
+  const total = toCents(a) + toCents(b);
+  const whole = total / 100n;
+  const cents = (total % 100n).toString().padStart(2, "0");
+  return `${whole}.${cents}`;
 }

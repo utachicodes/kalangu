@@ -235,6 +235,8 @@ interface PaymentStore {
   // Atomic primitives (see below): the store, not the engine, makes these safe.
   transition(id: string, change: Partial<PaymentRecord>, from: PaymentStatus[]): Promise<PaymentRecord | null>;
   claimNotification(id: string, at: number): Promise<PaymentRecord | null>;
+  releaseNotification(id: string): Promise<void>;         // undo a claim after a failed delivery
+  unnotified(): Promise<PaymentRecord[]>;                 // final, outcome not delivered
   withPhoneLock<T>(phone: string, work: () => Promise<T>): Promise<T>;
   get(id: string): Promise<PaymentRecord | null>;
   pending(olderThanMs: number): Promise<PaymentRecord[]>; // for reconciliation
@@ -245,6 +247,7 @@ interface PaymentRecord {
   id: string;              // our UUIDv4, also pawaPay's depositId
   phone: string;           // personal data: masked in logs
   provider: string;        // e.g. "MTN_MOMO_KEN"
+  providerPhone: string;   // the payer's number in the provider's format, as resolved
   amount: string;
   currency: string;
   reason: string;
@@ -257,6 +260,7 @@ interface PaymentRecord {
   updatedAt: number;
   finalizedAt?: number;
   notifiedAt?: number;     // when onPaid/onFailed was sent; makes it once-only
+  notifyAttempts?: number; // failed deliveries released for retry
 }
 ```
 
@@ -336,15 +340,29 @@ arrive (TODO), so every accepted payment is also polled:
 - **As built:** `agent.payments.reconcile({ minAgeMs, reinitiateWithinMs })`
   returns a report (`checked`, `completed`, `failed`, `unresolved`,
   `stillPending`, `errors`). It skips payments younger than `minAgeMs`
-  (default 30 s) so it never races the process starting them, and one
-  failing payment is counted and retried next sweep without stopping the
-  rest. A payment recorded but never initiated (the process died in
+  (default 30 s), which makes overlap with the process still starting
+  them unlikely but does not rule it out. That is safe: initiating twice is
+  idempotent on our id, and a status change is a compare-and-set, so a final
+  status is never overwritten. One failing payment is counted and retried
+  next sweep without stopping the rest; if its status check keeps failing
+  past the give-up window it is still marked `UNRESOLVED`, so a provider
+  outage cannot keep a payment pending forever. A payment recorded but never initiated (the process died in
   between) is initiated again while younger than `reinitiateWithinMs`
   (default 10 minutes), which is safe because our id is the idempotency
   key. An older one that the provider has never seen is failed as not
   started, with nothing charged. A payment past the give-up window becomes
   `UNRESOLVED`, not `UNKNOWN` as first drafted, so that `UNKNOWN` can keep
   meaning "initiate outcome not yet known".
+- **An outcome that could not be delivered is retried.** `notifiedAt` is a
+  claim taken before the SMS is sent. If sending fails after its retries the
+  claim is released (`releaseNotification`, counted in `notifyAttempts`) and
+  the next `reconcile` sweep sends it, through `unnotified()`, which also
+  recovers a process that died between recording the status and sending it.
+  After 5 failed deliveries it stays in the store with an error logged, for
+  a human. `reconcile` reports `redelivered`.
+- Polling waits `pollScheduleMs` in turn and then `pollRepeatMs` (default
+  hourly) until the give-up window, as first drafted. An earlier build
+  repeated the last scheduled interval instead.
 - After 72 hours still non-final: mark `UNKNOWN`, log an error for a human,
   and tell the user "we could not confirm your payment; contact …"
   (configurable). Never guess "paid".
@@ -406,7 +424,19 @@ Stated in the README and the package docs, not only here:
 - Regulatory compliance. Licensing, KYC, consumer protection and tax are
   the deployer's responsibility, per country.
 - Reliability with an in-memory payment store, or without
-  `reconcilePayments()` running somewhere.
+  `reconcile()` running somewhere.
+- **That the outcome message never overwrites a concurrent turn.** The SMS
+  that reports a payment's outcome loads the user's session, runs `onPaid` or
+  `onFailed`, and saves it. If the user is in the middle of another turn at
+  that moment, the later write wins, as for deferred answers. The payment's
+  own record is never affected, and nothing is charged twice; the cost is
+  that one conversation's position can be lost. Making this a retried
+  compare-and-set would mean re-running the developer's `onPaid` handler, so
+  it is left as a known limit rather than risking a handler running twice.
+- **Fast operator lookup.** On a live channel the lookup before the confirm
+  screen shares the USSD deadline. If it misses, the user is told payments
+  are unavailable and to try again, nothing is started, and the late answer
+  is dropped. On SMS there is no deadline.
 
 ---
 

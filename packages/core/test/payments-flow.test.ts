@@ -12,11 +12,13 @@ import {
   ussdChannel,
   type AgentConfig,
   type Clock,
+  MAX_NOTIFY_ATTEMPTS,
   type InitiateResult,
   type Logger,
   type MessageKey,
   type PaymentProvider,
   type PaymentRecord,
+  type PayTarget,
   type PaymentsConfig,
   type StatusResult,
 } from "../src/index.js";
@@ -97,6 +99,9 @@ function setup(
     payments?: Partial<PaymentsConfig>;
     amount?: string;
     agent?: Partial<AgentConfig>;
+    /** While `on`, the SMS gateway fails every send. */
+    failSends?: { on: boolean };
+    onFailed?: PayTarget;
     /** Share these with an earlier agent to simulate a restart. */
     shared?: { store: ReturnType<typeof memoryPaymentStore>; sessions: ReturnType<typeof memoryStore>; clock: Clock };
   } = {},
@@ -118,7 +123,7 @@ function setup(
         paid.push(payment);
         return "Paid. See you on Monday.";
       },
-      onFailed: (payment) => `Payment not completed: ${payment.failureMessage}`,
+      onFailed: options.onFailed ?? ((payment) => `Payment not completed: ${payment.failureMessage}`),
       onDeclined: say("No problem."),
     },
   );
@@ -130,6 +135,7 @@ function setup(
       ussdChannel(),
       smsChannel({
         send: async (out) => {
+          if (options.failSends?.on) throw new Error("gateway down");
           sent.push({ to: out.to, text: out.text });
         },
       }),
@@ -144,6 +150,7 @@ function setup(
       payeeName: "CLINIC",
       policy: { currencies: ["KES"], maxPerPayment: { KES: "5000" }, maxPerDayPerPhone: { KES: "10000" } },
       pollScheduleMs: [1000, 2000],
+      pollRepeatMs: 2000,
       giveUpAfterMs: 20_000,
       newId: (() => {
         let n = 0;
@@ -423,7 +430,7 @@ describe("reconcile", () => {
   }
 
   const record = (id: string, now: number, extra: Partial<PaymentRecord> = {}): PaymentRecord => ({
-    id, phone: PHONE, provider: "TEST_MOMO", amount: "500.00", currency: "KES", reason: "Consultation",
+    id, phone: PHONE, provider: "TEST_MOMO", providerPhone: "254700000001", amount: "500.00", currency: "KES", reason: "Consultation",
     stepId: "start.1", locale: "en", status: "CREATED", createdAt: now, updatedAt: now, ...extra,
   });
 
@@ -432,7 +439,7 @@ describe("reconcile", () => {
     first.fake.set(id, { found: true, status: "COMPLETED" });
 
     const report = await second.agent.payments!.reconcile({ minAgeMs: 0 });
-    expect(report).toEqual({ checked: 1, completed: 1, failed: 0, unresolved: 0, stillPending: 0, errors: 0 });
+    expect(report).toEqual({ checked: 1, completed: 1, failed: 0, unresolved: 0, stillPending: 0, redelivered: 0, errors: 0 });
     expect(second.sent.map((m) => m.text)).toEqual([
       "Paid. See you on Monday.",
       "Receipt: 500.00 KES paid to CLINIC. Ref 00000000.",
@@ -527,7 +534,7 @@ describe("two processes sharing one store", () => {
     const now = first.clock.now();
     // Final in the store, outcome never sent: e.g. the process died right after the status landed.
     await first.store.create({
-      id: "done", phone: PHONE, provider: "TEST_MOMO", amount: "500.00", currency: "KES", reason: "Consultation",
+      id: "done", phone: PHONE, provider: "TEST_MOMO", providerPhone: "254700000001", amount: "500.00", currency: "KES", reason: "Consultation",
       stepId: "start.1", locale: "en", status: "COMPLETED", createdAt: now - 1000, updatedAt: now - 1000,
     });
     await Promise.all([first.agent.payments!.settle("done"), second.agent.payments!.settle("done")]);
@@ -627,5 +634,183 @@ describe("two processes sharing one store", () => {
     release();
     await stale;
     expect((await first.store.get(id))?.status).toBe("COMPLETED");
+  });
+});
+
+describe("review fixes", () => {
+  const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  it("stores the provider's destination number on the payment", async () => {
+    const t = setup();
+    await toConfirm(t);
+    await t.press("1");
+    await flush();
+    expect(await t.store.get(t.fake.initiated[0]!.id)).toMatchObject({ providerPhone: "254700000001" });
+  });
+
+  describe("an outcome that could not be delivered", () => {
+    it("is released, retried by reconcile, and delivered once", async () => {
+      const failSends = { on: true };
+      const t = setup({ failSends });
+      await toConfirm(t);
+      await t.press("1");
+      await flush();
+      const id = t.fake.initiated[0]!.id;
+      t.fake.set(id, { found: true, status: "COMPLETED" });
+      await t.advance(1000); // the poll finds COMPLETED; sending retries at +1 s and +5 s, then fails
+      await t.advance(6000);
+
+      expect(t.sent).toHaveLength(0);
+      const stuck = await t.store.get(id);
+      expect(stuck).toMatchObject({ status: "COMPLETED", notifyAttempts: 1 });
+      expect(stuck?.notifiedAt).toBeUndefined();
+      expect(t.errors.some((e) => e.includes("reconcile will retry"))).toBe(true);
+
+      failSends.on = false;
+      const report = await t.agent.payments!.reconcile({ minAgeMs: 0 });
+      expect(report).toMatchObject({ redelivered: 1, errors: 0 });
+      expect(t.sent.map((m) => m.text)).toEqual([
+        "Paid. See you on Monday.",
+        "Receipt: 500.00 KES paid to CLINIC. Ref 00000000.",
+      ]);
+      // Delivered now: a second sweep sends nothing more.
+      expect((await t.agent.payments!.reconcile({ minAgeMs: 0 })).redelivered).toBe(0);
+      expect(t.sent).toHaveLength(2);
+    });
+
+    it("stops retrying after the attempt limit and leaves it for a human", async () => {
+      const t = setup();
+      const now = t.clock.now();
+      await t.store.create({
+        id: "stuck", phone: PHONE, provider: "TEST_MOMO", providerPhone: "254700000001", amount: "500.00", currency: "KES",
+        reason: "Consultation", stepId: "start.1", locale: "en", status: "COMPLETED",
+        createdAt: now - 10_000, updatedAt: now - 10_000, finalizedAt: now - 10_000, notifyAttempts: MAX_NOTIFY_ATTEMPTS,
+      });
+      const report = await t.agent.payments!.reconcile({ minAgeMs: 0 });
+      expect(report.redelivered).toBe(0);
+      expect(t.sent).toHaveLength(0);
+    });
+  });
+
+  it("keeps the outcome's session when the provider rejects before the turn is saved", async () => {
+    const t = setup({
+      provider: controllableProvider({ initiate: async () => ({ status: "REJECTED", failureCode: "X" }) }),
+      onFailed: menu("Try again?", { Retry: say("ok") }),
+    });
+    await toConfirm(t);
+    // Slow only the turn's own final save, the second one (the first is the offer's claim), so the
+    // outcome would be written first and then clobbered if delivery did not wait for it.
+    const real = t.sessions.save.bind(t.sessions);
+    let saves = 0;
+    t.sessions.save = async (record, options) => {
+      saves++;
+      if (saves === 2) await sleep(30);
+      return real(record, options);
+    };
+    await t.press("1");
+    await sleep(80);
+    await flush();
+    expect(t.sent[0]?.text).toContain("Try again?");
+    expect((await t.sessions.load(PHONE))?.turn?.kind).toBe("choose");
+  });
+
+  it("gives up on a payment whose status check keeps failing", async () => {
+    const t = setup(); // giveUpAfterMs is 20 s
+    const now = t.clock.now();
+    await t.store.create({
+      id: "down", phone: PHONE, provider: "TEST_MOMO", providerPhone: "254700000001", amount: "500.00", currency: "KES",
+      reason: "Consultation", stepId: "start.1", locale: "en", status: "PROCESSING", createdAt: now - 60_000, updatedAt: now - 60_000,
+    });
+    t.fake.provider.status = async () => {
+      throw new Error("provider down");
+    };
+    const report = await t.agent.payments!.reconcile({ minAgeMs: 0 });
+    expect(report).toMatchObject({ checked: 1, unresolved: 1, errors: 1 });
+    expect((await t.store.get("down"))?.status).toBe("UNRESOLVED");
+    expect(t.sent[0]?.text).toContain("contact CLINIC");
+  });
+
+  it("does not give up on a young payment just because a check failed", async () => {
+    const t = setup();
+    const now = t.clock.now();
+    await t.store.create({
+      id: "young", phone: PHONE, provider: "TEST_MOMO", providerPhone: "254700000001", amount: "500.00", currency: "KES",
+      reason: "Consultation", stepId: "start.1", locale: "en", status: "PROCESSING", createdAt: now - 5000, updatedAt: now - 5000,
+    });
+    t.fake.provider.status = async () => {
+      throw new Error("provider down");
+    };
+    expect(await t.agent.payments!.reconcile({ minAgeMs: 0 })).toMatchObject({ unresolved: 0, errors: 1 });
+    expect((await t.store.get("young"))?.status).toBe("PROCESSING");
+  });
+
+  it("uses pollRepeatMs once the schedule is used up", async () => {
+    const t = setup({ payments: { pollScheduleMs: [1000], pollRepeatMs: 50_000, giveUpAfterMs: 500_000 } });
+    await toConfirm(t);
+    await t.press("1");
+    await flush();
+    const id = t.fake.initiated[0]!.id;
+    await t.advance(1000); // the one scheduled check: still processing
+    t.fake.set(id, { found: true, status: "COMPLETED" });
+    await t.advance(10_000); // an old build would have checked again 1 s after the schedule's end
+    expect(t.sent).toHaveLength(0);
+    await t.advance(50_000);
+    expect(t.sent[0]?.text).toBe("Paid. See you on Monday.");
+  });
+
+  it("ends with a message when a root pay step is refused and its handler returns nothing", async () => {
+    const fake = controllableProvider();
+    const { clock } = timerClock();
+    const { logger } = silent();
+    const root = pay(
+      { amount: "5000.01", currency: "KES" },
+      { onPaid: say("ok"), onFailed: () => undefined, onDeclined: say("bye") },
+    );
+    const agent = createAgent({
+      start: root,
+      channels: [ussdChannel(), smsChannel({ send: async () => {} })],
+      logger,
+      clock,
+      payments: { provider: fake.provider, store: memoryPaymentStore(), payeeName: "CLINIC", policy: { currencies: ["KES"], maxPerPayment: { KES: "5000" } } },
+    });
+    // Going back to "the menu above" would be this same pay step again, forever.
+    const out = await Promise.race([
+      agent.handle({ channel: "ussd", phone: PHONE, input: "", newSession: true }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("looped")), 1500)),
+    ]);
+    expect(out.text).toBe("Sorry, this payment cannot be made. This payment is above the allowed limit.");
+    expect(out.end).toBe(true);
+  });
+
+  it("tells the user to try later when looking up the operator misses the USSD deadline", async () => {
+    const t = setup({ provider: controllableProvider({ resolve: () => new Promise(() => {}) }) });
+    await t.dial();
+    const pending = t.press("1");
+    await flush();
+    await t.advance(5000); // past the 4 s deadline
+    const out = await pending;
+    expect(out.text).toBe("Payments are unavailable right now. Nothing was charged. Please try again later.");
+    expect(out.end).toBe(true);
+    expect(t.store.size).toBe(0);
+    expect((await t.sessions.load(PHONE))?.payIntent ?? null).toBeNull();
+  });
+
+  it("does not apply the deadline to SMS, where nobody is waiting on a live session", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const t = setup({
+      provider: controllableProvider({
+        resolve: async (phone) => {
+          await gate;
+          return { provider: "TEST_MOMO", phone: phone.replace(/^\+/, ""), country: "KEN" };
+        },
+      }),
+    });
+    await t.agent.handle({ channel: "sms", phone: PHONE, input: "hi" });
+    const pending = t.agent.handle({ channel: "sms", phone: PHONE, input: "1" });
+    await flush();
+    await t.advance(60_000);
+    release();
+    expect((await pending).text).toContain("Pay 500 KES to CLINIC for Consultation?");
   });
 });

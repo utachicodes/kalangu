@@ -11,6 +11,7 @@ function record(overrides = {}): PaymentRecord {
     id: "pay-1",
     phone: "+254700000001",
     provider: "FAKE_MOMO",
+    providerPhone: "254700000001",
     amount: "1000.00",
     currency: "KES",
     reason: "Consultation",
@@ -119,6 +120,79 @@ describe("memoryPaymentStore", () => {
     await store.create(record({ id: "pay-1" }));
     await store.create(record({ id: "pay-2", phone: "+254700000002" }));
     expect(store.size).toBe(2);
+  });
+
+  describe("totals windows", () => {
+    const DAY = 24 * 3600_000;
+
+    it("counts a payment still in flight however old it is", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record({ id: "old", amount: "300", status: "PROCESSING", createdAt: now - 25 * 3600_000 }));
+      const totals = await store.totals("+254700000001", "KES", now - DAY);
+      expect(totals).toEqual({ pending: "300.00", completed: "0", pendingCount: 1 });
+    });
+
+    it("still limits completed payments to the window", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record({ id: "old", amount: "300", status: "COMPLETED", createdAt: now - 25 * 3600_000 }));
+      await store.create(record({ id: "new", amount: "100", status: "COMPLETED", createdAt: now - 1000 }));
+      expect((await store.totals("+254700000001", "KES", now - DAY)).completed).toBe("100.00");
+    });
+
+    it("adds amounts exactly, beyond what a float can hold", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record({ id: "a", amount: "90071992547409.00", status: "PROCESSING" }));
+      await store.create(record({ id: "b", amount: "1.07", status: "PROCESSING" }));
+      expect((await store.totals("+254700000001", "KES", now - 1000)).pending).toBe("90071992547410.07");
+    });
+  });
+
+  describe("record integrity", () => {
+    it("update refuses to change a payment's id", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record());
+      await expect(store.update("pay-1", { id: "pay-2" })).rejects.toThrow(/id cannot change/);
+      await expect(store.transition("pay-1", { id: "pay-2" }, ["CREATED"])).rejects.toThrow(/id cannot change/);
+      expect(await store.get("pay-2")).toBeNull();
+    });
+
+    it("update returns a copy, not the stored object", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record());
+      const updated = await store.update("pay-1", { status: "ACCEPTED" });
+      (updated as { status: string }).status = "COMPLETED";
+      expect((await store.get("pay-1"))?.status).toBe("ACCEPTED");
+    });
+  });
+
+  describe("undelivered outcomes", () => {
+    it("unnotified lists final payments whose outcome was not delivered", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record({ id: "a", status: "COMPLETED" }));
+      await store.create(record({ id: "b", status: "COMPLETED", notifiedAt: 5 }));
+      await store.create(record({ id: "c", status: "PROCESSING" }));
+      await store.create(record({ id: "d", status: "UNRESOLVED" }));
+      expect((await store.unnotified()).map((p) => p.id).sort()).toEqual(["a", "d"]);
+    });
+
+    it("releaseNotification undoes a claim and counts the failure", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record({ status: "COMPLETED" }));
+      await store.claimNotification("pay-1", 10);
+      await store.releaseNotification("pay-1");
+      const released = await store.get("pay-1");
+      expect(released?.notifiedAt).toBeUndefined();
+      expect(released?.notifyAttempts).toBe(1);
+      // The claim is available again, to exactly one caller.
+      expect(await store.claimNotification("pay-1", 20)).not.toBeNull();
+    });
+
+    it("releaseNotification on an unclaimed payment changes nothing", async () => {
+      const store = memoryPaymentStore();
+      await store.create(record({ status: "COMPLETED" }));
+      await store.releaseNotification("pay-1");
+      expect((await store.get("pay-1"))?.notifyAttempts).toBeUndefined();
+    });
   });
 
   describe("atomic operations", () => {

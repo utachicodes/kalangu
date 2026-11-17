@@ -46,7 +46,9 @@ export interface PolicyCheck {
   /**
    * Returns null when the payment is allowed, or a `PaymentRefusal` when it
    * is not. `pendingCount` is the number of this phone's payments not yet
-   * final; `completedTodayMinorUnits` is what they completed in the last 24h.
+   * final. `completedTodayMinorUnits` is the amount already committed in the
+   * last 24h: completed payments plus those still pending or unresolved, since
+   * money may yet move. (The name predates that; callers pass the sum.)
    */
   check({
     amount,
@@ -69,8 +71,10 @@ export function toMinorUnits(amount: string, currency: string): number {
     throw new Error(`Invalid decimal amount ${JSON.stringify(amount)}`);
   }
   const [whole, frac = ""] = amount.split(".");
-  const cents = `${whole}${frac.padEnd(2, "0").slice(0, 2)}`;
-  return Number(cents);
+  const cents = Number(`${whole}${frac.padEnd(2, "0").slice(0, 2)}`);
+  // Past 2^53 a float can no longer hold every cent, and money must stay exact.
+  if (!Number.isSafeInteger(cents)) throw new Error(`Amount ${JSON.stringify(amount)} is too large to handle exactly`);
+  return cents;
 }
 
 /** Format minor units back to a decimal string. */
@@ -94,6 +98,11 @@ export function isCurrency(code: unknown): code is string {
 export function createPolicyCheck(limits: PaymentLimits): PolicyCheck {
   if (limits.maxPendingPerPhone < 1) {
     throw new Error("maxPendingPerPhone must be at least 1");
+  }
+  for (const currency of limits.currencies) {
+    if (!limits.maxPerPayment.has(currency)) {
+      throw new Error(`maxPerPayment needs a limit for ${currency}: unbounded payments cannot be configured`);
+    }
   }
   for (const [currency, max] of limits.maxPerPayment) {
     if (!isCurrency(currency)) {
@@ -134,6 +143,12 @@ export function createPolicyCheck(limits: PaymentLimits): PolicyCheck {
       }
 
       // Provider-level bounds: stricter of ours and theirs wins.
+      if (providerBounds?.minAmount !== undefined && amountMinor < providerBounds.minAmount) {
+        return {
+          reason: "amount-bounds",
+          message: "This amount is not supported by your operator.",
+        };
+      }
       const providerMax = providerBounds?.maxAmount;
       const maxPerPayment = limits.maxPerPayment.get(currency);
       const effectiveMax =
@@ -148,11 +163,7 @@ export function createPolicyCheck(limits: PaymentLimits): PolicyCheck {
       }
 
       // Provider decimals: a NONE provider rejects fractional amounts.
-      if (
-        providerBounds?.decimals === "NONE" &&
-        /^\d+\.\d{1,2}$/.test(amount) &&
-        amount.slice(-2) !== "00"
-      ) {
+      if (providerBounds?.decimals === "NONE" && amountMinor % 100 !== 0) {
         return {
           reason: "decimals",
           message: "This amount is not supported with your operator.",
