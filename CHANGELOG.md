@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1] - 2026-11-17
+
+### Fixed
+
+- The installed `kalangu` command did nothing. npm installs a package's
+  command as a symlink, and the check for "started as a command" compared
+  the symlink's path with the real file's, so it never ran. Both paths are
+  now resolved first (`isEntryPoint`), with a test that runs through a
+  symlink.
+- `RELEASING.md` told people to install with `@alpha`, a tag that does not
+  exist: npm's staged-publishing approval set `latest` on the first release.
+  It now says to install without a tag and to check the tags after approving.
+
+## [0.1.0-alpha.0] - 2026-11-17
+
+First publish of `@kalangu/core`, `@kalangu/ussd`, `@kalangu/sms` and
+`@kalangu/sim`. Everything below was in it.
+
 ### Added
 
 - Payments in `@kalangu/core` (prep, no real provider yet): the `pay` step,
