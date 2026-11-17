@@ -29,7 +29,8 @@ default export, or "messages" export, is that object. A .ts file works on
 Node 22.18 or later.
 
 Options:
-  --locale <code>  the language code (default: the file name, e.g. wo.json is wo)
+  --locale <code>  the language code (default: the file name up to its first
+                   dot, e.g. wo.json and wo.draft.json are both wo)
   --complete       a missing key is an error (default: a warning, since a
                    partial translation falls back to the default language)
   --strict         warnings fail the check too
@@ -77,7 +78,8 @@ export async function main(argv: readonly string[], io: CliIo = nodeIo()): Promi
     return 2;
   }
 
-  const code = locale ?? basename(file, extname(file));
+  // The part of the name before the first dot: wo.json and wo.draft.json are both wo.
+  const code = locale ?? (basename(file).split(".")[0] || basename(file, extname(file)));
   const report = checkLocale(code, messages, { complete: flags.complete });
   io.stdout(formatReport(report, { verbose: flags.verbose }));
   return report.errors > 0 || (flags.strict && report.warnings > 0) ? 1 : 0;

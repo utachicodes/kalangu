@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ctx.model` for the user's current language.
 - `docs/prior-art.md` refreshed (17 Nov 2026): nothing new since 16 Nov, and
   `@omoyolab/ussdkit` recorded as the closest prior art.
+- `scripts/translate-locale.mjs`: drafts Kalangu's fixed strings in another
+  language with Gemini (`gemini-3.5-flash-lite` by default), writes
+  `locales/<code>.draft.json` marked as an unreviewed machine draft, and runs
+  the locale checker on it. The key is read from `GEMINI_API_KEY` and sent
+  only in the request header. Its tests run in CI (`node --test "scripts/**/*.test.mjs"`).
+- `kalangu locale check` takes the language code from the file name up to its
+  first dot, so `wo.draft.json` is checked as `wo`.
 
 ## [0.1.0-alpha.1] - 2026-11-17
 
