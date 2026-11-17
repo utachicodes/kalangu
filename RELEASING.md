@@ -60,7 +60,16 @@ the maintainer; nothing here runs on its own.
    (`./node_modules/.bin/kalangu locale check <file>`), not the file in
    `dist/`: running the file directly hid a bug in `0.1.0-alpha.0` where the
    installed command did nothing.
-7. Tag the commit (`git tag v0.1.0-alpha.1 && git push --tags`).
+   **Give it a minute after approving.** On `0.1.0-alpha.1` the registry
+   listed the new version as soon as it was approved, but its tarball
+   returned `404` for a short while, so an install straight away failed with
+   `E404 ... core-0.1.0-alpha.1.tgz`. If that happens, wait and retry before
+   suspecting the release. Approving the four packages can also land at
+   different times; packages that depend on `@kalangu/core` cannot install
+   until core's new version is live.
+7. Tag the commit the workflow built (its run shows the commit), with an
+   annotated tag, and push only that tag:
+   `git tag -a v<version> <commit> -m "v<version>: ..." && git push origin v<version>`.
 
 ### The `0.0.0-stage` placeholder
 
@@ -98,8 +107,9 @@ packing.
 
 ## Not yet done
 
-- `0.1.0-alpha.0` of all four packages was published on 17 Nov 2026 (staged,
-  then approved), with verified provenance. Its installed `kalangu` command
-  does nothing; `0.1.0-alpha.1` fixes it.
+- Published so far, all four packages, with verified provenance, on 17 Nov
+  2026: `0.1.0-alpha.0` (tag `v0.1.0-alpha.0`, its installed `kalangu`
+  command does nothing) and `0.1.0-alpha.1` (tag `v0.1.0-alpha.1`, `latest`,
+  which fixes it, checked with a clean install).
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.
