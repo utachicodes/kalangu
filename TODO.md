@@ -97,9 +97,20 @@ above).
 
 ## Version 0.3 — languages
 
-- [ ] Evaluate CommonLingua (61 languages, ~2M parameters) for detection
-- [ ] Per-language model routing design
-- [ ] Guide for community locale contributions (Wolof, Hausa, Swahili first)
+- [x] Desk-check CommonLingua (read 17 Nov 2026): Apache-2.0 per its model
+  card; 2.35M parameters; PyTorch only, no ONNX or JS build; 77.6% strict
+  accuracy on paragraphs; "not assessed on very short text"; Wolof, Hausa and
+  Swahili not named as covered
+- [ ] Hands-on detector evaluation on short keypad-typed text in Wolof, Hausa
+  and Swahili (languages design §12): coverage, accuracy, what the score means
+- [ ] Review the languages design, especially §4 (ask first, detection as a
+  hint) and the seven open questions in §14
+- [x] Per-language model routing design (languages design §7)
+- [ ] `kalangu locale check` (placeholders, USSD and SMS fit) and the
+  contributor guide for community locales (Wolof, Hausa, Swahili first); the
+  process is designed in languages design §8 and §9
+- [ ] Native speakers to supply and review the Wolof and Hausa translations
+  (the first draft's sample Wolof strings were removed: unverified)
 
 ## Version 0.4 — channels
 
