@@ -124,6 +124,13 @@ above).
   CONTRIBUTING.md): drafts only, marked unreviewed
 - [ ] Wolof, Hausa and Swahili translations, through the checker: draft with
   the script if useful, then native speakers (see the next item)
+- [x] Draft the text normalization design:
+  [docs/normalization-design.md](docs/normalization-design.md) (fold,
+  render for USSD, canonicalize; Gemini offline only; own repo later)
+- [ ] Fix: a typed language name without its accent ("francais") is refused,
+  though USSD itself shows it that way (normalization design §2, §11 step 1)
+- [ ] Review the normalization design and its questions for native speakers
+  (§10, §12)
 - [ ] Native speakers to supply and review the Wolof and Hausa translations
   (the first draft's sample Wolof strings were removed: unverified)
 
