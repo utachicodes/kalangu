@@ -40,8 +40,13 @@ export interface SessionRecord {
    * they answer, in whichever language they pick.
    */
   languageSuggestion?: { code: string; input: string; stepId: string } | null;
-  /** The user said No to a language suggestion: none is offered again this session. */
+  /**
+   * The user said No to a language suggestion. Kept for good, deliberately: no
+   * nagging. They can still switch with the language menu.
+   */
   languageSuggestionDeclined?: boolean;
+  /** A language switch was already offered in this conversation; cleared when it ends. */
+  languageOffered?: boolean;
   /**
    * The payment the user was last offered on a pay step: exactly what the
    * confirm screen showed, so "Yes" pays that and nothing else. Optional so

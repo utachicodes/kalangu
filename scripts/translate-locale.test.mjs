@@ -177,6 +177,22 @@ describe("main", () => {
     assert.equal(await main(["--help"], stubIo().io), 0);
   });
 
+  it("reports a network failure in words, not a stack", async () => {
+    const t = stubIo();
+    t.io.fetch = async () => {
+      throw new Error("fetch failed");
+    };
+    assert.equal(await main(["wo", "--name", "Wolof"], t.io), 1);
+    assert.match(t.err.join("\n"), /Could not reach Gemini: fetch failed/);
+    assert.ok(!t.err.join("\n").includes(SECRET));
+  });
+
+  it("reports an unreadable or invalid saved response", async () => {
+    const t = stubIo({ env: {}, files: { "bad.json": "{ not json" } });
+    assert.equal(await main(["wo", "--name", "Wolof", "--from-response", "bad.json"], t.io), 2);
+    assert.match(t.err.join("\n"), /Could not read the saved response bad\.json/);
+  });
+
   it("can run from a saved response, with no key and no network", async () => {
     const t = stubIo({ env: {}, files: { "saved.json": JSON.stringify(geminiResponse(goodTranslation())) } });
     assert.equal(await main(["ha", "--name", "Hausa", "--from-response", "saved.json"], t.io), 0);

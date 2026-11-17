@@ -152,10 +152,11 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
   const clock = config.clock ?? systemClock;
   const catalog = createCatalog(config.defaultLocale ?? "en", config.messages);
   const languageConfig = checkLanguages(config.languages, catalog);
-  // The implicit first-contact menu goes last among the extra steps, so the ids of the
-  // developer's own extra steps stay what they were.
+  // The implicit first-contact menu has a fixed id, "language": a position among the extra
+  // steps would change whenever the developer adds or removes one, and a user waiting at
+  // the menu would then be sent to another step.
   const languageStep = languageConfig ? languageMenu({ then: config.start }) : undefined;
-  const steps = indexSteps(config.start, [...(config.steps ?? []), ...(languageStep ? [languageStep] : [])]);
+  const steps = indexSteps(config.start, config.steps ?? [], languageStep ? { language: languageStep } : {});
   for (const step of steps.all()) {
     if (step.type !== "language") continue;
     if (step.languages === undefined && !languageConfig) {
@@ -614,9 +615,8 @@ class TurnRun<M> {
   /** Settles with the handler's reply, or `{ done: false }` at the deadline. */
   private race<T>(work: Promise<T>, ms = this.deps.deadlineMs): Promise<Race<T>> {
     const { clock } = this.deps;
-    const deadlineMs = ms;
     return new Promise((resolve, reject) => {
-      const timer = clock.setTimeout(() => resolve({ done: false }), deadlineMs);
+      const timer = clock.setTimeout(() => resolve({ done: false }), ms);
       work.then(
         (value) => {
           clock.clearTimeout(timer);
@@ -722,9 +722,13 @@ class TurnRun<M> {
   private async suggestLanguage(input: string, step: Step): Promise<Outcome | null> {
     const languages = this.deps.languages;
     const detection = languages?.detection;
-    if (!languages || !detection || this.record.languageSuggestionDeclined) return null;
+    if (!languages || !detection) return null;
+    // One offer per conversation, and none ever again after a No.
+    if (this.record.languageSuggestionDeclined || this.record.languageOffered) return null;
+    // Numbers are not language: never send an account number or an amount to a detector.
+    if (step.type === "ask" && step.input === "number") return null;
     const text = input.trim();
-    if (text.length < detection.minChars) return null;
+    if (text.length < detection.minChars || !/\p{L}/u.test(text)) return null;
     const candidates = languages.supported.map((l) => l.code);
 
     let result: DetectedLanguage | null;
@@ -749,10 +753,9 @@ class TurnRun<M> {
     if (!(result.confidence >= detection.threshold) || language.code === this.record.locale) return null;
 
     const stepId = this.deps.steps.id(step) ?? null;
-    this.record.languageSuggestion = { code: language.code, input, stepId: stepId ?? "" };
     // Asked in the suggested language, which is the point: the user reads it if it is theirs.
     const t = this.deps.catalog.translator(language.code);
-    return this.showTurn(
+    const outcome = this.showTurn(
       {
         kind: "confirm",
         question: t("common.suggestLanguage", { language: language.name }),
@@ -761,6 +764,10 @@ class TurnRun<M> {
       },
       stepId,
     );
+    // Set after showTurn, which clears any earlier suggestion.
+    this.record.languageSuggestion = { code: language.code, input, stepId: stepId ?? "" };
+    this.record.languageOffered = true;
+    return outcome;
   }
 
   /** The answer to a language suggestion: switch or not, then run the held answer. */
@@ -973,6 +980,8 @@ class TurnRun<M> {
 
   /** Shows a new turn, which makes every earlier button stale. */
   private showTurn(turn: Turn, stepId: string | null): Outcome {
+    // A pending language suggestion only applies while its question is on screen.
+    this.record.languageSuggestion = null;
     this.record.stepId = stepId;
     this.record.page = 0;
     this.record.turnId = newTurnId(this.record.turnId);
@@ -1092,6 +1101,7 @@ function resetPosition(record: SessionRecord): void {
   record.turn = null;
   record.page = 0;
   record.languageSuggestion = null;
+  record.languageOffered = false;
 }
 
 function describeError(err: unknown): string {

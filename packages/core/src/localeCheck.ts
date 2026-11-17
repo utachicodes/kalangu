@@ -78,8 +78,9 @@ export function checkLocale(
   const add = (key: string, code: LocaleIssueCode, severity: LocaleSeverity, message: string) =>
     issues.push({ key, code, severity, message });
 
+  const own = (object: object, key: string) => Object.prototype.hasOwnProperty.call(object, key);
   for (const key of Object.keys(reference)) {
-    if (!(key in messages)) {
+    if (!own(messages, key)) {
       add(
         key,
         "missing-key",
@@ -90,7 +91,8 @@ export function checkLocale(
   }
 
   for (const [key, value] of Object.entries(messages)) {
-    const original = reference[key];
+    // Own keys only: "toString" or "constructor" must not count as a known message.
+    const original = own(reference, key) ? reference[key] : undefined;
     if (original === undefined) {
       add(key, "unknown-key", "error", "not a message Kalangu uses (a typo?)");
       continue;
