@@ -109,7 +109,10 @@ packing.
 
 - Published so far, all four packages, with verified provenance, on 17 Nov
   2026: `0.1.0-alpha.0` (tag `v0.1.0-alpha.0`, its installed `kalangu`
-  command does nothing) and `0.1.0-alpha.1` (tag `v0.1.0-alpha.1`, `latest`,
-  which fixes it, checked with a clean install).
+  command does nothing), `0.1.0-alpha.1` (tag `v0.1.0-alpha.1`, which fixes
+  it) and `0.1.0-alpha.2` (tag `v0.1.0-alpha.2`, `latest`: typed answers
+  match regardless of accents, language detection as a hint, a model per
+  language), each checked with a clean install. For `0.1.0-alpha.2` the
+  files took between two and three minutes after approval to download.
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.
