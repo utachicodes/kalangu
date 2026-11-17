@@ -1,6 +1,6 @@
 {
   "name": "@kalangu/sms",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "Africa's Talking SMS adapter for Kalangu agents.",
   "keywords": [
     "sms",
