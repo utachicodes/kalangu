@@ -12,6 +12,8 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [ ] Trademark search (a Hausa word — check local usage in target markets)
 - [ ] Test the real session timeout and screen length on the operators you can
   reach; published figures vary and Kenya-only numbers are verified so far
+- [ ] Check that no operator you can reach intercepts `98` (our "More")
+  before it reaches the gateway; if one does, change `budget.more`
 - [ ] Confirm that a USSD session and an SMS to the same number work together
   on your operators — deferral depends on it
 - [ ] Check what a USSD short code and an SMS sender ID cost and require, per
@@ -35,19 +37,23 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [x] README how-to and docs polish
 - [x] CI: typecheck + vitest on push (Node 22/24), runtime smoke test on Node 20
 
-## Design review — open questions to settle (design doc §12)
+## Design review — open questions (design doc §12), settled 17 Nov 2026
 
-- [ ] 1. Navigation numbers: use `98` (More) ourselves, given telcos reserve
+Decisions are recorded under "Decisions" in §12. Question 1 stays unverified
+until a real operator confirms `98` is not intercepted (see the checklist
+above).
+
+- [x] 1. Navigation numbers: use `98` (More) ourselves, given telcos reserve
   it for auto-pagination?
-- [ ] 2. Unsafe-character policy on USSD screens: strip + warn vs strict mode
-- [ ] 3. Legacy vs new bulk SMS endpoint (legacy recommended until its sandbox
+- [x] 2. Unsafe-character policy on USSD screens: strip + warn vs strict mode
+- [x] 3. Legacy vs new bulk SMS endpoint (legacy recommended until its sandbox
   ships)
-- [ ] 4. SMS split cap (proposed max 4 segments, never silent truncation)
-- [ ] 5. Callback authenticity: document path-secret/IP-allowlist mitigations
+- [x] 4. SMS split cap (proposed max 4 segments, never silent truncation)
+- [x] 5. Callback authenticity: document path-secret/IP-allowlist mitigations
   (no signing exists to implement)
-- [ ] 6. Re-notice vs block-screen when a user redials during a pending
+- [x] 6. Re-notice vs block-screen when a user redials during a pending
   deferral
-- [ ] 7. `enqueue` default on SMS send (proposed: omit unless configured)
+- [x] 7. `enqueue` default on SMS send (proposed: omit unless configured)
 
 ## Version 0.2 — payments (do not rush; money code needs care)
 
