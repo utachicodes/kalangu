@@ -140,6 +140,16 @@ export default agent.requestHandler; // standard Request -> Response
 - **Serverless**: deferred answers run after the response is sent. Pass
   `background: { run: (task) => ctx.waitUntil(task()) }` (or a queue) on
   platforms that freeze the process, or those answers are never sent.
+- **Payments** (0.2, unreleased, fake provider only so far): a `pay` step
+  and `createAgent({ payments })` with a mandatory policy. Starting a
+  payment and waiting for its outcome run in the background, and that
+  waiting is lost when the process restarts or a serverless platform
+  freezes it. **Call `agent.payments.reconcile()` from a cron job or
+  scheduler, about every 5 minutes**; on serverless it is the only reliable
+  way to finish payments, and a payment whose outcome is never checked is
+  never reported to the user. Pass a `background` that keeps the process
+  alive there too, since initiating the payment runs in it. See
+  [docs/payments-design.md](docs/payments-design.md) §6.5.
 - **Sessions** are in memory by default and keyed by phone number; pass a
   durable `sessionStore` for production.
 - **Callbacks are not signed** by the gateway. Use hard-to-guess paths and,
@@ -157,8 +167,8 @@ example on Africa's Talking (sandbox or live) with Node's `http` module.
   else is removed with a warning.
 - A redial while an answer is still pending repeats the "SMS shortly"
   notice instead of waiting.
-- Payments (`pay` turn), WhatsApp, voice and language detection are later
-  versions.
+- Payments are in progress against a fake provider only; there is no real
+  provider yet. WhatsApp, voice and language detection are later versions.
 
 ## License
 
