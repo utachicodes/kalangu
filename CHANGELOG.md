@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   language with Gemini (`gemini-3.5-flash-lite` by default), writes
   `locales/<code>.draft.json` marked as an unreviewed machine draft, and runs
   the locale checker on it. The key is read from `GEMINI_API_KEY` and sent
-  only in the request header. Its tests run in CI (`node --test scripts/`).
+  only in the request header. Its tests run in CI (`node --test "scripts/**/*.test.mjs"`).
 - `kalangu locale check` takes the language code from the file name up to its
   first dot, so `wo.draft.json` is checked as `wo`.
 

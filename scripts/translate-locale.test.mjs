@@ -1,4 +1,4 @@
-// Run with: node --test scripts/   (needs `pnpm build` first, for the real core)
+// Run with: node --test "scripts/**/*.test.mjs"   (needs `pnpm build` first, for the real core)
 import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
