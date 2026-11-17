@@ -179,6 +179,96 @@ describe("pay step", () => {
     expect(t.fake.initiated).toHaveLength(0);
   });
 
+  it("a stale Yes from an earlier turn starts no payment; the current one does", async () => {
+    const t = setup();
+    const sms = (input: string, turnId?: number) =>
+      t.agent.handle({ channel: "sms", phone: PHONE, input, ...(turnId !== undefined ? { turnId } : {}) });
+    const token = async () => (await t.sessions.load(PHONE))?.turnId;
+    await sms("hi"); // the menu
+    const menuToken = await token();
+    await sms("1"); // the pay confirm
+    const confirmToken = await token();
+
+    const stale = await sms("1", menuToken); // a tap on the old menu's "Pay consultation", read as Yes
+    expect(stale.text).toContain("That choice has expired.");
+    expect(stale.text).toContain("Pay 500 KES to CLINIC for Consultation?");
+    await flush();
+    expect(t.store.size).toBe(0);
+    expect(t.fake.initiated).toHaveLength(0);
+
+    const fresh = await sms("1", confirmToken);
+    expect(fresh.text).toBe("You will receive a prompt to enter your PIN.");
+    await flush();
+    expect(t.store.size).toBe(1);
+  });
+
+  it("two simultaneous selections cannot make a Yes on one confirmation pay the other's amount", async () => {
+    const fake = controllableProvider();
+    const { clock } = timerClock();
+    const { logger } = silent();
+    const sessions = memoryStore();
+    const store = memoryPaymentStore();
+    const renders: Array<{ text: string; id: number | undefined }> = [];
+    const base = smsChannel({ id: "sms", send: async () => {} });
+    const channel = {
+      ...base,
+      render(turn: Parameters<typeof base.render>[0], ctx: Parameters<typeof base.render>[1]) {
+        const out = base.render(turn, ctx);
+        if (turn.kind === "confirm") renders.push({ text: out.text, id: ctx.turnId });
+        return out;
+      },
+    };
+    const outcomes = { onPaid: say("paid"), onFailed: say("failed"), onDeclined: say("no") };
+    const agent = createAgent({
+      start: menu("Fees", {
+        Small: pay({ amount: "500", currency: "KES" }, outcomes),
+        Big: pay({ amount: "1000", currency: "KES" }, outcomes),
+      }),
+      channels: [channel],
+      logger,
+      clock,
+      sessionStore: sessions,
+      payments: { provider: fake.provider, store, payeeName: "CLINIC", policy: { currencies: ["KES"], maxPerPayment: { KES: "5000" } } },
+    });
+    await agent.handle({ channel: "sms", phone: PHONE, input: "hi" });
+
+    // Both selections read the menu session before either saves.
+    const realLoad = sessions.load.bind(sessions);
+    const waiting: Array<() => void> = [];
+    sessions.load = async (phone) => {
+      const record = await realLoad(phone);
+      await new Promise<void>((resolve) => {
+        waiting.push(resolve);
+        if (waiting.length === 2) waiting.forEach((release) => release());
+      });
+      return record;
+    };
+    await Promise.all([
+      agent.handle({ channel: "sms", phone: PHONE, input: "1" }),
+      agent.handle({ channel: "sms", phone: PHONE, input: "2" }),
+    ]);
+    sessions.load = realLoad;
+
+    expect(renders).toHaveLength(2);
+    expect(renders[0]!.id).not.toBe(renders[1]!.id); // each confirmation has its own token
+    const current = (await sessions.load(PHONE))!.turnId;
+    const winner = renders.find((r) => r.id === current)!;
+    const loser = renders.find((r) => r.id !== current)!;
+
+    // A Yes on the confirmation the session no longer shows is refused and charges nothing.
+    const refused = await agent.handle({ channel: "sms", phone: PHONE, input: "1", turnId: loser.id! });
+    expect(refused.text).toContain("That choice has expired.");
+    await flush();
+    expect(store.size).toBe(0);
+
+    // A Yes on the one it does show pays exactly the amount that confirmation named.
+    await agent.handle({ channel: "sms", phone: PHONE, input: "1", turnId: winner.id! });
+    await flush();
+    const payment = fake.initiated[0]!;
+    expect(winner.text).toContain(`Pay ${Number(payment.amount)} KES`);
+    expect(loser.text).not.toContain(`Pay ${Number(payment.amount)} KES`);
+  });
+
   it("declining runs onDeclined and records nothing", async () => {
     const t = setup();
     await toConfirm(t);

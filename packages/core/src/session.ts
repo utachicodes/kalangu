@@ -38,6 +38,17 @@ export interface SessionRecord {
   deferred: { since: number } | null;
   updatedAt: number;
   /**
+   * An opaque, random token for the turn on screen: a positive integer, new
+   * every time a new turn is shown and kept when the same turn is shown again
+   * (a typed mistake, a page change). A channel with tappable history puts it
+   * in its button ids so a tap on an old message can be recognised and refused.
+   * It is random, not a counter, so a fresh or cleared session cannot reuse an
+   * old session's value, and two requests that render different turns at the
+   * same moment cannot share one. Absent on sessions stored before 0.4, read
+   * as 0, which no turn ever has.
+   */
+  turnId?: number;
+  /**
    * Bumped by the store on every save. Lets `save` refuse a write based on a
    * stale read (`ifVersion`). Absent on sessions stored before 0.2, read as 0.
    */
