@@ -111,6 +111,10 @@ above).
 - [ ] Review the languages design, especially §4 (ask first, detection as a
   hint) and the seven open questions in §14
 - [x] Per-language model routing design (languages design §7)
+- [x] Detector port and model map built (languages design §9.5), tested with
+  a fake detector; no real detector ships
+- [ ] Language detection on the first SMS of a conversation (§5 proposed it;
+  only `ask` answers are checked today)
 - [x] `kalangu locale check` (placeholders, USSD and SMS fit) and the
   contributor guide for community locales (CONTRIBUTING.md); designed in
   languages design §8 and §9

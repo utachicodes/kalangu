@@ -12,7 +12,15 @@ import { inProcessBackground, type BackgroundWork } from "./background.js";
 import { toUssdSafe } from "./budget/ussd.js";
 import type { Channel, InboundEvent, Outcome, RouteAgent } from "./channel.js";
 import { systemClock, type Clock } from "./clock.js";
-import { DEFAULT_LANGUAGE_PRIORS, orderLanguages, type Language, type LanguagePriors } from "./languages.js";
+import {
+  DEFAULT_DETECTION_TIMEOUT_MS,
+  DEFAULT_LANGUAGE_PRIORS,
+  orderLanguages,
+  type DetectedLanguage,
+  type Language,
+  type LanguageDetection,
+  type LanguagePriors,
+} from "./languages.js";
 import { createCatalog, type Catalog, type Messages, type Translate } from "./locales.js";
 import { consoleLogger, maskPhone, type Logger } from "./logger.js";
 import {
@@ -43,12 +51,22 @@ import {
 } from "./steps.js";
 import { assertNever, type Turn } from "./turns.js";
 
+/** One model per language, plus the one used when a language has none. */
+export type ModelMap<M> = { readonly default: M } & { readonly [locale: string]: M };
+
 export interface AgentConfig<M = any> {
   /** The first step shown on a fresh dial or a first SMS. */
   start: Step;
   channels: readonly Channel[];
   /** Your model handle; core only passes it to handlers as `ctx.model`. */
   model?: M;
+  /**
+   * A model per language instead of one `model` (docs/languages-design.md §7):
+   * `{ default: multilingual, wo: wolofModel }`. Handlers get the entry for the
+   * user's language as `ctx.model`, or `default` when there is none. Keys other
+   * than `default` must be languages the agent has messages for.
+   */
+  models?: ModelMap<M>;
   /** Locale for new users. Default "en". */
   defaultLocale?: string;
   /** Overrides for the built-in messages, or whole new locales. */
@@ -88,6 +106,8 @@ export interface AgentConfig<M = any> {
     supported: readonly Language[];
     /** Calling code to locales listed first. Defaults to `DEFAULT_LANGUAGE_PRIORS`. */
     priors?: LanguagePriors;
+    /** Optional: offer to switch language when a typed answer looks like another one. */
+    detection?: LanguageDetection;
   };
 }
 
@@ -148,6 +168,12 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
   }
   const resumeWindow = config.resumeWindowMs ?? DEFAULT_RESUME_WINDOW_MS;
   const deadlineMs = checkDeadline(config.deadlineMs ?? DEFAULT_DEADLINE_MS, logger);
+  if (languageConfig?.detection && deadlineMs + languageConfig.detection.timeoutMs > DEADLINE_MAX_MS) {
+    throw new RangeError(
+      `deadlineMs (${deadlineMs}) plus the language detection timeout (${languageConfig.detection.timeoutMs}) is over ${DEADLINE_MAX_MS} ms, the most a USSD gateway waits; lower one of them`,
+    );
+  }
+  const modelFor = buildModelFor(config, catalog, logger);
   const background = config.background ?? inProcessBackground(logger);
   const mask = (phone: string) => (config.logPhoneNumbers ? phone : maskPhone(phone));
 
@@ -187,7 +213,7 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
     catalog,
     steps,
     logger,
-    model: config.model as M,
+    modelFor,
     mask,
     store,
     clock,
@@ -333,7 +359,7 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
 function checkLanguages(
   languages: AgentConfig["languages"] | undefined,
   catalog: Catalog,
-): { supported: readonly Language[]; priors: LanguagePriors } | undefined {
+): { supported: readonly Language[]; priors: LanguagePriors; detection?: Required<LanguageDetection> } | undefined {
   if (!languages) return undefined;
   const { supported } = languages;
   if (supported.length < 2) {
@@ -355,7 +381,56 @@ function checkLanguages(
       );
     }
   }
-  return { supported, priors: languages.priors ?? DEFAULT_LANGUAGE_PRIORS };
+  const detection = languages.detection;
+  if (detection === undefined) return { supported, priors: languages.priors ?? DEFAULT_LANGUAGE_PRIORS };
+  if (typeof detection.detector?.detect !== "function") {
+    throw new TypeError("`languages.detection.detector` needs a detect(text, { candidates }) function");
+  }
+  if (!(Number.isFinite(detection.threshold) && detection.threshold > 0 && detection.threshold <= 1)) {
+    throw new TypeError(
+      `\`languages.detection.threshold\` must be above 0 and at most 1, got ${detection.threshold}: there is no default until one is measured`,
+    );
+  }
+  if (!(Number.isInteger(detection.minChars) && detection.minChars >= 1)) {
+    throw new TypeError(
+      `\`languages.detection.minChars\` must be a whole number of at least 1, got ${detection.minChars}: there is no default until one is measured`,
+    );
+  }
+  const timeoutMs = detection.timeoutMs ?? DEFAULT_DETECTION_TIMEOUT_MS;
+  if (!(Number.isFinite(timeoutMs) && timeoutMs > 0)) {
+    throw new TypeError(`\`languages.detection.timeoutMs\` must be a positive number, got ${timeoutMs}`);
+  }
+  return {
+    supported,
+    priors: languages.priors ?? DEFAULT_LANGUAGE_PRIORS,
+    detection: { detector: detection.detector, threshold: detection.threshold, minChars: detection.minChars, timeoutMs },
+  };
+}
+
+/** `ctx.model`: the one model, or the entry for the user's language from `models`, checked at startup. */
+function buildModelFor<M>(config: AgentConfig<M>, catalog: Catalog, logger: Logger): (locale: string) => M {
+  const models = config.models;
+  if (!models) return () => config.model as M;
+  if (config.model !== undefined) {
+    throw new TypeError("Pass either `model` or `models`, not both");
+  }
+  if (!Object.prototype.hasOwnProperty.call(models, "default")) {
+    throw new TypeError("`models` needs a `default` model, used for any language without its own");
+  }
+  for (const locale of Object.keys(models)) {
+    if (locale !== "default" && !catalog.has(locale)) {
+      throw new TypeError(`\`models.${locale}\` is for a language with no messages; add them in \`messages\` or remove the model`);
+    }
+  }
+  const warned = new Set<string>();
+  return (locale) => {
+    if (locale !== "default" && Object.prototype.hasOwnProperty.call(models, locale)) return models[locale] as M;
+    if (!warned.has(locale)) {
+      warned.add(locale);
+      logger.warn("No model for this language; using the default model", { locale });
+    }
+    return models.default;
+  };
 }
 
 function checkDeadline(ms: number, logger: Logger): number {
@@ -373,14 +448,15 @@ function checkDeadline(ms: number, logger: Logger): number {
 
 interface RunDeps<M> {
   /** The agent's languages, checked at startup. */
-  languages: { supported: readonly Language[]; priors: LanguagePriors } | undefined;
+  languages: { supported: readonly Language[]; priors: LanguagePriors; detection?: Required<LanguageDetection> } | undefined;
   /** The menu shown before the start step until the user has chosen. */
   languageStep: LanguageStep | undefined;
   payments: PaymentController | undefined;
   catalog: Catalog;
   steps: StepIndex;
   logger: Logger;
-  model: M;
+  /** `ctx.model` for a language. */
+  modelFor: (locale: string) => M;
   mask: (phone: string) => string;
   store: SessionStore;
   clock: Clock;
@@ -486,6 +562,9 @@ class TurnRun<M> {
       return this.display(shown);
     }
     if (reading.type === "invalid") return this.display(shown, this.t(reading.reason));
+    if (record.languageSuggestion && (reading.type === "yes" || reading.type === "no")) {
+      return this.resolveLanguageSuggestion(reading.type === "yes");
+    }
 
     const step = record.stepId ? this.deps.steps.get(record.stepId) : undefined;
     if (!step) {
@@ -504,7 +583,7 @@ class TurnRun<M> {
       }
       case "answer":
         if (step.type !== "ask") return this.showStep(this.entry());
-        return this.runHandler(step.handler, reading.value, step);
+        return (await this.suggestLanguage(reading.value, step)) ?? this.runHandler(step.handler, reading.value, step);
       case "yes":
       case "no": {
         if (step.type === "pay") {
@@ -533,8 +612,9 @@ class TurnRun<M> {
   }
 
   /** Settles with the handler's reply, or `{ done: false }` at the deadline. */
-  private race<T>(work: Promise<T>): Promise<Race<T>> {
-    const { clock, deadlineMs } = this.deps;
+  private race<T>(work: Promise<T>, ms = this.deps.deadlineMs): Promise<Race<T>> {
+    const { clock } = this.deps;
+    const deadlineMs = ms;
     return new Promise((resolve, reject) => {
       const timer = clock.setTimeout(() => resolve({ done: false }), deadlineMs);
       work.then(
@@ -632,6 +712,73 @@ class TurnRun<M> {
     if (step.type === "pay") return this.showPay(step);
     if (step.type === "language") return this.showLanguage(step);
     return this.showTurn(this.turnFor(step), this.deps.steps.id(step) ?? null);
+  }
+
+  /**
+   * A typed answer that a detector confidently places in another of the
+   * agent's languages: hold it, and ask whether to continue in that language.
+   * Returns null to carry on as normal, which is every other case.
+   */
+  private async suggestLanguage(input: string, step: Step): Promise<Outcome | null> {
+    const languages = this.deps.languages;
+    const detection = languages?.detection;
+    if (!languages || !detection || this.record.languageSuggestionDeclined) return null;
+    const text = input.trim();
+    if (text.length < detection.minChars) return null;
+    const candidates = languages.supported.map((l) => l.code);
+
+    let result: DetectedLanguage | null;
+    const work = Promise.resolve().then(() => detection.detector.detect(text, { candidates }));
+    try {
+      // On every channel: a hung detector must never hold up the answer.
+      const raced = await this.race(work, detection.timeoutMs);
+      if (!raced.done) {
+        work.catch(() => {});
+        this.deps.logger.warn("Language detection timed out; carrying on without it", { timeoutMs: detection.timeoutMs });
+        return null;
+      }
+      result = raced.value;
+    } catch (err) {
+      this.deps.logger.warn("Language detection failed; carrying on without it", { error: describeError(err) });
+      return null;
+    }
+
+    // Only one of the agent's own languages, confidently, and not the one already in use.
+    const language = result ? languages.supported.find((l) => l.code === result.code) : undefined;
+    if (!result || !language) return null;
+    if (!(result.confidence >= detection.threshold) || language.code === this.record.locale) return null;
+
+    const stepId = this.deps.steps.id(step) ?? null;
+    this.record.languageSuggestion = { code: language.code, input, stepId: stepId ?? "" };
+    // Asked in the suggested language, which is the point: the user reads it if it is theirs.
+    const t = this.deps.catalog.translator(language.code);
+    return this.showTurn(
+      {
+        kind: "confirm",
+        question: t("common.suggestLanguage", { language: language.name }),
+        yes: t("common.yes"),
+        no: t("common.no"),
+      },
+      stepId,
+    );
+  }
+
+  /** The answer to a language suggestion: switch or not, then run the held answer. */
+  private async resolveLanguageSuggestion(accept: boolean): Promise<Outcome> {
+    const suggestion = this.record.languageSuggestion;
+    this.record.languageSuggestion = null;
+    if (!suggestion) return this.showStep(this.entry());
+    if (accept && this.deps.catalog.has(suggestion.code)) {
+      this.record.locale = suggestion.code;
+      this.record.languageChosen = true;
+      this.t = this.deps.catalog.translator(suggestion.code);
+      this.deps.logger.info("Language switched on suggestion", { language: suggestion.code });
+    } else {
+      this.record.languageSuggestionDeclined = true;
+    }
+    const step = this.deps.steps.get(suggestion.stepId);
+    if (step?.type !== "ask") return this.showStep(this.entry());
+    return this.runHandler(step.handler, suggestion.input, step);
   }
 
   /** Where a fresh start begins: the language menu until the user has chosen, then the start step. */
@@ -924,7 +1071,9 @@ class TurnRun<M> {
         setLocale(locale);
       },
       t: (key, vars) => this.t(key, vars),
-      model: deps.model,
+      get model() {
+        return deps.modelFor(record.locale);
+      },
       logger: deps.logger,
     };
   }
@@ -942,6 +1091,7 @@ function resetPosition(record: SessionRecord): void {
   record.stepId = null;
   record.turn = null;
   record.page = 0;
+  record.languageSuggestion = null;
 }
 
 function describeError(err: unknown): string {

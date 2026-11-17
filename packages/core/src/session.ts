@@ -35,6 +35,14 @@ export interface SessionRecord {
    */
   languageChosen?: boolean;
   /**
+   * A typed answer held back while the user is asked whether to continue in
+   * the language a detector suggested. It is run through its handler once
+   * they answer, in whichever language they pick.
+   */
+  languageSuggestion?: { code: string; input: string; stepId: string } | null;
+  /** The user said No to a language suggestion: none is offered again this session. */
+  languageSuggestionDeclined?: boolean;
+  /**
    * The payment the user was last offered on a pay step: exactly what the
    * confirm screen showed, so "Yes" pays that and nothing else. Optional so
    * sessions stored before 0.2 still load.

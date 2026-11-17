@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Language detection as a hint (docs/languages-design.md §9.5):
+  `languages.detection: { detector, threshold, minChars, timeoutMs? }` with
+  the `LanguageDetector` port. On a typed `ask` answer that a detector
+  confidently places in another of the agent's languages, the user is asked
+  in that language whether to continue in it; the answer is held and then
+  handled in whichever language they choose. A "No" is remembered for the
+  session. No detector ships; `threshold` and `minChars` have no default.
+- `models: { default, [locale]: model }`: a model per language, resolved as
+  `ctx.model` for the user's current language.
+- `docs/prior-art.md` refreshed (17 Nov 2026): nothing new since 16 Nov, and
+  `@omoyolab/ussdkit` recorded as the closest prior art.
+
 ## [0.1.0-alpha.1] - 2026-11-17
 
 ### Fixed
