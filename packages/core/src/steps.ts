@@ -239,7 +239,12 @@ export interface StepIndex {
  * (`start`, `start.2`, `start.2.yes`). Ids are stored in sessions, so they
  * stay valid across restarts as long as the tree's shape doesn't change.
  */
-export function indexSteps(start: Step, extra: readonly Step[] = []): StepIndex {
+export function indexSteps(
+  start: Step,
+  extra: readonly Step[] = [],
+  /** Steps with a fixed id of their own, which no change to `extra` can shift. */
+  named: Readonly<Record<string, Step>> = {},
+): StepIndex {
   const ids = new Map<Step, string>();
   const byId = new Map<string, Step>();
   const parents = new Map<string, Step>();
@@ -277,6 +282,7 @@ export function indexSteps(start: Step, extra: readonly Step[] = []): StepIndex 
 
   visit(start, "start", undefined);
   extra.forEach((step, i) => visit(step, `steps.${i}`, undefined));
+  for (const [name, step] of Object.entries(named)) visit(step, name, undefined);
 
   return {
     start,

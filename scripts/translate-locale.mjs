@@ -209,7 +209,12 @@ export async function main(argv, io = defaultIo()) {
 
   let response;
   if (opts.fromResponse) {
-    response = JSON.parse(await io.readFile(opts.fromResponse));
+    try {
+      response = JSON.parse(await io.readFile(opts.fromResponse));
+    } catch (err) {
+      io.stderr(`Could not read the saved response ${opts.fromResponse}: ${err.message}`);
+      return 2;
+    }
   } else {
     const key = io.env.GEMINI_API_KEY;
     if (!key) {
@@ -217,11 +222,17 @@ export async function main(argv, io = defaultIo()) {
       return 2;
     }
     io.stderr(`Asking ${opts.model} for a ${opts.name} draft…`);
-    const res = await io.fetch(`${ENDPOINT}/${encodeURIComponent(opts.model)}:generateContent`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify(request),
-    });
+    let res;
+    try {
+      res = await io.fetch(`${ENDPOINT}/${encodeURIComponent(opts.model)}:generateContent`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify(request),
+      });
+    } catch (err) {
+      io.stderr(`Could not reach Gemini: ${err.message}. Check the connection and try again.`);
+      return 1;
+    }
     response = await res.json().catch(() => ({}));
     if (!res.ok) {
       io.stderr(`Gemini answered ${res.status}: ${response?.error?.message ?? res.statusText ?? "no details"}`);
@@ -275,5 +286,13 @@ function startedDirectly() {
 }
 
 if (startedDirectly()) {
-  main(process.argv.slice(2)).then((code) => process.exit(code));
+  main(process.argv.slice(2)).then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (err) => {
+      process.stderr.write(`translate-locale: ${err?.message ?? String(err)}\n`);
+      process.exitCode = 2;
+    },
+  );
 }

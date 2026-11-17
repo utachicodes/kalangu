@@ -145,5 +145,14 @@ export function isEntryPoint(entry: string | undefined, moduleUrl: string): bool
 
 // Run only when started as a command, never when imported (by the tests).
 if (isEntryPoint(process.argv[1], import.meta.url)) {
-  main(process.argv.slice(2)).then((code) => process.exit(code));
+  // exitCode, not exit(): exit() can cut off output still being written to a pipe.
+  main(process.argv.slice(2)).then(
+    (code) => {
+      process.exitCode = code;
+    },
+    (err: unknown) => {
+      process.stderr.write(`kalangu: ${err instanceof Error ? err.message : String(err)}\n`);
+      process.exitCode = 2;
+    },
+  );
 }

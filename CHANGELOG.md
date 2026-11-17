@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+From an independent review of everything merged in #21 and #26 to #30:
+
+- A pending language suggestion could answer a later question: after a
+  dropped call, a redial whose shortcut reached a confirm or a `pay` step had
+  its Yes taken as the answer to the old suggestion. Any new question now
+  clears a pending suggestion.
+- Language detection ran on `number` answers and on text with no letters, so
+  amounts and account numbers went to the detector. It no longer does.
+- After accepting a language switch, a later answer could be offered another
+  switch straight away. Detection now offers at most one switch per
+  conversation; a No is still kept for good, deliberately.
+- The first-contact language menu's stored id depended on how many extra
+  steps the agent had, so changing them could send a user waiting at the menu
+  to another step. It now has the fixed id `language`.
+- Confirm labels that differ only by accents: typing the exact No label could
+  read as Yes. An exact match now wins, and a folded match that fits both
+  Yes and No is refused.
+- `kalangu locale check` crashed on a key such as `toString`. It now reports
+  it as an unknown key. The command sets its exit status instead of calling
+  `process.exit`, so piped output is no longer cut off, and an unexpected
+  error is reported in one line.
+- `scripts/translate-locale.mjs` reports a network failure or an unreadable
+  saved response in words, with an exit status, instead of crashing.
+
 ## [0.1.0-alpha.2] - 2026-11-17
 
 ### Added

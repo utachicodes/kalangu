@@ -374,16 +374,25 @@ recommended in §14, question 2.
   must not exceed the 10 s USSD bound, so detection can never push a reply
   past what a gateway waits.
 - **When it runs:** only on the text of an `ask` answer, trimmed, at least
-  `minChars` long. Never on a menu choice or a confirm. Not yet on the first
-  SMS of a conversation (§5 proposed it; left for later).
+  `minChars` long, and containing at least one letter. Never on a menu
+  choice, a confirm, or a `number` ask: an amount or an account number is
+  not language, and is never sent to a detector. Not yet on the first SMS of
+  a conversation (§5 proposed it; left for later).
 - **What it does:** it never switches silently. When the result is one of
   the agent's languages, at or above the threshold, and not the current one,
   the typed answer is **held** and the user is asked, *in the suggested
   language*, "Continue in {language}?" (`common.suggestLanguage`). Yes
-  switches the language for good. No keeps it and is remembered for the
-  session, so nothing is offered again. Either way the held answer then runs
+  switches the language for good. Either way the held answer then runs
   through its handler, in the chosen language, so nothing the user typed is
   lost.
+- **How often:** at most **one offer per conversation**, accepted or not, so
+  a code-mixed answer right after a switch cannot flip the language back. A
+  **No is kept for good** for that phone number, deliberately: no nagging, and
+  the language menu still lets the user switch. A pending offer is dropped as
+  soon as any other question is shown, so it can never answer one.
+- The first-contact language menu is stored under the fixed step id
+  `language`, so adding or removing extra steps cannot send a user waiting at
+  the menu somewhere else. (Revised 17 Nov 2026 after an independent review.)
 - **Failure is never the user's problem:** a detector that throws, returns a
   language the agent does not have, or takes longer than `timeoutMs` is
   logged as a warning and the answer is handled as if there were no detector.

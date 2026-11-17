@@ -188,11 +188,17 @@ export function interpret(turn: Turn, input: string, ctx: InterpretContext): Int
 
     case "confirm": {
       const [yes, no] = confirmLabels(turn, ctx.t);
-      if (value === "1" || typedMatches(value, yes) || typedMatches(value, ctx.t("common.yes"))) {
-        return { type: "yes" };
-      }
-      if (value === "2" || typedMatches(value, no) || typedMatches(value, ctx.t("common.no"))) {
-        return { type: "no" };
+      if (value === "1") return { type: "yes" };
+      if (value === "2") return { type: "no" };
+      const yesWords = [yes, ctx.t("common.yes")];
+      const noWords = [no, ctx.t("common.no")];
+      // An exact (case-insensitive) word wins; otherwise a folded match, but only if it fits one side.
+      const exact = (w: string) => w.trim().toLowerCase() === value.toLowerCase();
+      for (const match of [exact, (w: string) => typedMatches(value, w)]) {
+        const isYes = yesWords.some(match);
+        const isNo = noWords.some(match);
+        if (isYes !== isNo) return { type: isYes ? "yes" : "no" };
+        if (isYes && isNo) break;
       }
       return { type: "invalid", reason: "common.invalidChoice" };
     }
