@@ -103,5 +103,15 @@ above).
 
 ## Version 0.4 — channels
 
-- [ ] WhatsApp Cloud API adapter design
+- [x] Draft the WhatsApp Cloud API adapter design:
+  [docs/whatsapp-design.md](docs/whatsapp-design.md)
+  - [x] Meta facts read from the official docs (17 Nov 2026), with what could
+    not be confirmed listed in §12
+  - [x] Identity (BSUIDs), the 24-hour window and cost, rendering, stale taps,
+    webhook signing and deduplication
+- [ ] Review the WhatsApp design, especially §3 (identity without a phone
+  number), §6 (stale taps) and the ten open questions in §14
+- [ ] Get a Meta test number and work through the verify-first list in §12
+  (signature over raw bytes, per-market message cost, `wa_id` presence)
+- [ ] Then, and only then, WhatsApp code
 - [ ] Survey the Chat SDK adapter directory for a community USSD adapter
