@@ -106,9 +106,13 @@ above).
 - [ ] Review the languages design, especially §4 (ask first, detection as a
   hint) and the seven open questions in §14
 - [x] Per-language model routing design (languages design §7)
-- [ ] `kalangu locale check` (placeholders, USSD and SMS fit) and the
-  contributor guide for community locales (Wolof, Hausa, Swahili first); the
-  process is designed in languages design §8 and §9
+- [x] `kalangu locale check` (placeholders, USSD and SMS fit) and the
+  contributor guide for community locales (CONTRIBUTING.md); designed in
+  languages design §8 and §9
+- [x] Language menu: `createAgent({ languages })`, `languageMenu()`, country
+  priors (languages design §4, §9.4)
+- [ ] Wolof, Hausa and Swahili translations, through the checker: needs native
+  speakers (see the next item)
 - [ ] Native speakers to supply and review the Wolof and Hausa translations
   (the first draft's sample Wolof strings were removed: unverified)
 

@@ -150,6 +150,14 @@ export default agent.requestHandler; // standard Request -> Response
   never reported to the user. Pass a `background` that keeps the process
   alive there too, since initiating the payment runs in it. See
   [docs/payments-design.md](docs/payments-design.md) §6.5.
+- **Languages**: `createAgent({ languages: { supported: [...] } })` asks the
+  user to pick a language on first contact and remembers it per phone number.
+  The menu names each language in itself and lists the likely ones for the
+  caller's country first (a prior, not a guess; the list is never shortened).
+  Each language needs messages: `en` and `fr` ship, others go in `messages`.
+  `languageMenu()` is the same step for a "Language" entry in your tree.
+  Check a translation with `kalangu locale check wo.json`. See
+  [docs/languages-design.md](docs/languages-design.md).
 - **Sessions** are in memory by default and keyed by phone number; pass a
   durable `sessionStore` for production. Agents that take payments need one
   whose `save` honours `ifVersion` atomically (`atomic: true`), so a

@@ -32,6 +32,41 @@ contribution; code contributions are welcome too.
   for a reason — keypad users' safety depends on never emitting a screen a
   channel would truncate.
 
+## Contributing a translation
+
+Fixed strings (the "Yes", "Invalid choice", payment messages and so on) can be
+translated by anyone who speaks the language, with no code. See
+[docs/languages-design.md](docs/languages-design.md) §8 and §9 for the why.
+
+1. Copy the English messages from `packages/core/src/locales.ts` (the `en`
+   object) into a JSON file named for the language, e.g. `wo.json`, and
+   translate the values. Keep the keys exactly. You may translate only some:
+   anything missing falls back to the default language.
+2. Keep every `{placeholder}` exactly as written: the program fills it in
+   (`{amount}`, `{yes}`). You can move it within the sentence.
+3. Run the checker from the repository root:
+
+   ```
+   pnpm build
+   node packages/core/dist/cli.js locale check wo.json --verbose
+   ```
+
+   It reports lost or invented placeholders (errors), strings that will take
+   more than one USSD screen or SMS segment, and the letters USSD shows
+   differently. `--complete` makes a missing message an error, and `--strict`
+   makes warnings fail.
+4. **Mind the channels.** USSD shows plain ASCII, so Wolof `ë`, `ŋ` and `ó`
+   and Hausa `ɓ`, `ɗ` and `ƙ` appear as `e`, `ng`, `o` and `b`, `d`, `k`. If
+   that makes a word ambiguous, choose a wording that survives it. On SMS one
+   such letter makes the whole message UCS-2, 70 characters per segment
+   instead of 160. The checker lists both, so you can judge.
+5. Open a pull request. A translation is marked **reviewed** only when a
+   speaker of that language other than the author has checked it, and the file
+   says who; until then it ships as **experimental**.
+
+Agent content (menu titles, answers) is the developer's own and lives in the
+agent definition as `{ en: "...", wo: "..." }`, not in these files.
+
 ## House rules
 
 - **Never commit secrets** (API keys, phone numbers of real users).

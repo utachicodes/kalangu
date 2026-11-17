@@ -8,6 +8,7 @@ import type { Text } from "./locales.js";
 import type { Json } from "./session.js";
 import type { Logger } from "./logger.js";
 import type { Translate } from "./locales.js";
+import type { Language, LanguagePriors } from "./languages.js";
 import type { SayTurn } from "./turns.js";
 
 export type Awaitable<T> = T | Promise<T>;
@@ -108,7 +109,42 @@ export interface PayStep<M = any> {
   readonly onDeclined: Target<M>;
 }
 
-export type Step = SayStep | MenuStep | AskStep | ConfirmStep | PayStep;
+/**
+ * Lets the user choose a language (docs/languages-design.md §4). Shown as a
+ * menu of language names, each in its own language, with the likely ones for
+ * the user's country first. Choosing one sets `ctx.locale` for good, then goes
+ * to `then`, or back up if there is none.
+ */
+export interface LanguageStep<M = any> {
+  readonly type: "language";
+  /** Defaults to `createAgent({ languages: { supported } })`. */
+  readonly languages?: readonly Language[];
+  /** Defaults to the agent's priors, or the built-in ones. */
+  readonly priors?: LanguagePriors;
+  /** Defaults to "Language / Langue" in the supported languages. */
+  readonly title?: Text;
+  readonly then?: Target<M>;
+}
+
+export type Step = SayStep | MenuStep | AskStep | ConfirmStep | PayStep | LanguageStep;
+
+/**
+ * A language menu. Place it in the tree (for a "Language" entry), or let
+ * `createAgent({ languages })` show it on first contact.
+ */
+export function languageMenu<M = any>(options: {
+  languages?: readonly Language[];
+  priors?: LanguagePriors;
+  title?: Text;
+  then?: Target<M>;
+} = {}): LanguageStep<M> {
+  const step: { -readonly [K in keyof LanguageStep<M>]: LanguageStep<M>[K] } = { type: "language" };
+  if (options.languages !== undefined) step.languages = options.languages;
+  if (options.priors !== undefined) step.priors = options.priors;
+  if (options.title !== undefined) step.title = options.title;
+  if (options.then !== undefined) step.then = options.then;
+  return step;
+}
 
 /**
  * Takes a payment from the user (docs/payments-design.md §4.2). Shown as a
@@ -180,7 +216,9 @@ export function confirm<M = any>(
 export function isStep(value: unknown): value is Step {
   if (typeof value !== "object" || value === null) return false;
   const type = (value as { type?: unknown }).type;
-  return type === "say" || type === "menu" || type === "ask" || type === "confirm" || type === "pay";
+  return (
+    type === "say" || type === "menu" || type === "ask" || type === "confirm" || type === "pay" || type === "language"
+  );
 }
 
 export interface StepIndex {
@@ -224,6 +262,9 @@ export function indexSteps(start: Step, extra: readonly Step[] = []): StepIndex 
         if (isStep(step.onPaid)) visit(step.onPaid, `${id}.paid`, step);
         if (isStep(step.onFailed)) visit(step.onFailed, `${id}.failed`, step);
         child(step.onDeclined, "declined");
+        break;
+      case "language":
+        if (step.then !== undefined) child(step.then, "then");
         break;
       case "say":
       case "ask":

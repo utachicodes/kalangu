@@ -314,6 +314,55 @@ The built-in locales are objects in `packages/core/src/locales.ts`.
 
 ---
 
+## 9.4 As built (17 Nov 2026)
+
+The first slice of this design is in core, with no detector and no model, as
+recommended in §14, question 2.
+
+- **`createAgent({ languages: { supported, priors? } })`.** Needs at least two
+  languages, each with messages (built in, or in `messages`); a language
+  without them, a repeated code or name, or fewer than two is a startup error.
+  Until the user has chosen, a fresh start shows the menu, then goes to the
+  start step. The choice sets `locale` and `languageChosen` on the session,
+  so it is asked once per phone number across every channel. Any handler that
+  sets `ctx.locale` counts as a choice too. A session stored before this
+  exists is asked once.
+- **`languageMenu({ languages?, priors?, title?, then? })`** is the same step
+  for a "Language" entry in the tree. Without `languages` it uses the
+  agent's. With no `then` it goes back up, and `then` may be a step or a
+  handler. It is indexed like any other step.
+- **The menu** names each language in itself, in the order the country prior
+  gives, then the rest in the order declared: every language appears exactly
+  once, so a prior can reorder the menu but never hide a choice. The title is
+  every supported language's word for "Language" without repeats ("Langue /
+  Language"). Typing a language's name also works. **On USSD the names are
+  shown in plain ASCII** (Français is "Francais"), like everything else.
+- **`DEFAULT_LANGUAGE_PRIORS`** is a small table keyed by calling code
+  (Gambia, Senegal, Mali, Guinea, Côte d'Ivoire, Burkina Faso, Niger, Togo,
+  Benin, Ghana, Nigeria, DR Congo, Kenya, Tanzania, Uganda). They are starting
+  points for ordering a menu, easy to correct, and replaceable with `priors`.
+  An id that is not a phone number, such as a business-scoped WhatsApp id, has
+  no calling code and gets the declared order.
+- **A dial-string shortcut** (`*384*1*2#`) is dropped on a user's first
+  contact, since its first input is not a language choice. They see the menu,
+  and the shortcut works from the next dial.
+- **`kalangu locale check <file>`** (the checker of §8). `checkLocale` is a
+  pure function exported from core; the command wraps it for `.json`, `.js` and
+  `.mjs` files (`.ts` on Node 22.18 or later). It reports missing keys
+  (a warning for a partial locale, an error with `--complete`), unknown keys,
+  empty or non-string values, strings left identical to English, lost or
+  invented placeholders, and for USSD and SMS the characters that are
+  removed, shown differently, or push a string to UCS-2, and strings that
+  span several screens or segments. Many untranslated messages collapse to
+  one line, so real errors stay visible. Exit status 0 passes, 1 fails, 2 is a
+  usage error. The command is a separate file, not exported from core's main
+  entry, so the engine stays runtime-agnostic.
+- **The shipped locales are tested with it.** English is clean. French has no
+  errors, and three payment strings fall back to UCS-2 on SMS because of `ê`
+  and `ç`, which the test pins as the known cost.
+- **Not built:** the detector port, `candidates` and `minChars`, the model
+  map, the `locales/` directory, and Wolof, Hausa and Swahili translations.
+
 ## 10. How the pieces fit
 
 ```

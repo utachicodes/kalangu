@@ -16,6 +16,7 @@ export type MessageKey =
   | "common.replyYesNo"
   | "common.error"
   | "common.expiredChoice"
+  | "common.language"
   | "payments.confirm"
   | "payments.confirmNoReason"
   | "payments.pinPrompt"
@@ -50,6 +51,7 @@ export const en: Messages = {
   "common.replyYesNo": "Reply {yes} or {no}",
   "common.error": "Sorry, something went wrong. Please try again later.",
   "common.expiredChoice": "That choice has expired.",
+  "common.language": "Language",
   "payments.confirm": "Pay {amount} {currency} to {payee} for {reason}?",
   "payments.confirmNoReason": "Pay {amount} {currency} to {payee}?",
   "payments.pinPrompt": "You will receive a prompt to enter your PIN.",
@@ -83,6 +85,7 @@ export const fr: Messages = {
   "common.replyYesNo": "Répondez {yes} ou {no}",
   "common.error": "Désolé, une erreur est survenue. Veuillez réessayer plus tard.",
   "common.expiredChoice": "Ce choix a expiré.",
+  "common.language": "Langue",
   "payments.confirm": "Payer {amount} {currency} à {payee} pour {reason} ?",
   "payments.confirmNoReason": "Payer {amount} {currency} à {payee} ?",
   "payments.pinPrompt": "Vous allez recevoir une demande de saisie de votre code PIN.",

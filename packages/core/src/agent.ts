@@ -12,6 +12,7 @@ import { inProcessBackground, type BackgroundWork } from "./background.js";
 import { toUssdSafe } from "./budget/ussd.js";
 import type { Channel, InboundEvent, Outcome, RouteAgent } from "./channel.js";
 import { systemClock, type Clock } from "./clock.js";
+import { DEFAULT_LANGUAGE_PRIORS, orderLanguages, type Language, type LanguagePriors } from "./languages.js";
 import { createCatalog, type Catalog, type Messages, type Translate } from "./locales.js";
 import { consoleLogger, maskPhone, type Logger } from "./logger.js";
 import {
@@ -28,7 +29,9 @@ import { freshRecord, memoryStore, SessionConflictError, type SessionRecord, typ
 import {
   indexSteps,
   isStep,
+  languageMenu,
   type Handler,
+  type LanguageStep,
   type PayStep,
   type PayTarget,
   type PaymentOutcome,
@@ -76,6 +79,16 @@ export interface AgentConfig<M = any> {
    * step. Needs a provider, a durable store, a payee name and a policy.
    */
   payments?: PaymentsConfig;
+  /**
+   * Ask the user to choose a language on first contact (docs/languages-design.md
+   * §4) and remember it per phone number. Needs at least two languages, each
+   * with messages: built in (`en`, `fr`) or passed in `messages`.
+   */
+  languages?: {
+    supported: readonly Language[];
+    /** Calling code to locales listed first. Defaults to `DEFAULT_LANGUAGE_PRIORS`. */
+    priors?: LanguagePriors;
+  };
 }
 
 export interface Agent<M = any> extends RouteAgent {
@@ -118,7 +131,18 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
   const logger = config.logger ?? consoleLogger();
   const clock = config.clock ?? systemClock;
   const catalog = createCatalog(config.defaultLocale ?? "en", config.messages);
-  const steps = indexSteps(config.start, config.steps);
+  const languageConfig = checkLanguages(config.languages, catalog);
+  // The implicit first-contact menu goes last among the extra steps, so the ids of the
+  // developer's own extra steps stay what they were.
+  const languageStep = languageConfig ? languageMenu({ then: config.start }) : undefined;
+  const steps = indexSteps(config.start, [...(config.steps ?? []), ...(languageStep ? [languageStep] : [])]);
+  for (const step of steps.all()) {
+    if (step.type !== "language") continue;
+    if (step.languages === undefined && !languageConfig) {
+      throw new TypeError("A language menu without `languages` needs `createAgent({ languages })` to say which languages");
+    }
+    if (step.languages !== undefined) checkLanguages({ supported: step.languages }, catalog);
+  }
   if (!config.payments && steps.all().some((step) => step.type === "pay")) {
     throw new TypeError("This agent has a pay step but no `payments` config (provider, store, payeeName, policy)");
   }
@@ -157,6 +181,8 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
     : undefined;
 
   const deps: Omit<RunDeps<M>, "saved"> = {
+    languages: languageConfig,
+    languageStep,
     payments,
     catalog,
     steps,
@@ -303,6 +329,35 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
   return agent;
 }
 
+/** Validates `createAgent({ languages })` once, at startup, so a typo never reaches a user. */
+function checkLanguages(
+  languages: AgentConfig["languages"] | undefined,
+  catalog: Catalog,
+): { supported: readonly Language[]; priors: LanguagePriors } | undefined {
+  if (!languages) return undefined;
+  const { supported } = languages;
+  if (supported.length < 2) {
+    throw new TypeError("`languages.supported` needs at least two languages: one language needs no menu");
+  }
+  const codes = new Set<string>();
+  const names = new Set<string>();
+  for (const language of supported) {
+    if (!language.code || !language.name.trim()) {
+      throw new TypeError("Each language needs a code and its own name, e.g. { code: \"fr\", name: \"Français\" }");
+    }
+    if (codes.has(language.code)) throw new TypeError(`Language ${JSON.stringify(language.code)} is listed twice`);
+    if (names.has(language.name)) throw new TypeError(`Two languages are both called ${JSON.stringify(language.name)}`);
+    codes.add(language.code);
+    names.add(language.name);
+    if (!catalog.has(language.code)) {
+      throw new TypeError(
+        `Language ${JSON.stringify(language.code)} has no messages: pass them in createAgent({ messages: { ${language.code}: { … } } })`,
+      );
+    }
+  }
+  return { supported, priors: languages.priors ?? DEFAULT_LANGUAGE_PRIORS };
+}
+
 function checkDeadline(ms: number, logger: Logger): number {
   if (!Number.isFinite(ms) || ms <= 0) throw new RangeError(`deadlineMs must be a positive number, got ${ms}`);
   if (ms > DEADLINE_MAX_MS) {
@@ -317,6 +372,10 @@ function checkDeadline(ms: number, logger: Logger): number {
 }
 
 interface RunDeps<M> {
+  /** The agent's languages, checked at startup. */
+  languages: { supported: readonly Language[]; priors: LanguagePriors } | undefined;
+  /** The menu shown before the start step until the user has chosen. */
+  languageStep: LanguageStep | undefined;
   payments: PaymentController | undefined;
   catalog: Catalog;
   steps: StepIndex;
@@ -366,8 +425,11 @@ class TurnRun<M> {
       const replay = event.inputs ?? (event.input !== "" ? [event.input] : []);
       if (replay.length === 0) {
         // A fresh dial: resume where a dropped session left off, or start over.
-        return shown ? this.display(shown) : await this.showStep(this.deps.steps.start);
+        return shown ? this.display(shown) : await this.showStep(this.entry());
       }
+      // The first replayed input would be taken as a language choice, which it is not:
+      // ask the language first and drop the shortcut this once.
+      if (this.needsLanguage()) return this.showStep(this.entry());
       // A dial string with choices in it: start from the top and replay them.
       let outcome = await this.showStep(this.deps.steps.start);
       for (const input of replay) {
@@ -377,10 +439,10 @@ class TurnRun<M> {
       }
       return outcome;
     }
-    if (!shown) return this.showStep(this.deps.steps.start);
+    if (!shown) return this.showStep(this.entry());
     if (channel.kind === "sms" && shown.kind === "say") {
       // Nothing is waiting for an answer: an SMS starts the flow from the top.
-      return this.showStep(this.deps.steps.start);
+      return this.showStep(this.entry());
     }
     return this.answer(shown, event.input);
   }
@@ -428,26 +490,27 @@ class TurnRun<M> {
     const step = record.stepId ? this.deps.steps.get(record.stepId) : undefined;
     if (!step) {
       // The tree changed under a stored session, or a handler's say had pages.
-      return this.showStep(this.deps.steps.start);
+      return this.showStep(this.entry());
     }
 
     switch (reading.type) {
       case "option": {
-        if (step.type !== "menu") return this.showStep(this.deps.steps.start);
+        if (step.type === "language") return this.chooseLanguage(step, reading.index);
+        if (step.type !== "menu") return this.showStep(this.entry());
         const entry = step.entries[reading.index];
         if (!entry) return this.display(shown, this.t("common.invalidChoice"));
         const label = shown.kind === "choose" ? (shown.options[reading.index]?.label ?? "") : "";
         return this.go(entry.to, label, step);
       }
       case "answer":
-        if (step.type !== "ask") return this.showStep(this.deps.steps.start);
+        if (step.type !== "ask") return this.showStep(this.entry());
         return this.runHandler(step.handler, reading.value, step);
       case "yes":
       case "no": {
         if (step.type === "pay") {
           return reading.type === "yes" ? this.startPayment(step) : this.go(step.onDeclined, input.trim(), step);
         }
-        if (step.type !== "confirm") return this.showStep(this.deps.steps.start);
+        if (step.type !== "confirm") return this.showStep(this.entry());
         return this.go(reading.type === "yes" ? step.onYes : step.onNo, input.trim(), step);
       }
       default:
@@ -567,7 +630,51 @@ class TurnRun<M> {
 
   private async showStep(step: Step): Promise<Outcome> {
     if (step.type === "pay") return this.showPay(step);
+    if (step.type === "language") return this.showLanguage(step);
     return this.showTurn(this.turnFor(step), this.deps.steps.id(step) ?? null);
+  }
+
+  /** Where a fresh start begins: the language menu until the user has chosen, then the start step. */
+  private entry(): Step {
+    return this.needsLanguage() && this.deps.languageStep ? this.deps.languageStep : this.deps.steps.start;
+  }
+
+  private needsLanguage(): boolean {
+    return this.deps.languageStep !== undefined && !this.record.languageChosen;
+  }
+
+  /** The step's languages, the likely ones for this number first. */
+  private orderedLanguages(step: LanguageStep): Language[] {
+    const languages = step.languages ?? this.deps.languages?.supported ?? [];
+    const priors = step.priors ?? this.deps.languages?.priors ?? DEFAULT_LANGUAGE_PRIORS;
+    return orderLanguages(languages, this.event.phone, priors);
+  }
+
+  private async showLanguage(step: LanguageStep): Promise<Outcome> {
+    const ordered = this.orderedLanguages(step);
+    const title =
+      step.title !== undefined
+        ? this.deps.catalog.localize(step.title, this.record.locale)
+        : [...new Set(ordered.map((l) => this.deps.catalog.translator(l.code)("common.language")))].join(" / ");
+    return this.showTurn(
+      { kind: "choose", question: title, options: ordered.map((l) => ({ label: l.name })) },
+      this.deps.steps.id(step) ?? null,
+    );
+  }
+
+  /** The user picked a language: set it for good, then carry on. */
+  private async chooseLanguage(step: LanguageStep, index: number): Promise<Outcome> {
+    const language = this.orderedLanguages(step)[index];
+    const shown = this.record.turn;
+    if (!language) {
+      return shown ? this.display(shown, this.t("common.invalidChoice")) : this.showStep(this.entry());
+    }
+    this.record.locale = language.code;
+    this.record.languageChosen = true;
+    this.t = this.deps.catalog.translator(language.code);
+    this.deps.logger.info("Language chosen", { language: language.code, channel: this.channel.id });
+    if (step.then === undefined) return this.finish(undefined, step);
+    return this.go(step.then, language.name, step);
   }
 
   private paymentsOrThrow(): PaymentController {
@@ -734,7 +841,7 @@ class TurnRun<M> {
       step: this.record.stepId,
     });
     if (shown) return this.display(shown, this.t("common.expiredChoice"));
-    return this.showStep(this.deps.steps.start);
+    return this.showStep(this.entry());
   }
 
   /** Renders `turn` at the record's current page and updates the position. */
@@ -786,6 +893,8 @@ class TurnRun<M> {
         };
       case "pay":
         throw new TypeError("A pay step is shown through showPay, not turnFor");
+      case "language":
+        throw new TypeError("A language step is shown through showLanguage, not turnFor");
       default:
         return assertNever(step);
     }
@@ -799,6 +908,7 @@ class TurnRun<M> {
         return;
       }
       record.locale = locale;
+      record.languageChosen = true;
       this.t = deps.catalog.translator(locale);
     };
     return {
