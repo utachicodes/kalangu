@@ -260,10 +260,19 @@ what breaks without one (deferred answers never get sent).
 ```ts
 interface SessionStore {
   load(key: string): Promise<SessionRecord | null>;
-  save(record: SessionRecord): Promise<void>;
+  save(record: SessionRecord, options?: { ifVersion?: number }): Promise<void>;
   clear(key: string): Promise<void>;
+  readonly atomic?: boolean;   // save honours ifVersion atomically (0.2, payments)
 }
 ```
+
+`save` bumps `record.version`. With `ifVersion` it is a compare-and-set: it
+throws `SessionConflictError` if the stored version has moved on (a missing
+record counts as 0). Without it the last write wins, as before. A store that
+sets `atomic: true` promises the compare-and-set holds across every process
+sharing it (a conditional `UPDATE … WHERE version = $n`, or Redis
+`WATCH`/`MULTI`). Agents that take payments require it; see payments design
+§6.1.
 
 - **Keyed by phone number**, not gateway `sessionId`, so a dropped session
   resumes on redial. The gateway `sessionId` is stored for correlation only.

@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   implement: `transition` (a final status stays final), `claimNotification`
   (each outcome is announced once) and `withPhoneLock` (limits cannot be
   raced past). Fixes a bug where two processes could both notify the user.
+- `SessionStore.save` takes `{ ifVersion }` for compare-and-set and the
+  store declares `atomic: true` when it honours it; `SessionRecord.version`
+  is bumped on every save. An agent with `payments` requires an atomic store,
+  and a double-tapped "Yes" now starts exactly one payment.
 - Payment refusals (policy rules and provider reasons) are localized in `en`
   and `fr` through `payments.refusal.*` messages, which can be overridden.
 

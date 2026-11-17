@@ -24,7 +24,7 @@ import {
 } from "./payments/controller.js";
 import type { PaymentRecord } from "./payments/store.js";
 import { interpret, type Rendered } from "./render.js";
-import { freshRecord, memoryStore, type SessionRecord, type SessionStore } from "./session.js";
+import { freshRecord, memoryStore, SessionConflictError, type SessionRecord, type SessionStore } from "./session.js";
 import {
   indexSteps,
   isStep,
@@ -147,6 +147,11 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
   const errorText = (locale?: string) =>
     catalog.translator(locale && catalog.has(locale) ? locale : catalog.defaultLocale)("common.error");
 
+  if (config.payments && !store.atomic) {
+    throw new TypeError(
+      "Payments need a sessionStore whose `save` honours `ifVersion` atomically (set `atomic: true`); otherwise a double-tapped Yes can start two payments",
+    );
+  }
   const payments = config.payments
     ? createPaymentController(config.payments, { clock, logger, mask, onFinal: (payment) => deliverPayment(payment) })
     : undefined;
@@ -593,6 +598,17 @@ class TurnRun<M> {
     const intent = this.record.payIntent;
     this.record.payIntent = null;
     if (!intent) return this.showStep(step); // Nothing was offered under this session: start over.
+
+    // Claim the intent before touching money: a versioned save of the session
+    // with the intent consumed. A second "Yes" read from the same stored
+    // session loses here and starts nothing.
+    try {
+      await this.deps.store.save(this.record, { ifVersion: this.record.version ?? 0 });
+    } catch (err) {
+      if (!(err instanceof SessionConflictError)) throw err;
+      this.deps.logger.info("Duplicate Yes ignored", { phone: this.deps.mask(this.event.phone) });
+      return this.showTurn({ kind: "say", text: this.t("payments.alreadyStarted") }, null);
+    }
 
     const stepId = this.deps.steps.id(step) ?? "";
     const begun = await payments.begin(this.event.phone, intent, { stepId, locale: this.record.locale });

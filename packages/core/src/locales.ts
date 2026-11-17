@@ -23,6 +23,7 @@ export type MessageKey =
   | "payments.failed"
   | "payments.unresolved"
   | "payments.receipt"
+  | "payments.alreadyStarted"
   | "payments.refusal.currency"
   | "payments.refusal.per-payment"
   | "payments.refusal.per-day"
@@ -53,6 +54,7 @@ export const en: Messages = {
   "payments.failed": "The payment was not completed. Nothing was charged.",
   "payments.unresolved": "We could not confirm your payment. Please contact {payee} before paying again.",
   "payments.receipt": "Receipt: {amount} {currency} paid to {payee}. Ref {ref}.",
+  "payments.alreadyStarted": "Your payment is already being processed.",
   "payments.refusal.currency": "Payments in {currency} are not accepted.",
   "payments.refusal.per-payment": "This payment is above the allowed limit.",
   "payments.refusal.per-day": "You have reached the daily payment limit.",
@@ -82,6 +84,7 @@ export const fr: Messages = {
   "payments.failed": "Le paiement n'a pas abouti. Rien n'a été débité.",
   "payments.unresolved": "Nous n'avons pas pu confirmer votre paiement. Contactez {payee} avant de payer à nouveau.",
   "payments.receipt": "Reçu : {amount} {currency} payé à {payee}. Réf {ref}.",
+  "payments.alreadyStarted": "Votre paiement est déjà en cours de traitement.",
   "payments.refusal.currency": "Les paiements en {currency} ne sont pas acceptés.",
   "payments.refusal.per-payment": "Ce paiement dépasse la limite autorisée.",
   "payments.refusal.per-day": "Vous avez atteint la limite de paiement journalière.",

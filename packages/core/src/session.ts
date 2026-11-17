@@ -37,13 +37,43 @@ export interface SessionRecord {
   /** Set while a deferred answer is still being produced. */
   deferred: { since: number } | null;
   updatedAt: number;
+  /**
+   * Bumped by the store on every save. Lets `save` refuse a write based on a
+   * stale read (`ifVersion`). Absent on sessions stored before 0.2, read as 0.
+   */
+  version?: number;
   /** Kept for correlating logs with the gateway; never used as the key. */
   gatewaySessionId: string | null;
 }
 
+/** A versioned save found a newer record than the one it was based on. */
+export class SessionConflictError extends Error {
+  override readonly name = "SessionConflictError";
+}
+
+export interface SessionSaveOptions {
+  /**
+   * Save only if the stored record's version is still this (a missing record
+   * counts as 0), atomically; otherwise throw `SessionConflictError` and
+   * change nothing. Without it, the last write wins.
+   */
+  readonly ifVersion?: number;
+}
+
 export interface SessionStore {
   load(phone: string): Promise<SessionRecord | null>;
-  save(record: SessionRecord): Promise<void>;
+  /**
+   * Stores the record and bumps `record.version`. Must honour `ifVersion`
+   * atomically if `atomic` is true.
+   */
+  save(record: SessionRecord, options?: SessionSaveOptions): Promise<void>;
+  /**
+   * True when `save` honours `ifVersion` atomically across every process
+   * that shares the store (a conditional UPDATE, a Redis WATCH/MULTI).
+   * Required when the agent takes payments: a double-tapped "Yes" is stopped
+   * by it.
+   */
+  readonly atomic?: boolean;
   clear(phone: string): Promise<void>;
 }
 
@@ -59,9 +89,15 @@ export function memoryStore(): SessionStore & { readonly size: number } {
       const record = records.get(phone);
       return record ? structuredClone(record) : null;
     },
-    async save(record) {
+    async save(record, options) {
+      const current = records.get(record.phone)?.version ?? 0;
+      if (options?.ifVersion !== undefined && options.ifVersion !== current) {
+        throw new SessionConflictError(`Session for ${record.phone} changed since it was read`);
+      }
+      record.version = current + 1;
       records.set(record.phone, structuredClone(record));
     },
+    atomic: true,
     async clear(phone) {
       records.delete(phone);
     },

@@ -357,6 +357,19 @@ describe("pay step", () => {
 });
 
 describe("pay configuration", () => {
+  it("refuses a session store that cannot do compare-and-set", () => {
+    const { provider } = controllableProvider();
+    const plain = { ...memoryStore(), atomic: false };
+    expect(() =>
+      createAgent({
+        start: say("hi"),
+        channels: [ussdChannel()],
+        sessionStore: plain,
+        payments: { provider, store: memoryPaymentStore(), payeeName: "X", policy: { currencies: ["KES"], maxPerPayment: { KES: "100" } } },
+      }),
+    ).toThrow(/compare|atomic/i);
+  });
+
   const base = { start: say("hi"), channels: [ussdChannel()] };
   const step = pay({ amount: "5", currency: "KES" }, { onPaid: say("ok"), onFailed: say("no"), onDeclined: say("bye") });
 
@@ -556,6 +569,40 @@ describe("two processes sharing one store", () => {
     await flush();
     expect(first.store.size).toBe(1);
     expect(first.fake.initiated).toHaveLength(1);
+  });
+
+  it("a double-tapped Yes starts one payment even when several are allowed in flight", async () => {
+    const policy = { currencies: ["KES"], maxPerPayment: { KES: "5000" }, maxPendingPerPhone: 5 };
+    const first = setup({ payments: { policy } });
+    const second = setup({
+      provider: first.fake,
+      shared: { store: first.store, sessions: first.sessions, clock: first.clock },
+      payments: { policy, newId: () => "ffffffff-0000-4000-8000-000000000002" },
+    });
+    await first.dial();
+    await first.press("1"); // the confirm screen is showing
+
+    // Both Yes requests read the stored session before either of them writes.
+    const realLoad = first.sessions.load.bind(first.sessions);
+    const waiting: Array<() => void> = [];
+    first.sessions.load = async (phone) => {
+      const record = await realLoad(phone);
+      await new Promise<void>((resolve) => {
+        waiting.push(resolve);
+        if (waiting.length === 2) waiting.forEach((release) => release());
+      });
+      return record;
+    };
+    const [a, b] = await Promise.all([first.press("1"), second.press("1")]);
+    first.sessions.load = realLoad;
+    await flush();
+
+    expect(first.store.size).toBe(1);
+    expect(first.fake.initiated).toHaveLength(1);
+    expect([a.text, b.text].sort()).toEqual([
+      "You will receive a prompt to enter your PIN.",
+      "Your payment is already being processed.",
+    ]);
   });
 
   it("never lets a stale status read overwrite a final one", async () => {

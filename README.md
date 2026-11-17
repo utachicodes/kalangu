@@ -151,7 +151,9 @@ export default agent.requestHandler; // standard Request -> Response
   alive there too, since initiating the payment runs in it. See
   [docs/payments-design.md](docs/payments-design.md) §6.5.
 - **Sessions** are in memory by default and keyed by phone number; pass a
-  durable `sessionStore` for production.
+  durable `sessionStore` for production. Agents that take payments need one
+  whose `save` honours `ifVersion` atomically (`atomic: true`), so a
+  double-tapped "Yes" cannot start two payments.
 - **Callbacks are not signed** by the gateway. Use hard-to-guess paths and,
   where you can, allow only the gateway's IP addresses.
 

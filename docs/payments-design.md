@@ -273,9 +273,14 @@ interface PaymentRecord {
   - `withPhoneLock(phone, work)` serialises the limit check and the create
     for one phone, so two simultaneous "Yes" answers cannot both pass a
     limit of one. In Postgres, `pg_advisory_xact_lock(hashtext(phone))`.
-  Known gap: with `maxPendingPerPhone` above 1, a double-tapped "Yes" can
-  still start two payments, since sessions have no compare-and-set. The
-  default of 1 prevents it.
+- **A double-tapped "Yes" starts one payment.** Before touching money, the
+  engine consumes the stored offer with a versioned session save
+  (`ifVersion`). A second "Yes" that read the same stored session loses the
+  compare-and-set, starts nothing and is told "Your payment is already being
+  processed". This holds even with `maxPendingPerPhone` above 1, and it is why
+  an agent with `payments` refuses to start on a session store that is not
+  `atomic`. If the process dies between that claim and recording the payment,
+  nothing was charged and the next "Yes" simply re-offers.
 - An in-memory store ships **for tests and the simulator only**. Using it
   with a real provider logs an error at startup: a restart would forget
   pending payments.

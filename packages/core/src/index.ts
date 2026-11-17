@@ -70,8 +70,8 @@ export { consoleLogger, maskPhone, silentLogger } from "./logger.js";
 export type { LogFields, LogLevel, Logger } from "./logger.js";
 export { NotSupportedError, interpret, renderSms, renderUssd } from "./render.js";
 export type { ChannelKind, InterpretContext, Interpretation, RenderContext, Rendered } from "./render.js";
-export { freshRecord, memoryStore } from "./session.js";
-export type { Json, PayIntent, SessionRecord, SessionStore } from "./session.js";
+export { SessionConflictError, freshRecord, memoryStore } from "./session.js";
+export type { Json, PayIntent, SessionRecord, SessionSaveOptions, SessionStore } from "./session.js";
 export { ask, choose, confirm, indexSteps, isStep, menu, pay, say } from "./steps.js";
 export type {
   AskStep,
