@@ -1,8 +1,9 @@
 # Contributing
 
-Kalangu's v0.1 packages are in this repository but nothing is published
-yet. Reviewing [docs/design.md](docs/design.md) is still the most useful
-contribution; code contributions are welcome too.
+Kalangu's packages are published on npm as alpha releases (see
+[RELEASING.md](RELEASING.md) for how a release is made). Reviewing
+[docs/design.md](docs/design.md) is still the most useful contribution;
+code contributions are welcome too.
 
 ## Reviewing the design
 

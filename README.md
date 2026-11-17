@@ -12,12 +12,14 @@ between towns across West Africa for centuries by imitating the tones of
 speech — a long-distance, low-bandwidth messaging network that needed no
 literacy and no smartphone. That is the job this toolkit does for agents.
 
-## Status: v0.1 in progress
+## Status: alpha
 
-**Nothing is published on npm yet.** The v0.1 packages are built and
-tested in this repository; the design is still open for review, and the
-verify-first checklist in [TODO.md](TODO.md) (real operators, real costs)
-is not done.
+**Alpha packages are on npm**: `@kalangu/core`, `@kalangu/ussd`,
+`@kalangu/sms` and `@kalangu/sim`, published with verified provenance. The
+API may change before 1.0. Payments have only been run against a fake
+provider, so do not use them with real money. The design is still open for
+review, and the verify-first checklist in [TODO.md](TODO.md) (real
+operators, real costs) is not done.
 
 | Start here | What it is |
 |---|---|
@@ -107,6 +109,10 @@ The packages run on Node 20 or later; the test suite needs Node 22.12 or
 later. Requires pnpm. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Write an agent
+
+```sh
+npm install @kalangu/core @kalangu/ussd @kalangu/sms
+```
 
 ```ts
 import { ask, createAgent, menu, say } from "@kalangu/core";
