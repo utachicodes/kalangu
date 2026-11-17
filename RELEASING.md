@@ -28,8 +28,11 @@ the maintainer; nothing here runs on its own.
 ## Each release
 
 1. Bump `version` in all four `packages/*/package.json` (same number).
-   Alpha releases look like `0.1.0-alpha.1` and publish under the `alpha`
-   tag, so `npm install @kalangu/core` does not pick them up by accident.
+   Alpha releases look like `0.1.0-alpha.1`. The packages ask for the
+   `alpha` dist-tag (`publishConfig.tag`), but **on the first release npm's
+   staged-publishing approval set `latest` instead and created no `alpha`
+   tag**, so a plain `npm install @kalangu/core` gets the alpha. Check the
+   tags after approving (step 6) rather than assuming.
 2. Move the CHANGELOG's `[Unreleased]` entries under the new version and
    date.
 3. Merge to `main` and wait for CI to pass.
@@ -48,9 +51,15 @@ the maintainer; nothing here runs on its own.
    docs do not say whether a staged version expires, so approve promptly.
 6. **Check the registry** (read-only, no login needed):
    `npm view @kalangu/core versions dist-tags` for all four packages. The
-   new version must be listed, the `alpha` tag must point at it, and the
-   package page should show a provenance badge. Then install it in an empty
-   folder with `npm install @kalangu/core@alpha` and import it.
+   new version must be listed and `latest` must point at it (or `alpha`, if
+   npm set that instead; set the one you want with
+   `npm dist-tag add @kalangu/core@<version> <tag>`). `npm audit signatures`
+   in an install should report verified attestations. Then, in an empty
+   folder, `npm install @kalangu/core @kalangu/ussd @kalangu/sms @kalangu/sim`,
+   import them, and run the **installed** command
+   (`./node_modules/.bin/kalangu locale check <file>`), not the file in
+   `dist/`: running the file directly hid a bug in `0.1.0-alpha.0` where the
+   installed command did nothing.
 7. Tag the commit (`git tag v0.1.0-alpha.1 && git push --tags`).
 
 ### The `0.0.0-stage` placeholder
@@ -84,12 +93,13 @@ packing.
 - Read each package README as a stranger would: they are what npm shows.
   The core README says payments are experimental and fake-provider only;
   keep that true.
-- Alpha packages install only with the tag: `npm install @kalangu/core@alpha`.
+- Packages install with a plain `npm install @kalangu/core`; there is no
+  `alpha` tag (see "Each release", step 1).
 
 ## Not yet done
 
-- As of 17 Nov 2026 the first release, `0.1.0-alpha.0` of all four packages,
-  has been staged but not approved, so it is not yet installable. Update this
-  line when it is live.
+- `0.1.0-alpha.0` of all four packages was published on 17 Nov 2026 (staged,
+  then approved), with verified provenance. Its installed `kalangu` command
+  does nothing; `0.1.0-alpha.1` fixes it.
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.

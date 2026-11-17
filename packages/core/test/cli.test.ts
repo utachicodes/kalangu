@@ -1,8 +1,9 @@
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, symlink, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { loadMessagesFile, main, type CliIo } from "../src/cli.js";
+import { isEntryPoint, loadMessagesFile, main, type CliIo } from "../src/cli.js";
 import { en } from "../src/index.js";
 
 function stubIo(files: Record<string, Record<string, unknown>> = {}) {
@@ -142,5 +143,40 @@ describe("loading real files", () => {
     const out: string[] = [];
     const code = await main(["locale", "check", path, "--complete", "--strict"], { stdout: (t) => void out.push(t), stderr: () => {}, load: loadMessagesFile });
     expect(code).toBe(0);
+  });
+});
+
+describe("isEntryPoint: running as an installed command", () => {
+  let dir: string;
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), "kalangu-entry-"));
+  });
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("is true for the file itself", async () => {
+    const file = join(dir, "cli.js");
+    await writeFile(file, "");
+    expect(isEntryPoint(file, pathToFileURL(file).href)).toBe(true);
+  });
+
+  it("is true through a symlink, which is how npm installs a package's command", async () => {
+    const file = join(dir, "real-cli.js");
+    await writeFile(file, "");
+    await mkdir(join(dir, ".bin"), { recursive: true });
+    const link = join(dir, ".bin", "kalangu");
+    await symlink(file, link);
+    expect(isEntryPoint(link, pathToFileURL(file).href)).toBe(true);
+  });
+
+  it("is false for another file, a missing file, or nothing", async () => {
+    const file = join(dir, "a.js");
+    const other = join(dir, "b.js");
+    await writeFile(file, "");
+    await writeFile(other, "");
+    expect(isEntryPoint(other, pathToFileURL(file).href)).toBe(false);
+    expect(isEntryPoint(join(dir, "missing.js"), pathToFileURL(file).href)).toBe(false);
+    expect(isEntryPoint(undefined, pathToFileURL(file).href)).toBe(false);
   });
 });

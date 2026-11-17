@@ -1,6 +1,8 @@
 name: Release
 
-# Manual only. Publishes the four packages to npm under the `alpha` tag.
+# Manual only. Publishes the four packages to npm. They ask for the `alpha`
+# dist-tag, but npm staged publishing holds them for a maintainer to approve,
+# and on the first release approval set `latest` instead: see RELEASING.md.
 # Needs an `NPM_TOKEN` repository secret (an npm automation token with
 # publish rights to the @kalangu scope). Run it from main, after CI passes.
 

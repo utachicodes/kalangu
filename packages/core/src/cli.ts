@@ -5,9 +5,10 @@
  * main export so the engine stays runtime-agnostic.
  */
 
+import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename, extname, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { checkLocale, formatReport } from "./localeCheck.js";
 
 export interface CliIo {
@@ -124,7 +125,23 @@ function nodeIo(): CliIo {
   };
 }
 
+/**
+ * True when `entry` (what Node was told to run, `process.argv[1]`) is this
+ * module. npm installs a package's command as a symlink
+ * (`node_modules/.bin/kalangu` to `dist/cli.js`), so both sides are resolved
+ * to their real paths before comparing; comparing the raw paths made the
+ * installed command silently do nothing.
+ */
+export function isEntryPoint(entry: string | undefined, moduleUrl: string): boolean {
+  if (!entry) return false;
+  try {
+    return realpathSync(resolve(entry)) === realpathSync(fileURLToPath(moduleUrl));
+  } catch {
+    return false;
+  }
+}
+
 // Run only when started as a command, never when imported (by the tests).
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (isEntryPoint(process.argv[1], import.meta.url)) {
   main(process.argv.slice(2)).then((code) => process.exit(code));
 }
