@@ -72,12 +72,13 @@ export { NotSupportedError, interpret, renderSms, renderUssd } from "./render.js
 export type { ChannelKind, InterpretContext, Interpretation, RenderContext, Rendered } from "./render.js";
 export { SessionConflictError, freshRecord, memoryStore } from "./session.js";
 export type { Json, PayIntent, SessionRecord, SessionSaveOptions, SessionStore } from "./session.js";
-export { ask, choose, confirm, indexSteps, isStep, menu, pay, say } from "./steps.js";
+export { ask, choose, confirm, indexSteps, isStep, languageMenu, menu, pay, say } from "./steps.js";
 export type {
   AskStep,
   Awaitable,
   ConfirmStep,
   Handler,
+  LanguageStep,
   MenuEntry,
   MenuStep,
   PayHandler,
@@ -134,3 +135,9 @@ export type {
   StatusResult,
   PaymentRoute,
 } from "./payments/index.js";
+
+export { DEFAULT_LANGUAGE_PRIORS, callingCodeOf, orderLanguages } from "./languages.js";
+export type { Language, LanguagePriors } from "./languages.js";
+
+export { checkLocale, formatReport } from "./localeCheck.js";
+export type { CheckLocaleOptions, LocaleIssue, LocaleIssueCode, LocaleReport, LocaleSeverity } from "./localeCheck.js";

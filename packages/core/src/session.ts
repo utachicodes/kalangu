@@ -29,6 +29,12 @@ export interface SessionRecord {
   /** The channel id of the last exchange. */
   channel: string | null;
   /**
+   * True once the user has chosen a language (the language menu, or any
+   * handler setting `ctx.locale`). An agent with `languages` asks until then.
+   * Absent on earlier sessions, which are asked once.
+   */
+  languageChosen?: boolean;
+  /**
    * The payment the user was last offered on a pay step: exactly what the
    * confirm screen showed, so "Yes" pays that and nothing else. Optional so
    * sessions stored before 0.2 still load.

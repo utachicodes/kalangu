@@ -50,6 +50,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   has expired." and runs nothing, so an old Yes can never confirm a later
   question or start a payment, and a Yes on one confirmation cannot pay the
   amount of another. USSD and SMS are unaffected.
+- Languages (first slice of docs/languages-design.md, no model needed):
+  `createAgent({ languages })` asks the user to choose a language on first
+  contact and remembers it per phone number, with a menu that names each
+  language in itself and lists the likely ones for the caller's country
+  first (`DEFAULT_LANGUAGE_PRIORS`, `orderLanguages`, `callingCodeOf`); and
+  `languageMenu()` for a Language entry in the tree. New message
+  `common.language`.
+- `kalangu locale check <file>` and `checkLocale`: checks a translation for
+  missing, unknown and empty keys, lost or invented `{placeholders}`, and how
+  each string fits USSD (letters removed or shown differently, screen length)
+  and SMS (UCS-2, segments). The `kalangu` command is the new `bin` of
+  `@kalangu/core`.
 - Payment refusals (policy rules and provider reasons) are localized in `en`
   and `fr` through `payments.refusal.*` messages, which can be overridden.
 
