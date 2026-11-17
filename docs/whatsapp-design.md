@@ -171,7 +171,7 @@ Talking always supplies one. WhatsApp may not (§2.4).
   a phone-less BSUID is a separate session from their USSD self. An alias
   store (BSUID to phone, filled whenever a webhook carries both, and updated
   on `user_changed_number`) can come later; it needs a durable store and
-  decisions about merging sessions (§14, question 1).
+  decisions about merging sessions (§14, decision 1).
 - **`user_changed_number` and `user_changed_user_id`** must be handled, or a
   user's session and history silently orphan when they change phone. First
   slice: log it, move the stored session to the new key when both keys are
@@ -378,7 +378,7 @@ Core's engine changes, all small and all testable without Meta:
   gains an optional `interactive` field; channels that do not support it
   ignore it. The text form is always present as the fallback, so a renderer
   bug degrades to numbered text rather than silence.
-- `turnSeq` (§6).
+- `turnSeq` (§6, settled in §14, decision 9).
 - The user key is opaque (§3).
 
 ---
@@ -443,14 +443,58 @@ same renderer).
 
 ---
 
-## 14. Open questions
+## 14. Decisions and open questions
 
-Each has a recommendation so they can be settled quickly.
+### Decisions (17 Nov 2026)
 
-1. **Identity key.** Phone when present, otherwise the BSUID, with no
-   aliasing in the first slice (recommended), or build the BSUID-to-phone
-   alias store now? The alias store is the larger piece of work and depends on
-   how fast usernames spread in your markets.
+**1. Identity key: the phone when present, otherwise the BSUID. No alias
+store in the first slice.**
+
+- The key is `+<wa_id>` when `wa_id` is present, else the BSUID as given. A
+  key that does not start with `+` means "no phone known" everywhere
+  (§3): SMS fallback is skipped, and `pay` refuses.
+- When a webhook carries both `wa_id` and a BSUID, nothing is stored about
+  the pairing. The session lives under the phone key.
+- `user_changed_number` and `user_changed_user_id` move the stored session to
+  the new key when both the old and new keys are known to the adapter from
+  that one webhook, and otherwise start the user fresh, logging that they
+  did.
+- **Why not the alias store now:** it needs a durable store of its own and
+  rules for merging two sessions that both have state, and we do not yet know
+  how common a phone-less BSUID is in the target markets (§12, item 3). The
+  first slice is correct without it, only less continuous for users who hide
+  their number.
+- **Revisit when** the test-number work shows phone-less BSUIDs are common for
+  your users, or the first user reports a lost session after changing phone.
+  The key stays an opaque string, so adding an alias lookup later changes the
+  adapter and nothing in core.
+
+**9. Stale-tap protection goes into core now, not only into the WhatsApp
+package.**
+
+- It is a property of the engine, not of one channel: any adapter with
+  tappable history needs it, and the check has to compare against the stored
+  session, which only the engine can read. An adapter-only version would
+  need its own session lookup and could disagree with the engine.
+- **What changes in core:** an optional `turnSeq` on `SessionRecord` (a
+  session stored before it exists reads as 0), an optional `turnSeq` on
+  `InboundEvent`, the comparison in the engine, a `common.expiredChoice`
+  message in `en` and `fr`, and tests. USSD and SMS never set the field and
+  are unaffected.
+- **When the counter bumps:** when a **new** turn is shown, that is, whenever
+  the engine moves to a different step or message. It does **not** bump when
+  the same turn is shown again (an invalid answer re-shown with a notice, a
+  page change). Otherwise tapping a button on the message the user is looking
+  at, just after a typed mistake re-sent it, would be refused as expired.
+  Buttons from the earlier, identical message stay valid for the same reason.
+- **A tap with no `turnSeq`** (an adapter that does not send one) is treated
+  as a typed answer, as today.
+- **An expired tap** shows the current turn again with the localized
+  "That choice has expired", runs no handler, and starts no payment. This is
+  required before payments are ever offered over a tappable channel (§9).
+
+### Still open
+
 2. **Over-long `say`.** Error for the developer (recommended, consistent with
    SMS), or paginate with a "More" button?
 3. **Buttons, then list, then numbered text** for `choose`, never shortening
@@ -465,7 +509,5 @@ Each has a recommendation so they can be settled quickly.
    management that is out of scope?
 8. **Typing indicator and read receipts:** later (recommended). They need no
    extra billable message but their request shapes are unverified.
-9. **Stale-tap `turnSeq`** in core now (recommended), since it protects any
-   future adapter, or only inside the WhatsApp package?
 10. **Package name and pinning:** `@kalangu/whatsapp`, with `graphVersion`
     configurable and a default that is bumped deliberately (recommended).
