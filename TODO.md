@@ -120,8 +120,10 @@ above).
   languages design §8 and §9
 - [x] Language menu: `createAgent({ languages })`, `languageMenu()`, country
   priors (languages design §4, §9.4)
-- [ ] Wolof, Hausa and Swahili translations, through the checker: needs native
-  speakers (see the next item)
+- [x] Gemini drafting script for translations (`scripts/translate-locale.mjs`,
+  CONTRIBUTING.md): drafts only, marked unreviewed
+- [ ] Wolof, Hausa and Swahili translations, through the checker: draft with
+  the script if useful, then native speakers (see the next item)
 - [ ] Native speakers to supply and review the Wolof and Hausa translations
   (the first draft's sample Wolof strings were removed: unverified)
 

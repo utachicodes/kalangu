@@ -28,6 +28,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      # The repository scripts' own tests (they load the built core).
+      - run: node --test scripts/
 
   runtime-node-20:
     name: Runtime smoke test (Node 20)

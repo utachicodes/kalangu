@@ -65,6 +65,22 @@ translated by anyone who speaks the language, with no code. See
    speaker of that language other than the author has checked it, and the file
    says who; until then it ships as **experimental**.
 
+**Starting from a machine draft.** If no speaker is at hand to write the first
+version, `scripts/translate-locale.mjs` asks Gemini for a draft and runs the
+checker on it:
+
+```
+pnpm build
+export GEMINI_API_KEY=...   # your own key; never paste it into a chat, issue or commit
+node scripts/translate-locale.mjs wo --name Wolof --reference fr
+```
+
+It writes `locales/wo.draft.json`, marked as an unreviewed machine draft, and
+sends Google only Kalangu's fixed strings. Models are much weaker in Wolof,
+Hausa and other African languages than their fluent output suggests, so a
+draft is a starting point for a native speaker, never a translation to ship
+as it is. `--dry-run` shows the request without sending anything.
+
 Agent content (menu titles, answers) is the developer's own and lives in the
 agent definition as `{ en: "...", wo: "..." }`, not in these files.
 

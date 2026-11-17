@@ -38,6 +38,9 @@ describe("kalangu locale check", () => {
     const u = stubIo({ "x/sw.json": goodWo });
     await main(["locale", "check", "x/sw.json"], u.io);
     expect(u.out()).toMatch(/^sw: /);
+    const d = stubIo({ "locales/wo.draft.json": goodWo });
+    await main(["locale", "check", "locales/wo.draft.json"], d.io);
+    expect(d.out()).toMatch(/^wo: /);
   });
 
   it("fails on an error, such as a lost placeholder", async () => {
