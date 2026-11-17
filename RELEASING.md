@@ -9,8 +9,17 @@ the maintainer; nothing here runs on its own.
 1. Claim the `@kalangu` scope on npm (create an organisation named
    `kalangu`, or publish under the maintainer's user scope if the name is
    taken). The packages are `publishConfig.access: public`.
-2. Create an npm **automation** token with publish rights to the scope and
-   add it to the repository as the `NPM_TOKEN` secret.
+2. Create an npm token with publish rights to the scope (a granular token,
+   read and write for packages under `@kalangu`, with a short expiry) and
+   add it to the repository as the `NPM_TOKEN` secret. **Put it only in
+   GitHub's secret store**, typed or pasted there yourself or through
+   `gh secret set NPM_TOKEN`. Never paste a token into a chat, an issue or a
+   commit; if you do, revoke it at once on npmjs.com.
+   An alternative with no long-lived token is npm's trusted publishing
+   (GitHub OIDC): it needs npm 11.5.1 or later, is configured per package on
+   npmjs.com, and the docs say a new configuration must complete a first
+   publish within two days. Check npm's current documentation before
+   switching.
 
 ## Each release
 
@@ -35,6 +44,16 @@ cd packages/core && pnpm pack --dry-run   # lists exactly what would ship
 Each package ships `dist/`, `src/` (for source maps), its README and the
 LICENSE. `workspace:*` dependencies are rewritten to the real version when
 packing.
+
+## Before the first publish
+
+- Finish the trademark search in `TODO.md`; a published package name is hard
+  to take back.
+- Run the **Release** workflow once as a dry run and read what it lists.
+- Read each package README as a stranger would: they are what npm shows.
+  The core README says payments are experimental and fake-provider only;
+  keep that true.
+- Alpha packages install only with the tag: `npm install @kalangu/core@alpha`.
 
 ## Not yet done
 
