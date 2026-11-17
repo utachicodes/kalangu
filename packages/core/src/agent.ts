@@ -357,7 +357,7 @@ class TurnRun<M> {
     }
 
     // A tap on a button from an earlier turn: refuse it and show what is current.
-    if (event.turnSeq !== undefined && event.turnSeq !== (record.turnSeq ?? 0)) {
+    if (event.turnId !== undefined && event.turnId !== (record.turnId ?? 0)) {
       return this.expiredChoice();
     }
 
@@ -721,7 +721,7 @@ class TurnRun<M> {
   private showTurn(turn: Turn, stepId: string | null): Outcome {
     this.record.stepId = stepId;
     this.record.page = 0;
-    this.record.turnSeq = (this.record.turnSeq ?? 0) + 1;
+    this.record.turnId = newTurnId(this.record.turnId);
     return this.display(turn);
   }
 
@@ -743,7 +743,7 @@ class TurnRun<M> {
     const rendered: Rendered = channel.render(turn, {
       t: this.t,
       page: record.page,
-      turnSeq: record.turnSeq ?? 0,
+      turnId: record.turnId ?? 0,
       ...(notice ? { notice } : {}),
     });
     for (const warning of rendered.warnings) {
@@ -817,6 +817,14 @@ class TurnRun<M> {
       model: deps.model,
       logger: deps.logger,
     };
+  }
+}
+
+/** A random positive 31-bit integer, different from `previous`. Never 0, which means "none". */
+function newTurnId(previous: number | undefined): number {
+  for (;;) {
+    const id = globalThis.crypto.getRandomValues(new Uint32Array(1))[0]! >>> 1;
+    if (id !== 0 && id !== previous) return id;
   }
 }
 

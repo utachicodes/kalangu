@@ -42,11 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   justified that conclusion, and an outcome is only ever announced for a
   final payment: another process seeing the payment in the meantime can no
   longer cause a "not completed" message for a payment still in progress.
-- Stale-tap protection for channels with tappable history: `turnSeq` on
-  sessions, `InboundEvent.turnSeq` and `RenderContext.turnSeq`. A tap carrying
-  an earlier turn's counter shows the current turn again with "That choice has
-  expired." and runs nothing, so an old Yes can never confirm a later question
-  or start a payment. USSD and SMS are unaffected.
+- Stale-tap protection for channels with tappable history: a random per-turn
+  token, `turnId`, on sessions, `InboundEvent.turnId` and
+  `RenderContext.turnId`. A tap carrying any token but the current one (an
+  earlier turn, a cleared or restarted session, a concurrent request that
+  rendered a different turn) shows the current turn again with "That choice
+  has expired." and runs nothing, so an old Yes can never confirm a later
+  question or start a payment, and a Yes on one confirmation cannot pay the
+  amount of another. USSD and SMS are unaffected.
 - Payment refusals (policy rules and provider reasons) are localized in `en`
   and `fr` through `payments.refusal.*` messages, which can be overridden.
 

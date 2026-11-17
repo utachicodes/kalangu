@@ -22,7 +22,7 @@ function setup() {
   const channel: Channel = {
     ...base,
     render(turn, ctx: RenderContext) {
-      seen.push(ctx.turnSeq);
+      seen.push(ctx.turnId);
       return base.render(turn, ctx);
     },
   };
@@ -44,19 +44,45 @@ function setup() {
     }),
   });
   const agent = createAgent({ start, channels: [channel], logger: silentLogger, sessionStore: sessions });
-  const send = (input: string, turnSeq?: number) =>
-    agent.handle({ channel: "wa", phone: PHONE, input, ...(turnSeq !== undefined ? { turnSeq } : {}) });
-  const seq = async () => (await sessions.load(PHONE))?.turnSeq;
+  const send = (input: string, turnId?: number) =>
+    agent.handle({ channel: "wa", phone: PHONE, input, ...(turnId !== undefined ? { turnId } : {}) });
+  const seq = async () => (await sessions.load(PHONE))?.turnId;
   return { send, seq, sessions, ran, seen };
 }
 
-describe("turnSeq", () => {
-  it("starts at 1 for the first turn and is bumped by each new turn", async () => {
+describe("turnId", () => {
+  it("gives each new turn a fresh positive token, never 0", async () => {
     const t = setup();
     await t.send("hi");
-    expect(await t.seq()).toBe(1);
+    const first = await t.seq();
+    expect(first).toBeGreaterThan(0);
+    expect(Number.isInteger(first)).toBe(true);
     await t.send("1"); // the confirm screen
-    expect(await t.seq()).toBe(2);
+    const second = await t.seq();
+    expect(second).toBeGreaterThan(0);
+    expect(second).not.toBe(first);
+  });
+
+  it("is not a counter: tokens do not follow one another", async () => {
+    const t = setup();
+    const seen = new Set<number | undefined>();
+    for (const phone of ["+254700000010", "+254700000011", "+254700000012", "+254700000013"]) {
+      const agent = createAgent({ start: say("hi"), channels: [smsChannel({ id: "wa" })], logger: silentLogger, sessionStore: t.sessions });
+      await agent.handle({ channel: "wa", phone, input: "x" });
+      seen.add((await t.sessions.load(phone))?.turnId);
+    }
+    expect(seen.size).toBe(4); // four fresh sessions, four different first tokens
+  });
+
+  it("refuses a tap from a session that was cleared and started again", async () => {
+    const t = setup();
+    await t.send("hi");
+    const oldToken = await t.seq();
+    await t.sessions.clear(PHONE); // or a restart of an in-memory store
+    await t.send("hi");
+    const out = await t.send("1", oldToken);
+    expect(out.text).toContain("That choice has expired.");
+    expect(t.ran).toEqual([]);
   });
 
   it("is not bumped when the same turn is shown again", async () => {
@@ -69,14 +95,14 @@ describe("turnSeq", () => {
     expect(await t.seq()).toBe(before);
   });
 
-  it("hands the renderer the current counter", async () => {
+  it("hands the renderer the current token", async () => {
     const t = setup();
     await t.send("hi");
     await t.send("1");
-    expect(t.seen.at(-1)).toBe(2);
+    expect(t.seen.at(-1)).toBe(await t.seq());
   });
 
-  it("treats a tap carrying the current counter as typed input", async () => {
+  it("treats a tap carrying the current token as typed input", async () => {
     const t = setup();
     await t.send("hi");
     await t.send("1");
@@ -88,8 +114,8 @@ describe("turnSeq", () => {
   it("refuses a tap from an earlier turn, shows the current turn, and runs nothing", async () => {
     const t = setup();
     await t.send("hi");
-    const menuSeq = await t.seq(); // 1: the menu
-    await t.send("1"); // now on the confirm, seq 2
+    const menuSeq = await t.seq(); // the menu's token
+    await t.send("1"); // now on the confirm, with a new token
     const out = await t.send("1", menuSeq); // a tap on the old menu's "Book a visit"
     expect(out.text).toBe("That choice has expired.\nBook for Monday?\nReply YES or NO");
     expect(out.end).toBe(false);
@@ -120,18 +146,18 @@ describe("turnSeq", () => {
     expect(t.ran).toEqual([]);
   });
 
-  it("does not touch typed input, whatever the counter says", async () => {
+  it("does not touch typed input, whatever the token says", async () => {
     const t = setup();
     await t.send("hi");
     await t.send("1");
-    expect((await t.send("1")).text).toBe("Booked."); // no turnSeq: answers what is on screen
+    expect((await t.send("1")).text).toBe("Booked."); // no turnId: answers what is on screen
   });
 
-  it("reads a session stored before turnSeq existed as 0", async () => {
+  it("reads a session stored before turnId existed as 0", async () => {
     const t = setup();
     await t.send("hi");
     const record = (await t.sessions.load(PHONE))!;
-    delete record.turnSeq;
+    delete record.turnId;
     await t.sessions.save(record);
     // 0 matches a legacy session; the menu on screen is answered normally.
     expect((await t.send("1", 0)).text).toContain("Book for Monday?");
@@ -154,7 +180,7 @@ describe("turnSeq", () => {
       defaultLocale: "fr",
     });
     await agent.handle({ channel: "wa", phone: PHONE, input: "hi" });
-    const out = await agent.handle({ channel: "wa", phone: PHONE, input: "1", turnSeq: 9 });
+    const out = await agent.handle({ channel: "wa", phone: PHONE, input: "1", turnId: 9 });
     expect(out.text).toContain("Ce choix a expiré.");
   });
 });
