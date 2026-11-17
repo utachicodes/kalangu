@@ -67,8 +67,10 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
     and receipt; unknown outcomes keep polling, give up as `UNRESOLVED`
   - [x] `agent.payments.settle(id)` re-checks status for callback routes
 - [ ] Per-locale policy refusal messages (English only today)
-- [ ] `reconcilePayments` for a cron or scheduler (§6.5): polling today lives
-  in the process that started the payment and is lost on restart
+- [x] `agent.payments.reconcile()` for a cron or scheduler (§6.5): finishes
+  payments whose in-process polling died with a restart
+- [ ] README note: on serverless, `reconcile()` on a schedule is the only
+  reliable path (§6.5)
 - [ ] Atomic claim on `PaymentStore.update` for durable stores, so two
   processes cannot notify or begin twice (§6.1)
 - [ ] Read pawaPay's terms of service (the v2 API docs were read on

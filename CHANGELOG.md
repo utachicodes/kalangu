@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`UNRESOLVED`), `agent.payments.settle(id)` for callback routes (re-checks
   the provider, never trusts the body), and the outcome and receipt by SMS.
   The `pay` turn amount is now a decimal string.
+- `agent.payments.reconcile()`: a sweep for a cron job or scheduler that
+  settles non-final payments, re-initiates fresh never-initiated ones,
+  fails old never-started ones, and marks payments past the give-up window
+  `UNRESOLVED`. It reports what it did and survives a failing payment.
 
 - `@kalangu/core` package with the turn types (`say`, `choose`, `ask`,
   `confirm`, and `pay` reserved for 0.2), `parseTurn`/`isTurn` for

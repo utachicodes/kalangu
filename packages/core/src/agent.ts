@@ -14,7 +14,13 @@ import type { Channel, InboundEvent, Outcome, RouteAgent } from "./channel.js";
 import { systemClock, type Clock } from "./clock.js";
 import { createCatalog, type Catalog, type Messages, type Translate } from "./locales.js";
 import { consoleLogger, maskPhone, type Logger } from "./logger.js";
-import { createPaymentController, type PaymentController, type PaymentsConfig } from "./payments/controller.js";
+import {
+  createPaymentController,
+  type PaymentController,
+  type PaymentsConfig,
+  type ReconcileOptions,
+  type ReconcileReport,
+} from "./payments/controller.js";
 import type { PaymentRecord } from "./payments/store.js";
 import { interpret, type Rendered } from "./render.js";
 import { freshRecord, memoryStore, type SessionRecord, type SessionStore } from "./session.js";
@@ -85,7 +91,13 @@ export interface Agent<M = any> extends RouteAgent {
    * `settle` with the payment id; it re-checks the status with the provider
    * rather than trusting the callback body.
    */
-  readonly payments: { settle(id: string): Promise<void> } | undefined;
+  readonly payments:
+    | {
+        settle(id: string): Promise<void>;
+        /** Sweeps non-final payments; call from a cron job (docs/payments-design.md §6.5). */
+        reconcile(options?: ReconcileOptions): Promise<ReconcileReport>;
+      }
+    | undefined;
 }
 
 export const DEFAULT_RESUME_WINDOW_MS = 5 * 60 * 1000;
@@ -209,6 +221,7 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
           settle: async (id) => {
             await payments.settle(id);
           },
+          reconcile: (options) => payments.reconcile(options),
         }
       : undefined,
     mask,

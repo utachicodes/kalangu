@@ -20,7 +20,7 @@ import {
 const PHONE = "+254700000001";
 
 /** A clock whose timers fire when the test advances time. */
-function timerClock(start = 1_000_000) {
+function timerClock(start = Date.now()) {
   let now = start;
   let nextId = 1;
   const timers = new Map<number, { at: number; fn: () => void }>();
@@ -88,12 +88,21 @@ function controllableProvider(options: FakeOptions = {}) {
 }
 
 function setup(
-  options: { provider?: ReturnType<typeof controllableProvider>; payments?: Partial<PaymentsConfig>; amount?: string } = {},
+  options: {
+    provider?: ReturnType<typeof controllableProvider>;
+    payments?: Partial<PaymentsConfig>;
+    amount?: string;
+    /** Share these with an earlier agent to simulate a restart. */
+    shared?: { store: ReturnType<typeof memoryPaymentStore>; sessions: ReturnType<typeof memoryStore>; clock: Clock };
+  } = {},
 ) {
   const fake = options.provider ?? controllableProvider();
-  const { clock, advance } = timerClock();
+  const timers = timerClock();
+  const clock = options.shared?.clock ?? timers.clock;
+  const advance = timers.advance;
   const { logger, errors } = silent();
-  const store = memoryPaymentStore();
+  const store = options.shared?.store ?? memoryPaymentStore();
+  const sessions = options.shared?.sessions ?? memoryStore();
   const sent: Array<{ to: string; text: string }> = [];
   const paid: unknown[] = [];
 
@@ -122,7 +131,7 @@ function setup(
     ],
     logger,
     clock,
-    sessionStore: memoryStore(),
+    sessionStore: sessions,
     payments: {
       provider: fake.provider,
       store,
@@ -139,7 +148,7 @@ function setup(
   });
   const dial = () => agent.handle({ channel: "ussd", phone: PHONE, input: "", newSession: true });
   const press = (input: string) => agent.handle({ channel: "ussd", phone: PHONE, input });
-  return { agent, dial, press, store, sent, paid, advance, errors, fake };
+  return { agent, dial, press, store, sessions, clock, sent, paid, advance, errors, fake };
 }
 
 async function toConfirm(t: ReturnType<typeof setup>) {
@@ -340,5 +349,114 @@ describe("pay configuration", () => {
         payments: { provider, store: memoryPaymentStore(), payeeName: "X", policy: { currencies: ["KES"], maxPerPayment: { KES: "5e3" } } },
       }),
     ).toThrow(/decimal string/);
+  });
+});
+
+describe("reconcile", () => {
+  /** A new process: same stores and provider, none of the old process's timers. */
+  function restart(old: ReturnType<typeof setup>) {
+    const frozen: Clock = { now: () => old.clock.now(), setTimeout: () => 0, clearTimeout: () => {} };
+    return setup({ provider: old.fake, shared: { store: old.store, sessions: old.sessions, clock: frozen } });
+  }
+
+  /** Starts a payment, then "restarts": the returned agent has no polling for it. */
+  async function started() {
+    const first = setup();
+    await toConfirm(first);
+    await first.press("1");
+    await flush();
+    const id = first.fake.initiated[0]!.id;
+    return { first, id, second: restart(first) };
+  }
+
+  const record = (id: string, now: number, extra: Partial<PaymentRecord> = {}): PaymentRecord => ({
+    id, phone: PHONE, provider: "TEST_MOMO", amount: "500.00", currency: "KES", reason: "Consultation",
+    stepId: "start.1", locale: "en", status: "CREATED", createdAt: now, updatedAt: now, ...extra,
+  });
+
+  it("finishes a payment whose polling died with the old process, and tells the user", async () => {
+    const { first, id, second } = await started();
+    first.fake.set(id, { found: true, status: "COMPLETED" });
+
+    const report = await second.agent.payments!.reconcile({ minAgeMs: 0 });
+    expect(report).toEqual({ checked: 1, completed: 1, failed: 0, unresolved: 0, stillPending: 0, errors: 0 });
+    expect(second.sent.map((m) => m.text)).toEqual([
+      "Paid. See you on Monday.",
+      "Receipt: 500.00 KES paid to CLINIC. Ref 00000000.",
+    ]);
+  });
+
+  it("is safe to run twice: the outcome is sent once", async () => {
+    const { first, id, second } = await started();
+    first.fake.set(id, { found: true, status: "COMPLETED" });
+    await second.agent.payments!.reconcile({ minAgeMs: 0 });
+    const again = await second.agent.payments!.reconcile({ minAgeMs: 0 });
+    expect(again.checked).toBe(0); // Final payments are no longer pending.
+    expect(second.sent).toHaveLength(2);
+  });
+
+  it("leaves a payment still processing alone", async () => {
+    const { second } = await started();
+    const report = await second.agent.payments!.reconcile({ minAgeMs: 0 });
+    expect(report).toMatchObject({ checked: 1, stillPending: 1 });
+    expect(second.sent).toHaveLength(0);
+  });
+
+  it("skips payments younger than minAgeMs", async () => {
+    const { second } = await started();
+    expect(await second.agent.payments!.reconcile()).toMatchObject({ checked: 0 }); // default 30 s
+  });
+
+  it("re-initiates a payment recorded but never initiated, while it is fresh", async () => {
+    const t = setup();
+    const now = t.clock.now();
+    await t.store.create(record("fresh", now - 5000));
+    t.fake.set("fresh", { found: false });
+
+    const report = await t.agent.payments!.reconcile({ minAgeMs: 0 });
+    expect(t.fake.initiated.map((p) => p.id)).toEqual(["fresh"]);
+    expect(report).toMatchObject({ checked: 1, stillPending: 1 });
+    expect((await t.store.get("fresh"))?.status).toBe("ACCEPTED");
+  });
+
+  it("fails an old never-initiated payment as not started, with nothing charged", async () => {
+    const t = setup();
+    const now = t.clock.now();
+    await t.store.create(record("old", now - 3_600_000));
+    t.fake.set("old", { found: false });
+
+    const report = await t.agent.payments!.reconcile({ minAgeMs: 0 });
+    expect(t.fake.initiated).toHaveLength(0);
+    expect(report).toMatchObject({ checked: 1, failed: 1 });
+    expect(await t.store.get("old")).toMatchObject({ status: "FAILED", failureCode: "NOT_FOUND" });
+    expect(t.sent[0]?.text).toContain("Nothing was charged");
+  });
+
+  it("marks a payment UNRESOLVED once it is older than the give-up window", async () => {
+    const t = setup(); // giveUpAfterMs is 20 s here
+    const now = t.clock.now();
+    await t.store.create(record("ancient", now - 60_000, { status: "PROCESSING" }));
+
+    const report = await t.agent.payments!.reconcile({ minAgeMs: 0 });
+    expect(report).toMatchObject({ checked: 1, unresolved: 1 });
+    expect((await t.store.get("ancient"))?.status).toBe("UNRESOLVED");
+    expect(t.sent[0]?.text).toContain("contact CLINIC");
+  });
+
+  it("counts a failing check as an error and carries on with the rest", async () => {
+    const t = setup();
+    const now = t.clock.now();
+    await t.store.create(record("a", now - 5000, { status: "PROCESSING" }));
+    await t.store.create(record("b", now - 5000, { status: "PROCESSING" }));
+    const real = t.fake.provider.status;
+    t.fake.provider.status = async (id) => {
+      if (id === "a") throw new Error("provider down");
+      return real(id);
+    };
+    t.fake.set("b", { found: true, status: "COMPLETED" });
+
+    const report = await t.agent.payments!.reconcile({ minAgeMs: 0 });
+    expect(report).toMatchObject({ checked: 2, completed: 1, errors: 1 });
+    expect((await t.store.get("a"))?.status).toBe("PROCESSING"); // retried next sweep
   });
 });

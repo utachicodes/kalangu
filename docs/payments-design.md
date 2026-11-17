@@ -306,6 +306,18 @@ arrive (TODO), so every accepted payment is also polled:
   that a cron job or scheduler calls (proposed every 5 minutes); it checks
   every non-final payment from `PaymentStore.pending()`. On serverless
   platforms this is the only reliable path, and the README says so.
+- **As built:** `agent.payments.reconcile({ minAgeMs, reinitiateWithinMs })`
+  returns a report (`checked`, `completed`, `failed`, `unresolved`,
+  `stillPending`, `errors`). It skips payments younger than `minAgeMs`
+  (default 30 s) so it never races the process starting them, and one
+  failing payment is counted and retried next sweep without stopping the
+  rest. A payment recorded but never initiated (the process died in
+  between) is initiated again while younger than `reinitiateWithinMs`
+  (default 10 minutes), which is safe because our id is the idempotency
+  key. An older one that the provider has never seen is failed as not
+  started, with nothing charged. A payment past the give-up window becomes
+  `UNRESOLVED`, not `UNKNOWN` as first drafted, so that `UNKNOWN` can keep
+  meaning "initiate outcome not yet known".
 - After 72 hours still non-final: mark `UNKNOWN`, log an error for a human,
   and tell the user "we could not confirm your payment; contact …"
   (configurable). Never guess "paid".

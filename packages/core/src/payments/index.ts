@@ -30,5 +30,5 @@ export type {
   PaymentRoute,
 } from "./provider.js";
 
-export type { Offer, OfferResult, PaymentController, PaymentPolicyConfig, PaymentsConfig } from "./controller.js";
+export type { Offer, OfferResult, PaymentController, ReconcileOptions, ReconcileReport, PaymentPolicyConfig, PaymentsConfig } from "./controller.js";
 export { DEFAULT_GIVE_UP_AFTER_MS, DEFAULT_POLL_SCHEDULE_MS, createPaymentController } from "./controller.js";

@@ -44,6 +44,33 @@ export interface PaymentsConfig {
   readonly newId?: () => string;
 }
 
+/** What a reconciliation sweep did. */
+export interface ReconcileReport {
+  /** Non-final payments examined. */
+  readonly checked: number;
+  /** Of those, how they ended up. */
+  readonly completed: number;
+  readonly failed: number;
+  readonly unresolved: number;
+  readonly stillPending: number;
+  /** Payments whose check threw (provider down, store error); retried next sweep. */
+  readonly errors: number;
+}
+
+export interface ReconcileOptions {
+  /**
+   * Skip payments younger than this, in ms, so a sweep never races the
+   * process that is still starting them. Default 30 seconds.
+   */
+  readonly minAgeMs?: number;
+  /**
+   * A payment recorded but never initiated (the process died in between) is
+   * initiated again, safely, since our id is the idempotency key, while it
+   * is younger than this. Older ones are failed as never started. Default 10 minutes.
+   */
+  readonly reinitiateWithinMs?: number;
+}
+
 export const DEFAULT_POLL_SCHEDULE_MS: readonly number[] = [60_000, 120_000, 300_000, 900_000, 3_600_000];
 export const DEFAULT_GIVE_UP_AFTER_MS = 72 * 3_600_000;
 const DAY_MS = 24 * 3_600_000;
@@ -72,6 +99,13 @@ export interface PaymentController {
   run(id: string): Promise<void>;
   /** Asks the provider for the status and applies it. Safe to call from a callback route. */
   settle(id: string): Promise<PaymentRecord | null>;
+  /**
+   * Sweeps every non-final payment: checks the provider, finishes what a
+   * restart interrupted, and gives up on the old ones. Call it from a cron
+   * job or scheduler (every 5 minutes is reasonable). Safe to run alongside
+   * the in-process polling and to run twice.
+   */
+  reconcile(options?: ReconcileOptions): Promise<ReconcileReport>;
 }
 
 export function createPaymentController(
@@ -155,6 +189,30 @@ export function createPaymentController(
     return apply(id, result.status);
   }
 
+  /** Initiates with the provider and records what it said. Never fails a payment on a guess. */
+  async function initiate(payment: PaymentRecord): Promise<PaymentRecord> {
+    let outcome: PaymentStatus = "UNKNOWN";
+    let failureCode: string | undefined;
+    try {
+      const result = await provider.initiate(payment);
+      failureCode = result.failureCode;
+      if (result.status === "ACCEPTED" || result.status === "DUPLICATE_IGNORED") outcome = "ACCEPTED";
+      else if (result.status === "REJECTED") outcome = "REJECTED";
+    } catch (err) {
+      // Network or provider failure: the money may or may not have moved.
+      logger.error("Payment initiation outcome unknown", { payment: payment.id, error: describe(err) });
+    }
+    return apply(payment.id, outcome, failureCode);
+  }
+
+  async function giveUp(payment: PaymentRecord): Promise<PaymentRecord> {
+    logger.error("Payment unresolved: no final status within the give-up window", {
+      payment: payment.id,
+      phone: mask(payment.phone),
+    });
+    return apply(payment.id, "UNRESOLVED");
+  }
+
   return {
     payeeName: config.payeeName,
 
@@ -202,21 +260,7 @@ export function createPaymentController(
     async run(id) {
       const payment = await store.get(id);
       if (!payment) return;
-      let outcome: PaymentStatus = "UNKNOWN";
-      let failureCode: string | undefined;
-      try {
-        const result = await provider.initiate(payment);
-        failureCode = result.failureCode;
-        if (result.status === "ACCEPTED" || result.status === "DUPLICATE_IGNORED") outcome = "ACCEPTED";
-        else if (result.status === "REJECTED") outcome = "REJECTED";
-      } catch (err) {
-        // Network or provider failure: the money may or may not have moved.
-        logger.error("Payment initiation outcome unknown", {
-          payment: id,
-          error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
-        });
-      }
-      const updated = await apply(id, outcome, failureCode);
+      const updated = await initiate(payment);
       if (isFinalPaymentStatus(updated.status)) return;
 
       for (let i = 0; ; i++) {
@@ -226,21 +270,51 @@ export function createPaymentController(
         try {
           current = await this.settle(id);
         } catch (err) {
-          logger.error("Payment status check failed", {
-            payment: id,
-            error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
-          });
+          logger.error("Payment status check failed", { payment: id, error: describe(err) });
         }
         if (current && isFinalPaymentStatus(current.status)) return;
         if (clock.now() - payment.createdAt >= giveUpAfterMs) {
-          logger.error("Payment unresolved: no final status within the give-up window", {
-            payment: id,
-            phone: mask(payment.phone),
-          });
-          await apply(id, "UNRESOLVED");
+          await giveUp(payment);
           return;
         }
       }
+    },
+
+    async reconcile(options = {}) {
+      const minAgeMs = options.minAgeMs ?? 30_000;
+      const reinitiateWithinMs = options.reinitiateWithinMs ?? 600_000;
+      const pending = await store.pending(minAgeMs);
+      let completed = 0;
+      let failed = 0;
+      let unresolved = 0;
+      let stillPending = 0;
+      let errors = 0;
+
+      for (const payment of pending) {
+        try {
+          let current = await this.settle(payment.id);
+          if (current?.status === "CREATED") {
+            // The provider has never seen it: the process died before initiating.
+            current =
+              clock.now() - payment.createdAt <= reinitiateWithinMs
+                ? await initiate(current)
+                : await apply(payment.id, "FAILED", "NOT_FOUND");
+          }
+          if (current && !isFinalPaymentStatus(current.status) && clock.now() - payment.createdAt >= giveUpAfterMs) {
+            current = await giveUp(payment);
+          }
+          if (!current) continue;
+          if (current.status === "COMPLETED") completed++;
+          else if (current.status === "UNRESOLVED") unresolved++;
+          else if (isFinalPaymentStatus(current.status)) failed++;
+          else stillPending++;
+        } catch (err) {
+          errors++;
+          logger.error("Reconciliation failed for a payment", { payment: payment.id, error: describe(err) });
+        }
+      }
+      logger.info("Payments reconciled", { checked: pending.length, completed, failed, unresolved, stillPending, errors });
+      return { checked: pending.length, completed, failed, unresolved, stillPending, errors };
     },
 
     settle(id) {
@@ -254,6 +328,10 @@ export function createPaymentController(
 }
 
 /** Turns the decimal-string config into checked limits. Throws on anything unbounded. */
+function describe(err: unknown): string {
+  return err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+}
+
 function buildPolicy(config: PaymentPolicyConfig | undefined): PolicyCheck {
   if (!config) throw new TypeError("payments needs a policy: unbounded payments cannot be configured");
   if (config.currencies.length === 0) throw new TypeError("payments.policy.currencies must list at least one currency");

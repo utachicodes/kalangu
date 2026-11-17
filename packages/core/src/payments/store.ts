@@ -105,7 +105,7 @@ export function memoryPaymentStore(): PaymentStore & { readonly size: number } {
       const cutoff = Date.now() - olderThanMs;
       const out: PaymentRecord[] = [];
       for (const record of records.values()) {
-        if (!isFinalPaymentStatus(record.status) && record.createdAt < cutoff) {
+        if (!isFinalPaymentStatus(record.status) && record.createdAt <= cutoff) {
           out.push(structuredClone(record));
         }
       }

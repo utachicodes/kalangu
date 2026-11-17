@@ -110,6 +110,8 @@ export type {
   Offer,
   OfferResult,
   PaymentController,
+  ReconcileOptions,
+  ReconcileReport,
   PaymentPolicyConfig,
   PaymentsConfig,
   PaymentRecord,
