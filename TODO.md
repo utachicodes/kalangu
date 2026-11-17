@@ -57,8 +57,33 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   - [x] What the library does not guarantee; the agent never sees a PIN
     (§8, §9)
   - [x] Polling fallback for missed callbacks (§6.5)
-- [ ] Review the design, especially §3 (USSD session vs PIN prompt) and the
+- [x] Review the design, especially §3 (USSD session vs PIN prompt) and the
   open questions in §14
+- [x] Prep code against the fake provider, no pawaPay (tested end to end):
+  - [x] Decimal-string `pay` turn amount
+  - [x] Policy layer, payment store, provider port, fake provider
+  - [x] `pay` step, `payments` config validation (no policy, no payments)
+  - [x] Confirm → end session → background initiate → poll → SMS outcome
+    and receipt; unknown outcomes keep polling, give up as `UNRESOLVED`
+  - [x] `agent.payments.settle(id)` re-checks status for callback routes
+- [x] Localized policy and provider refusal messages (`en`, `fr`)
+- [x] `agent.payments.reconcile()` for a cron or scheduler (§6.5): finishes
+  payments whose in-process polling died with a restart
+- [x] README note: on serverless, `reconcile()` on a schedule is the only
+  reliable path (§6.5)
+- [x] Address the CodeRabbit review of the payments PR: old in-flight payments
+  counted by the pending limit, failed outcome deliveries retried by
+  `reconcile`, outcome delivery waits for the turn's session save, `reconcile`
+  gives up when a status check keeps failing, root pay step refusal no longer
+  loops, operator lookup under the USSD deadline, provider phone stored,
+  exact decimal totals, provider minimum, `"100.0"` accepted for NONE
+  decimals, ids immutable
+- [ ] Make outcome delivery and a concurrent turn safe together (known limit,
+  payments design §9): needs a way to retry `onPaid` without running it twice
+- [x] Atomic store primitives (`transition`, `claimNotification`,
+  `withPhoneLock`) so two processes cannot notify or begin twice (§6.1)
+- [x] Session store compare-and-set, so a double-tapped Yes cannot start two
+  payments when `maxPendingPerPhone` is above 1
 - [ ] Read pawaPay's terms of service (the v2 API docs were read on
   16 Nov 2026; the 24-country figure is the company's own claim)
 - [ ] Sandbox account; work through the verify-first list in §12

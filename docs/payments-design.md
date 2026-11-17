@@ -139,7 +139,7 @@ pay(
   (ctx) => ({ amount: "500", currency: "KES", reason: { en: "Consultation", fr: "Consultation" } }),
   {
     onPaid: say({ en: "Paid. See you on Monday.", fr: "Payé. À lundi." }),
-    onFailed: (payment, ctx) => `Payment not completed: ${payment.reason}`,
+    onFailed: (payment, ctx) => `Payment not completed: ${payment.failureMessage}`,
     onDeclined: menu("No problem", { … }),   // user said No on the confirm
   },
 )
@@ -155,6 +155,15 @@ pay(
   the USSD session has ended, so their output goes out **by SMS**, the same
   path as a deferred answer (v0.1 §4.6). `onFailed` receives a reason the
   user can read (§7.3), never a raw provider code.
+
+**As built (16 Nov 2026).** A refusal before the confirm screen runs
+`onFailed` inline on the live channel with `status: "REFUSED"` and no `id`.
+The receipt goes as a second SMS after the `onPaid` message, so a long
+`onPaid` text can never push the receipt over the segment cap. Refusals are
+localized by reason code (`payments.refusal.<reason>`, `en` and `fr`, and
+overridable through `messages`); the English `message` on a refusal is for
+logs only. A provider's own refusal text is likewise ignored in favour of
+the localized text for its `kind`.
 
 ### 4.3 Flow
 
@@ -223,6 +232,12 @@ Payments get their own durable store, separate from sessions:
 interface PaymentStore {
   create(payment: PaymentRecord): Promise<void>;          // fails if the id exists
   update(id: string, change: Partial<PaymentRecord>): Promise<PaymentRecord>;
+  // Atomic primitives (see below): the store, not the engine, makes these safe.
+  transition(id: string, change: Partial<PaymentRecord>, from: PaymentStatus[]): Promise<PaymentRecord | null>;
+  claimNotification(id: string, at: number): Promise<PaymentRecord | null>;
+  releaseNotification(id: string): Promise<void>;         // undo a claim after a failed delivery
+  unnotified(): Promise<PaymentRecord[]>;                 // final, outcome not delivered
+  withPhoneLock<T>(phone: string, work: () => Promise<T>): Promise<T>;
   get(id: string): Promise<PaymentRecord | null>;
   pending(olderThanMs: number): Promise<PaymentRecord[]>; // for reconciliation
   totals(phone: string, currency: string, sinceMs: number): Promise<{ pending: string; completed: string }>;
@@ -232,6 +247,7 @@ interface PaymentRecord {
   id: string;              // our UUIDv4, also pawaPay's depositId
   phone: string;           // personal data: masked in logs
   provider: string;        // e.g. "MTN_MOMO_KEN"
+  providerPhone: string;   // the payer's number in the provider's format, as resolved
   amount: string;
   currency: string;
   reason: string;
@@ -244,9 +260,31 @@ interface PaymentRecord {
   updatedAt: number;
   finalizedAt?: number;
   notifiedAt?: number;     // when onPaid/onFailed was sent; makes it once-only
+  notifyAttempts?: number; // failed deliveries released for retry
 }
 ```
 
+- **Three operations must be atomic across every process that shares the
+  store.** The in-memory store gets them for free; a durable store has to
+  provide them:
+  - `transition(id, change, from)` is a compare-and-set on `status`. It
+    keeps a final status final when a stale status check or a late callback
+    arrives after another process has recorded the outcome. In SQL:
+    `UPDATE … SET … WHERE id = $1 AND status = ANY($2)`.
+  - `claimNotification(id, at)` is a compare-and-set on `notifiedAt`, so of
+    any number of racing deliverers exactly one gets the claim. In SQL:
+    `UPDATE … SET notified_at = $2 WHERE id = $1 AND notified_at IS NULL`.
+  - `withPhoneLock(phone, work)` serialises the limit check and the create
+    for one phone, so two simultaneous "Yes" answers cannot both pass a
+    limit of one. In Postgres, `pg_advisory_xact_lock(hashtext(phone))`.
+- **A double-tapped "Yes" starts one payment.** Before touching money, the
+  engine consumes the stored offer with a versioned session save
+  (`ifVersion`). A second "Yes" that read the same stored session loses the
+  compare-and-set, starts nothing and is told "Your payment is already being
+  processed". This holds even with `maxPendingPerPhone` above 1, and it is why
+  an agent with `payments` refuses to start on a session store that is not
+  `atomic`. If the process dies between that claim and recording the payment,
+  nothing was charged and the next "Yes" simply re-offers.
 - An in-memory store ships **for tests and the simulator only**. Using it
   with a real provider logs an error at startup: a restart would forget
   pending payments.
@@ -299,6 +337,32 @@ arrive (TODO), so every accepted payment is also polled:
   that a cron job or scheduler calls (proposed every 5 minutes); it checks
   every non-final payment from `PaymentStore.pending()`. On serverless
   platforms this is the only reliable path, and the README says so.
+- **As built:** `agent.payments.reconcile({ minAgeMs, reinitiateWithinMs })`
+  returns a report (`checked`, `completed`, `failed`, `unresolved`,
+  `stillPending`, `errors`). It skips payments younger than `minAgeMs`
+  (default 30 s), which makes overlap with the process still starting
+  them unlikely but does not rule it out. That is safe: initiating twice is
+  idempotent on our id, and a status change is a compare-and-set, so a final
+  status is never overwritten. One failing payment is counted and retried
+  next sweep without stopping the rest; if its status check keeps failing
+  past the give-up window it is still marked `UNRESOLVED`, so a provider
+  outage cannot keep a payment pending forever. A payment recorded but never initiated (the process died in
+  between) is initiated again while younger than `reinitiateWithinMs`
+  (default 10 minutes), which is safe because our id is the idempotency
+  key. An older one that the provider has never seen is failed as not
+  started, with nothing charged. A payment past the give-up window becomes
+  `UNRESOLVED`, not `UNKNOWN` as first drafted, so that `UNKNOWN` can keep
+  meaning "initiate outcome not yet known".
+- **An outcome that could not be delivered is retried.** `notifiedAt` is a
+  claim taken before the SMS is sent. If sending fails after its retries the
+  claim is released (`releaseNotification`, counted in `notifyAttempts`) and
+  the next `reconcile` sweep sends it, through `unnotified()`, which also
+  recovers a process that died between recording the status and sending it.
+  After 5 failed deliveries it stays in the store with an error logged, for
+  a human. `reconcile` reports `redelivered`.
+- Polling waits `pollScheduleMs` in turn and then `pollRepeatMs` (default
+  hourly) until the give-up window, as first drafted. An earlier build
+  repeated the last scheduled interval instead.
 - After 72 hours still non-final: mark `UNKNOWN`, log an error for a human,
   and tell the user "we could not confirm your payment; contact …"
   (configurable). Never guess "paid".
@@ -360,7 +424,19 @@ Stated in the README and the package docs, not only here:
 - Regulatory compliance. Licensing, KYC, consumer protection and tax are
   the deployer's responsibility, per country.
 - Reliability with an in-memory payment store, or without
-  `reconcilePayments()` running somewhere.
+  `reconcile()` running somewhere.
+- **That the outcome message never overwrites a concurrent turn.** The SMS
+  that reports a payment's outcome loads the user's session, runs `onPaid` or
+  `onFailed`, and saves it. If the user is in the middle of another turn at
+  that moment, the later write wins, as for deferred answers. The payment's
+  own record is never affected, and nothing is charged twice; the cost is
+  that one conversation's position can be lost. Making this a retried
+  compare-and-set would mean re-running the developer's `onPaid` handler, so
+  it is left as a known limit rather than risking a handler running twice.
+- **Fast operator lookup.** On a live channel the lookup before the confirm
+  screen shares the USSD deadline. If it misses, the user is told payments
+  are unavailable and to try again, nothing is started, and the late answer
+  is dropped. On SMS there is no deadline.
 
 ---
 
@@ -437,16 +513,38 @@ provider other than pawaPay.
 
 ---
 
-## 14. Open questions
+## 14. Decisions (16 Nov 2026)
 
-1. **`amount` as a decimal string** in the `pay` turn (§4.1)? Recommended.
-2. **Re-check the callback with check-status** (one extra request per
-   payment) or trust a verified signature alone? Recommended: re-check.
-3. **Polling schedule and 72-hour give-up** (§6.5): too long, too short?
-4. **Unknown operator**: refuse (proposed), or show an operator menu?
-5. **PIN-prompt revival SMS** (§7.1): helpful, or noise when the prompt
-   simply took a few seconds?
-6. **One pending payment per user** (`maxPendingPerPhone: 1`) as the
-   default?
-7. **Where receipts go when SMS sending fails**: retry policy, and whether
-   to surface it in `onPaid`.
+Settled as defaults for the 0.2 build. Items marked *revisit* change if
+sandbox testing (§12) contradicts them.
+
+1. **`amount` is a decimal string** in the `pay` turn. Done (`parseTurn`
+   accepts `/^\d+(\.\d{1,2})?$/`, positive only).
+2. **Re-check every callback with check-status.** One extra request per
+   payment is cheap next to the cost of crediting a forged or replayed
+   callback. A verified signature alone is not enough.
+3. **Polling: backoff, give up at 72 hours.** Poll at 1, 2, 5, 15 and 60
+   minutes, then hourly. At 72 hours mark the payment `UNRESOLVED`, alert
+   the developer through the logger, and tell the user to contact the
+   payee. Never auto-fail a payment whose status is unknown. *Revisit*
+   against the provider's actual settlement windows.
+4. **Unknown operator: refuse.** Guessing an operator can charge the wrong
+   wallet. An operator menu is deferred until a country needs it.
+5. **Revival SMS: send once, after 60 seconds with no final status**, not
+   immediately. Never more than once per payment. Short enough to help,
+   late enough not to be noise. *Revisit* with operator timing data.
+6. **`maxPendingPerPhone` defaults to 1.** Raising it is an explicit
+   opt-in in the policy.
+7. **Receipt SMS failure: retry 3 times with backoff, then log and
+   continue.** The payment's status is never affected by a failed
+   receipt. `onPaid` is not blocked on it, and the receipt can be
+   re-sent from the stored record.
+
+### §3 (USSD session vs PIN prompt)
+
+The design stands: **on USSD, end our session first, then initiate the
+deposit.** It is the safe order whichever way operators behave, and it
+removes the 10-second bound from the provider call. The cost is one extra
+screen of friction. What remains unknown is operator behaviour, which only
+a real phone can show (§12, item 1). Until then the engine is built to
+this decision and nothing depends on the opposite being true.
