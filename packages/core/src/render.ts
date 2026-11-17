@@ -169,7 +169,12 @@ export function interpret(turn: Turn, input: string, ctx: InterpretContext): Int
       let index = numbers.indexOf(value);
       if (index < 0) {
         const lower = value.toLowerCase();
+        // An exact (case-insensitive) match wins; otherwise a folded one, but only if it is unique.
         index = turn.options.findIndex((o) => o.label.trim().toLowerCase() === lower);
+        if (index < 0) {
+          const matches = turn.options.flatMap((o, i) => (typedMatches(value, o.label) ? [i] : []));
+          index = matches.length === 1 ? (matches[0] as number) : -1;
+        }
       }
       return index >= 0 ? { type: "option", index } : { type: "invalid", reason: "common.invalidChoice" };
     }
@@ -183,11 +188,10 @@ export function interpret(turn: Turn, input: string, ctx: InterpretContext): Int
 
     case "confirm": {
       const [yes, no] = confirmLabels(turn, ctx.t);
-      const lower = value.toLowerCase();
-      if (value === "1" || lower === yes.toLowerCase() || lower === ctx.t("common.yes").toLowerCase()) {
+      if (value === "1" || typedMatches(value, yes) || typedMatches(value, ctx.t("common.yes"))) {
         return { type: "yes" };
       }
-      if (value === "2" || lower === no.toLowerCase() || lower === ctx.t("common.no").toLowerCase()) {
+      if (value === "2" || typedMatches(value, no) || typedMatches(value, ctx.t("common.no"))) {
         return { type: "no" };
       }
       return { type: "invalid", reason: "common.invalidChoice" };
@@ -199,6 +203,32 @@ export function interpret(turn: Turn, input: string, ctx: InterpretContext): Int
     default:
       return assertNever(turn);
   }
+}
+
+/**
+ * A comparison key for typed text (docs/normalization-design.md §5.1, generic
+ * steps): accents dropped, case, spacing and apostrophe style ignored. For
+ * comparing only; never shown to anyone.
+ */
+export function foldForMatch(text: string): string {
+  return text
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[\u2018\u2019\u02BC\u02BB`´]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Whether typed text names `label`: as written, or as a USSD screen showed it.
+ * USSD allows plain ASCII only, so "Français" is shown as "Francais" and Hausa
+ * "Ɗan" as "Dan"; whatever a screen showed must be typeable back.
+ */
+function typedMatches(typed: string, label: string): boolean {
+  const key = foldForMatch(typed);
+  if (key === "") return false;
+  return key === foldForMatch(label) || key === foldForMatch(toUssdSafe(label).text);
 }
 
 function confirmLabels(turn: ConfirmTurn, t: Translate): [string, string] {

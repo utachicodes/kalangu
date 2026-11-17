@@ -69,12 +69,18 @@ Three ideas do the reconciling (full details in the design doc):
 
 ## Roadmap
 
-| Version | Ships | Proves |
-|---|---|---|
-| 0.1 | core, ussd (Africa's Talking), sms, terminal keypad simulator, one example agent | A model-backed agent works on USSD despite the time limit |
-| 0.2 | pay turns, policy layer, pawaPay sandbox adapter | An agent can take money safely |
-| 0.3 | language detection, per-language model routing, language test command | The agent holds up outside English and French |
-| 0.4 | WhatsApp adapter + Chat SDK community adapter | One agent, every channel |
+| Version | Ships | Proves | Status (17 Nov 2026) |
+|---|---|---|---|
+| 0.1 | core, ussd (Africa's Talking), sms, terminal keypad simulator, one example agent | A model-backed agent works on USSD despite the time limit | Built and published as `0.1.0-alpha.1`. Not yet tested on real operators |
+| 0.2 | pay turns, policy layer, pawaPay sandbox adapter | An agent can take money safely | Engine built and tested against a fake provider. The pawaPay adapter waits for a sandbox account and its terms |
+| 0.3 | language detection, per-language model routing, language test command | The agent holds up outside English and French | Language menu, `kalangu locale check`, detector port and model map built. Wolof, Hausa and Swahili translations and a real detector wait for native speakers and data |
+| 0.4 | WhatsApp adapter + Chat SDK community adapter | One agent, every channel | Designed ([docs/whatsapp-design.md](docs/whatsapp-design.md)). Code waits for a Meta test number |
+
+Text normalization for African languages (matching what people type,
+spelling on USSD) is designed in
+[docs/normalization-design.md](docs/normalization-design.md); its first step,
+matching typed answers regardless of accents, is built. The full list of what
+is done and what is next is in [TODO.md](TODO.md).
 
 The v0.1 goal: someone clones the repo, runs `pnpm install && pnpm demo`, and
 within ten minutes has dialed a code on a simulated keypad phone, asked a
@@ -178,17 +184,24 @@ export default agent.requestHandler; // standard Request -> Response
 [`examples/clinic/src/server.ts`](examples/clinic/src/server.ts) runs the
 example on Africa's Talking (sandbox or live) with Node's `http` module.
 
-## Known limits (v0.1)
+## Known limits
 
 - A `*` typed inside a free-text USSD answer splits it; the gateway sends
   no way to tell it apart from a separator. Numeric input is unaffected.
 - USSD screens are restricted to printable ASCII: accents are dropped
   (`é` → `e`), letters such as `ŋ` are transliterated (`ng`), and anything
-  else is removed with a warning.
+  else is removed with a warning. Hausa's hooked letters become plain ones
+  (`ɗ` → `d`), which merges different sounds; per-language spellings wait for
+  Hausa readers (normalization design §10). A user can always type back what
+  a screen showed: typed answers are matched ignoring accents, case, spacing
+  and apostrophe style.
 - A redial while an answer is still pending repeats the "SMS shortly"
   notice instead of waiting.
-- Payments are in progress against a fake provider only; there is no real
-  provider yet. WhatsApp, voice and language detection are later versions.
+- Payments run against a fake provider only; there is no real provider yet,
+  so do not use them with real money.
+- Language detection is an interface you supply a detector for; none ships,
+  and its threshold has no default until one is measured. WhatsApp and voice
+  are later versions.
 
 ## License
 
