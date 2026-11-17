@@ -295,6 +295,17 @@ the rules.
 
 ---
 
+### As built (17 Nov 2026): step 1
+
+`interpret` now matches typed text to option labels and to the yes and no
+words with `foldForMatch` (exported from core): accents dropped, case,
+spacing and apostrophe style ignored. It also compares against the label **as
+a USSD screen shows it**, so letters USSD rewrites rather than strips (`ɗ` to
+`d`, `ŋ` to `ng`) can be typed back too: whatever a screen showed can be
+typed. An exact case-insensitive match still wins, and a folded match that
+fits more than one label is refused rather than guessed. Numbers are matched
+first, as before. No language data is involved.
+
 ## 12. Open questions
 
 1. **Generic folding first,** shipped before any language data (recommended),

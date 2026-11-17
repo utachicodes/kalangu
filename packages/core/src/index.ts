@@ -68,7 +68,7 @@ export { BUILTIN_MESSAGES, createCatalog, en, fr } from "./locales.js";
 export type { Catalog, MessageKey, Messages, Text, Translate } from "./locales.js";
 export { consoleLogger, maskPhone, silentLogger } from "./logger.js";
 export type { LogFields, LogLevel, Logger } from "./logger.js";
-export { NotSupportedError, interpret, renderSms, renderUssd } from "./render.js";
+export { NotSupportedError, foldForMatch, interpret, renderSms, renderUssd } from "./render.js";
 export type { ChannelKind, InterpretContext, Interpretation, RenderContext, Rendered } from "./render.js";
 export { SessionConflictError, freshRecord, memoryStore } from "./session.js";
 export type { Json, PayIntent, SessionRecord, SessionSaveOptions, SessionStore } from "./session.js";

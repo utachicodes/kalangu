@@ -127,8 +127,10 @@ above).
 - [x] Draft the text normalization design:
   [docs/normalization-design.md](docs/normalization-design.md) (fold,
   render for USSD, canonicalize; Gemini offline only; own repo later)
-- [ ] Fix: a typed language name without its accent ("francais") is refused,
-  though USSD itself shows it that way (normalization design §2, §11 step 1)
+- [x] Fix: a typed language name without its accent ("francais") was refused,
+  though USSD itself shows it that way. Typed answers are now matched ignoring
+  accents, case, spacing and apostrophe style, and against the USSD form of
+  the label (normalization design §11 step 1)
 - [ ] Review the normalization design and its questions for native speakers
   (§10, §12)
 - [ ] Native speakers to supply and review the Wolof and Hausa translations

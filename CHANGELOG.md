@@ -27,6 +27,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only in the request header. Its tests run in CI (`node --test "scripts/**/*.test.mjs"`).
 - `kalangu locale check` takes the language code from the file name up to its
   first dot, so `wo.draft.json` is checked as `wo`.
+- `docs/normalization-design.md`: the text normalization design (folding,
+  USSD spelling, canonicalizing; Gemini offline only; its own repository
+  later).
+
+### Fixed
+
+- A typed answer that names an option without its accents was refused: on
+  USSD the language menu shows "Français" as "Francais", and typing that back
+  gave "Invalid choice". `interpret` now matches typed text to labels and to
+  the yes and no words ignoring accents, case, spacing and apostrophe style
+  (`foldForMatch`), and against the label as a USSD screen shows it, so Hausa
+  "Ɗan" shown as "Dan" can be typed back too. An exact match still wins; a
+  folded match that fits more than one label is refused.
 
 ## [0.1.0-alpha.1] - 2026-11-17
 
