@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Payments in `@kalangu/core` (prep, no real provider yet): the `pay` step,
+  `createAgent({ payments })` with a mandatory policy, the confirm screen
+  that ends the USSD session before the deposit is initiated, background
+  initiation, status polling with backoff and a 72-hour give-up
+  (`UNRESOLVED`), `agent.payments.settle(id)` for callback routes (re-checks
+  the provider, never trusts the body), and the outcome and receipt by SMS.
+  The `pay` turn amount is now a decimal string.
+- `agent.payments.reconcile()`: a sweep for a cron job or scheduler that
+  settles non-final payments, re-initiates fresh never-initiated ones,
+  fails old never-started ones, and marks payments past the give-up window
+  `UNRESOLVED`. It reports what it did and survives a failing payment.
+- `PaymentStore` gains three atomic operations a durable store must
+  implement: `transition` (a final status stays final), `claimNotification`
+  (each outcome is announced once) and `withPhoneLock` (limits cannot be
+  raced past). Fixes a bug where two processes could both notify the user.
+- `SessionStore.save` takes `{ ifVersion }` for compare-and-set and the
+  store declares `atomic: true` when it honours it; `SessionRecord.version`
+  is bumped on every save. An agent with `payments` requires an atomic store,
+  and a double-tapped "Yes" now starts exactly one payment.
+- Review fixes in payments: payments still in flight count toward the pending
+  limit however old; an outcome that failed to send is released and retried
+  by `reconcile` (`unnotified`, `releaseNotification`, `notifyAttempts`,
+  report field `redelivered`); outcome delivery waits for the turn's session
+  save; `reconcile` marks a payment unresolved when its status check keeps
+  failing; a refused root `pay` step ends with a message instead of looping;
+  looking up the operator on a live channel honours the USSD deadline;
+  `PaymentRecord.providerPhone`; `pollRepeatMs`; exact decimal sums; the
+  provider minimum amount; `"100.0"` accepted for providers without decimals;
+  amounts too large to hold exactly refused; payment ids cannot change.
+- A payment is failed as "not found" only if it is still in the status that
+  justified that conclusion, and an outcome is only ever announced for a
+  final payment: another process seeing the payment in the meantime can no
+  longer cause a "not completed" message for a payment still in progress.
+- Stale-tap protection for channels with tappable history: a random per-turn
+  token, `turnId`, on sessions, `InboundEvent.turnId` and
+  `RenderContext.turnId`. A tap carrying any token but the current one (an
+  earlier turn, a cleared or restarted session, a concurrent request that
+  rendered a different turn) shows the current turn again with "That choice
+  has expired." and runs nothing, so an old Yes can never confirm a later
+  question or start a payment, and a Yes on one confirmation cannot pay the
+  amount of another. USSD and SMS are unaffected.
+- Payment refusals (policy rules and provider reasons) are localized in `en`
+  and `fr` through `payments.refusal.*` messages, which can be overridden.
+
 - `@kalangu/core` package with the turn types (`say`, `choose`, `ask`,
   `confirm`, and `pay` reserved for 0.2), `parseTurn`/`isTurn` for
   validating turns from untyped sources, `assertNever` for exhaustive

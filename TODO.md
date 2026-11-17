@@ -12,6 +12,8 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [ ] Trademark search (a Hausa word — check local usage in target markets)
 - [ ] Test the real session timeout and screen length on the operators you can
   reach; published figures vary and Kenya-only numbers are verified so far
+- [ ] Check that no operator you can reach intercepts `98` (our "More")
+  before it reaches the gateway; if one does, change `budget.more`
 - [ ] Confirm that a USSD session and an SMS to the same number work together
   on your operators — deferral depends on it
 - [ ] Check what a USSD short code and an SMS sender ID cost and require, per
@@ -35,19 +37,23 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [x] README how-to and docs polish
 - [x] CI: typecheck + vitest on push (Node 22/24), runtime smoke test on Node 20
 
-## Design review — open questions to settle (design doc §12)
+## Design review — open questions (design doc §12), settled 17 Nov 2026
 
-- [ ] 1. Navigation numbers: use `98` (More) ourselves, given telcos reserve
+Decisions are recorded under "Decisions" in §12. Question 1 stays unverified
+until a real operator confirms `98` is not intercepted (see the checklist
+above).
+
+- [x] 1. Navigation numbers: use `98` (More) ourselves, given telcos reserve
   it for auto-pagination?
-- [ ] 2. Unsafe-character policy on USSD screens: strip + warn vs strict mode
-- [ ] 3. Legacy vs new bulk SMS endpoint (legacy recommended until its sandbox
+- [x] 2. Unsafe-character policy on USSD screens: strip + warn vs strict mode
+- [x] 3. Legacy vs new bulk SMS endpoint (legacy recommended until its sandbox
   ships)
-- [ ] 4. SMS split cap (proposed max 4 segments, never silent truncation)
-- [ ] 5. Callback authenticity: document path-secret/IP-allowlist mitigations
+- [x] 4. SMS split cap (proposed max 4 segments, never silent truncation)
+- [x] 5. Callback authenticity: document path-secret/IP-allowlist mitigations
   (no signing exists to implement)
-- [ ] 6. Re-notice vs block-screen when a user redials during a pending
+- [x] 6. Re-notice vs block-screen when a user redials during a pending
   deferral
-- [ ] 7. `enqueue` default on SMS send (proposed: omit unless configured)
+- [x] 7. `enqueue` default on SMS send (proposed: omit unless configured)
 
 ## Version 0.2 — payments (do not rush; money code needs care)
 
@@ -57,8 +63,33 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   - [x] What the library does not guarantee; the agent never sees a PIN
     (§8, §9)
   - [x] Polling fallback for missed callbacks (§6.5)
-- [ ] Review the design, especially §3 (USSD session vs PIN prompt) and the
+- [x] Review the design, especially §3 (USSD session vs PIN prompt) and the
   open questions in §14
+- [x] Prep code against the fake provider, no pawaPay (tested end to end):
+  - [x] Decimal-string `pay` turn amount
+  - [x] Policy layer, payment store, provider port, fake provider
+  - [x] `pay` step, `payments` config validation (no policy, no payments)
+  - [x] Confirm → end session → background initiate → poll → SMS outcome
+    and receipt; unknown outcomes keep polling, give up as `UNRESOLVED`
+  - [x] `agent.payments.settle(id)` re-checks status for callback routes
+- [x] Localized policy and provider refusal messages (`en`, `fr`)
+- [x] `agent.payments.reconcile()` for a cron or scheduler (§6.5): finishes
+  payments whose in-process polling died with a restart
+- [x] README note: on serverless, `reconcile()` on a schedule is the only
+  reliable path (§6.5)
+- [x] Address the CodeRabbit review of the payments PR: old in-flight payments
+  counted by the pending limit, failed outcome deliveries retried by
+  `reconcile`, outcome delivery waits for the turn's session save, `reconcile`
+  gives up when a status check keeps failing, root pay step refusal no longer
+  loops, operator lookup under the USSD deadline, provider phone stored,
+  exact decimal totals, provider minimum, `"100.0"` accepted for NONE
+  decimals, ids immutable
+- [ ] Make outcome delivery and a concurrent turn safe together (known limit,
+  payments design §9): needs a way to retry `onPaid` without running it twice
+- [x] Atomic store primitives (`transition`, `claimNotification`,
+  `withPhoneLock`) so two processes cannot notify or begin twice (§6.1)
+- [x] Session store compare-and-set, so a double-tapped Yes cannot start two
+  payments when `maxPendingPerPhone` is above 1
 - [ ] Read pawaPay's terms of service (the v2 API docs were read on
   16 Nov 2026; the 24-country figure is the company's own claim)
 - [ ] Sandbox account; work through the verify-first list in §12
@@ -72,5 +103,19 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 
 ## Version 0.4 — channels
 
-- [ ] WhatsApp Cloud API adapter design
+- [x] Draft the WhatsApp Cloud API adapter design:
+  [docs/whatsapp-design.md](docs/whatsapp-design.md)
+  - [x] Meta facts read from the official docs (17 Nov 2026), with what could
+    not be confirmed listed in §12
+  - [x] Identity (BSUIDs), the 24-hour window and cost, rendering, stale taps,
+    webhook signing and deduplication
+- [x] Settle WhatsApp questions 1 (identity key: phone, else BSUID, no alias
+  store yet) and 9 (stale-tap `turnId` goes into core)
+- [x] `turnId` stale-tap protection in core, a random per-turn token (tested,
+  including that a stale Yes starts no payment)
+- [ ] Review the rest of the WhatsApp design, especially §3 and §6, and the
+  eight questions still open in §14
+- [ ] Get a Meta test number and work through the verify-first list in §12
+  (signature over raw bytes, per-market message cost, `wa_id` presence)
+- [ ] Then, and only then, WhatsApp code
 - [ ] Survey the Chat SDK adapter directory for a community USSD adapter

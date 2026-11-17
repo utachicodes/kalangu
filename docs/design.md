@@ -260,10 +260,19 @@ what breaks without one (deferred answers never get sent).
 ```ts
 interface SessionStore {
   load(key: string): Promise<SessionRecord | null>;
-  save(record: SessionRecord): Promise<void>;
+  save(record: SessionRecord, options?: { ifVersion?: number }): Promise<void>;
   clear(key: string): Promise<void>;
+  readonly atomic?: boolean;   // save honours ifVersion atomically (0.2, payments)
 }
 ```
+
+`save` bumps `record.version`. With `ifVersion` it is a compare-and-set: it
+throws `SessionConflictError` if the stored version has moved on (a missing
+record counts as 0). Without it the last write wins, as before. A store that
+sets `atomic: true` promises the compare-and-set holds across every process
+sharing it (a conditional `UPDATE … WHERE version = $n`, or Redis
+`WATCH`/`MULTI`). Agents that take payments require it; see payments design
+§6.1.
 
 - **Keyed by phone number**, not gateway `sessionId`, so a dropped session
   resumes on redial. The gateway `sessionId` is stored for correlation only.
@@ -565,6 +574,40 @@ to implement), npm publishing, and remote repositories.
    10 s bound)? Proposed: re-notice.
 7. **`enqueue` default on send.** Proposed: omit unless configured (legacy
    endpoint default), matching the official SDK.
+
+### Decisions (17 Nov 2026)
+
+Settled for v0.1. Each matches what is already built and tested, so nothing
+here changes code. Items marked *unverified* depend on how real operators
+behave and are covered by the verify-first list in `TODO.md`.
+
+1. **Navigation numbers: our own `98` (More), configurable**, with
+   `00` also reserved so no option is ever numbered `98` or `00`. Screens
+   stay within the limit, so operator auto-pagination should not trigger.
+   *Unverified:* whether any operator intercepts `98` before it reaches us.
+   The number is configurable (`budget.more`) for exactly that case.
+2. **Unsafe characters: strip and warn by default, strict mode opt-in.**
+   Accents are transliterated first (`é` → `e`), so ordinary French text
+   survives; only what has no mapping (an emoji) is removed, with a logged
+   warning. `unsafeChars: "throw"` raises a `BudgetError` instead, for
+   development.
+3. **Legacy `/version1/messaging` endpoint behind a transport seam.** It is
+   form-encoded, works in the sandbox and returns 201. The JSON bulk
+   endpoint replaces it by passing a different `transport`, with no change to
+   the adapter. Switch once that endpoint's sandbox ships.
+4. **SMS split cap of 4 segments, never silent truncation.** Over the cap
+   throws a `BudgetError` the developer sees; `maxSegments` raises or lowers
+   it.
+5. **Callback authenticity: document mitigations, no crypto.** The gateway
+   signs nothing, so there is nothing to verify. The README tells developers
+   to use hard-to-guess callback paths and to allow only the gateway's IP
+   addresses where they can.
+6. **Deferral re-notice, not a block screen.** A redial while an answer is
+   pending repeats the "SMS shortly" notice. A "please wait" `CON` screen
+   would risk the 10-second bound. Listed under Known limits in the README.
+7. **`enqueue` omitted unless configured**, matching the official SDK and
+   the legacy endpoint's default. `bulkSmsMode` defaults to 1, also as the
+   SDK does.
 
 ---
 

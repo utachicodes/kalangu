@@ -74,7 +74,60 @@ export interface ConfirmStep<M = any> {
   readonly onNo: Target<M>;
 }
 
-export type Step = SayStep | MenuStep | AskStep | ConfirmStep;
+/** What a pay step asks for. The amount is a decimal string, never a float. */
+export interface PaySpec {
+  readonly amount: string;
+  /** ISO 4217 code, e.g. "KES". */
+  readonly currency: string;
+  /** What the payment is for; shown on the confirm screen and the receipt. */
+  readonly reason?: Text;
+}
+
+/** The payment as `onPaid` and `onFailed` see it. Never carries a raw provider code. */
+export interface PaymentOutcome {
+  /** Absent when the payment was refused before one was created. */
+  readonly id?: string;
+  readonly amount: string;
+  readonly currency: string;
+  /** What the payment was for. */
+  readonly reason: string;
+  /** `REFUSED` means the policy or operator said no before the user saw a confirm screen. */
+  readonly status: "COMPLETED" | "FAILED" | "REJECTED" | "UNRESOLVED" | "REFUSED";
+  /** A localized reason the user can read. Set unless the payment completed. */
+  readonly failureMessage?: string;
+}
+
+export type PayHandler<M = any> = (payment: PaymentOutcome, ctx: TurnContext<M>) => Awaitable<Reply>;
+export type PayTarget<M = any> = Step | PayHandler<M>;
+
+export interface PayStep<M = any> {
+  readonly type: "pay";
+  readonly spec: (ctx: TurnContext<M>) => Awaitable<PaySpec>;
+  readonly onPaid: PayTarget<M>;
+  readonly onFailed: PayTarget<M>;
+  readonly onDeclined: Target<M>;
+}
+
+export type Step = SayStep | MenuStep | AskStep | ConfirmStep | PayStep;
+
+/**
+ * Takes a payment from the user (docs/payments-design.md §4.2). Shown as a
+ * confirm screen; `onPaid` and `onFailed` run when the final status arrives,
+ * after the USSD session has ended, so their output goes out by SMS.
+ * Requires `payments` in `createAgent`.
+ */
+export function pay<M = any>(
+  spec: PaySpec | ((ctx: TurnContext<M>) => Awaitable<PaySpec>),
+  options: { onPaid: PayTarget<M>; onFailed: PayTarget<M>; onDeclined: Target<M> },
+): PayStep<M> {
+  return {
+    type: "pay",
+    spec: typeof spec === "function" ? spec : () => spec,
+    onPaid: options.onPaid,
+    onFailed: options.onFailed,
+    onDeclined: options.onDeclined,
+  };
+}
 
 /** A final screen or message. */
 export function say(text: Text): SayStep {
@@ -127,7 +180,7 @@ export function confirm<M = any>(
 export function isStep(value: unknown): value is Step {
   if (typeof value !== "object" || value === null) return false;
   const type = (value as { type?: unknown }).type;
-  return type === "say" || type === "menu" || type === "ask" || type === "confirm";
+  return type === "say" || type === "menu" || type === "ask" || type === "confirm" || type === "pay";
 }
 
 export interface StepIndex {
@@ -136,6 +189,8 @@ export interface StepIndex {
   get(id: string): Step | undefined;
   /** The step to return to when a handler under `id` returns nothing. */
   parent(id: string): Step | undefined;
+  /** Every indexed step. */
+  all(): readonly Step[];
 }
 
 /**
@@ -165,6 +220,11 @@ export function indexSteps(start: Step, extra: readonly Step[] = []): StepIndex 
         child(step.onYes, "yes");
         child(step.onNo, "no");
         break;
+      case "pay":
+        if (isStep(step.onPaid)) visit(step.onPaid, `${id}.paid`, step);
+        if (isStep(step.onFailed)) visit(step.onFailed, `${id}.failed`, step);
+        child(step.onDeclined, "declined");
+        break;
       case "say":
       case "ask":
         break;
@@ -179,5 +239,6 @@ export function indexSteps(start: Step, extra: readonly Step[] = []): StepIndex 
     id: (step) => ids.get(step),
     get: (id) => byId.get(id),
     parent: (id) => parents.get(id),
+    all: () => [...ids.keys()],
   };
 }
