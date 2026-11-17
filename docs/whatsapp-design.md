@@ -244,29 +244,41 @@ that is no longer current. Mapped naively to "option 1 of the current turn",
 an old **Yes** could confirm a different question, and for a `pay` step that
 means money.
 
-**Proposal:** a per-session `turnSeq`, bumped each time a turn is displayed.
-Button and row ids carry it: `<seq>.<n>` (for example `14.2`). The adapter
-passes it on the `InboundEvent`; the engine compares it to the stored
-`turnSeq`.
+**Proposal:** a per-turn token, `turnId`, stored on the session and new each
+time a turn is displayed. Button and row ids carry it: `<id>.<n>` (for
+example `1204873611.2`). The adapter passes it on the `InboundEvent`; the
+engine compares it to the stored `turnId`.
 
 - Equal: the tap is `n`, as if typed.
 - Different: the engine answers with a localized "That choice has expired"
   and shows the current turn again. Nothing runs.
 
-This is a small engine change (a counter on `SessionRecord`, one optional
+The token is **random, not a counter**. A counter was the first draft and
+failed review twice: a session that is cleared (or an in-memory store that
+restarts) starts counting again, so an old button numbered 1 would pass the
+check against the new session's turn 1; and two requests that both read the
+same session and render different turns at the same moment would both
+produce "turn 2", so a Yes tapped on one confirmation could start the
+payment named on the other. A random 31-bit token has neither problem: a new
+session cannot collide with an old one, and two concurrent renders get
+different tokens, so whichever turn the session ends up on is the only one
+whose buttons work.
+
+This is a small engine change (a token on `SessionRecord`, one optional
 field on `InboundEvent`, one message key) and it also protects any future
 adapter with tappable history.
 
-**As built in core (17 Nov 2026).** `SessionRecord.turnSeq` (a session
-stored before it exists reads as 0), `InboundEvent.turnSeq`, and
-`RenderContext.turnSeq`, which hands a channel's renderer the current value
-to put in its ids. The counter bumps when a **new** turn is shown and not when
+**As built in core (17 Nov 2026).** `SessionRecord.turnId` (a session
+stored before it exists reads as 0, which no turn ever has), `InboundEvent.turnId`,
+and `RenderContext.turnId`, which hands a channel's renderer the current value
+to put in its ids. The token changes when a **new** turn is shown and not when
 the same turn is shown again, so a typed mistake that re-sends the question
-does not expire the buttons on it. A mismatch, whether older or ahead, shows
+does not expire the buttons on it. Any other token, whether from an earlier
+turn, another session or a concurrent request, shows
 the current turn again with `common.expiredChoice` ("That choice has
 expired.", `en` and `fr`) and runs nothing, including a `pay` confirm. With
 no current turn it shows the start step. The engine does not expose the
-counter on `Outcome`: the renderer already receives it, and an `Outcome` only
+token on `Outcome`: the renderer already receives it, and an `Outcome` only
 carries rendered text. Typed answers are unaffected: a user typing
 "1" means whatever is on screen now, as on SMS.
 
@@ -295,8 +307,11 @@ Crypto and `fetch`, so core keeps zero runtime dependencies.
   trigger Meta's retries. Meta's acknowledgement timeout is not stated on the
   pages read (§12, item 2). The cost is that a crash after the `200` loses
   that message; the user's next message recovers, and the failure is logged.
-  Acknowledging only after a durable enqueue is possible for deployments with
-  a queue (the `background` seam already allows it).
+  Acknowledging only after a durable enqueue is **not** possible today:
+  `BackgroundWork.run` returns nothing, so the route cannot wait for an
+  enqueue to finish before it answers `200`. It would need an awaitable
+  enqueue, a change to core that has not been made. Until it is, a crash
+  after the `200` can lose the message.
 - **Deduplicate** on the inbound message `id` with a `DedupeStore`
   (`seen(id): Promise<boolean>` with a TTL of at least 36 hours, since
   that is how long Meta retries). The in-memory default is for development;
@@ -335,10 +350,22 @@ whatsapp({
 - A transport seam like the SMS adapter's: the default uses `fetch`; tests and
   alternative hosts replace it.
 - **Outbound failures:** HTTP errors are surfaced with Meta's error code and
-  message, never retried blindly on a `4xx`; a `5xx` or network failure is
-  retried a few times with backoff. A message can still fail later (status
-  `failed`), so "accepted" is never logged as "delivered".
-- **One message per turn**, so message order is never at risk (§2.1).
+  message. A `4xx` is never retried. **A send is retried only when Meta
+  cannot have accepted it**: the connection failed before the request went
+  out, or the response proves a rejection. Meta documents no idempotency key
+  for the messages endpoint, so a timeout or `5xx` *after* the request went
+  out is ambiguous: Meta may have accepted and sent the message, and sending
+  again would deliver a second, billable copy with a new message id. Those
+  are not resent. They are logged as "outcome unknown" and settled by the
+  status webhooks (`sent`, `delivered`, `failed`). Whether a send can carry
+  our own correlation data that comes back on the status webhook, so an
+  unknown outcome can be matched to its message, is unverified (§12, item
+  11). A message can still fail later (status `failed`), so "accepted" is
+  never logged as "delivered".
+- **One message per turn**, so a single turn never reorders its own messages
+  (§2.1). Delivery order across turns is not guaranteed, so a later turn's
+  message can arrive before an earlier one. A typed answer is always read
+  against what is on screen now (§6).
 - **A deferred answer or payment outcome has no deadline to miss on
   WhatsApp**, but it can arrive after the window closed, for example a
   payment that settles the next day. The engine currently sends those through
@@ -377,7 +404,7 @@ Revisit after the payments package has run against a sandbox.
 packages/whatsapp   @kalangu/whatsapp: the channel, the webhook route,
                     signature check, deduplication, the Graph transport
 packages/core       ChannelKind gains "whatsapp"; renderWhatsapp + interpret
-                    for it; turnSeq and InboundEvent.turnSeq; the expired-choice
+                    for it; turnId and InboundEvent.turnId; the expired-choice
                     message; deliveryChannel
 packages/sim        a WhatsApp-style simulator view is optional
 ```
@@ -390,7 +417,7 @@ Core's engine changes, all small and all testable without Meta:
   gains an optional `interactive` field; channels that do not support it
   ignore it. The text form is always present as the fallback, so a renderer
   bug degrades to numbered text rather than silence.
-- `turnSeq` (§6, settled in §14, decision 9).
+- `turnId` (§6, settled in §14, decision 9).
 - The user key is opaque (§3).
 
 ---
@@ -433,6 +460,11 @@ same renderer).
 10. **That the pages above are current.** Several are undated. Read Meta's
     WhatsApp changelog and the *Business-scoped user IDs* section for any
     entry after 5 November 2026 before building.
+
+11. **Retrying a send.** Whether a send can carry our own correlation data
+    that comes back on the status webhook, and whether a timeout or `5xx`
+    after a send means Meta accepted it or not. Until known, ambiguous
+    failures are not resent (§8).
 
 ---
 
@@ -488,18 +520,21 @@ package.**
   tappable history needs it, and the check has to compare against the stored
   session, which only the engine can read. An adapter-only version would
   need its own session lookup and could disagree with the engine.
-- **What changes in core:** an optional `turnSeq` on `SessionRecord` (a
-  session stored before it exists reads as 0), an optional `turnSeq` on
+- **What changes in core:** an optional `turnId` on `SessionRecord` (a
+  session stored before it exists reads as 0), an optional `turnId` on
   `InboundEvent`, the comparison in the engine, a `common.expiredChoice`
   message in `en` and `fr`, and tests. USSD and SMS never set the field and
   are unaffected.
-- **When the counter bumps:** when a **new** turn is shown, that is, whenever
-  the engine moves to a different step or message. It does **not** bump when
+- **A random token, not a counter** (revised after review, §6): a counter
+  restarts with a cleared session and repeats across concurrent renders, so
+  an old or other-session button could pass the check.
+- **When the token changes:** when a **new** turn is shown, that is, whenever
+  the engine moves to a different step or message. It does **not** change when
   the same turn is shown again (an invalid answer re-shown with a notice, a
   page change). Otherwise tapping a button on the message the user is looking
   at, just after a typed mistake re-sent it, would be refused as expired.
   Buttons from the earlier, identical message stay valid for the same reason.
-- **A tap with no `turnSeq`** (an adapter that does not send one) is treated
+- **A tap with no `turnId`** (an adapter that does not send one) is treated
   as a typed answer, as today.
 - **An expired tap** shows the current turn again with the localized
   "That choice has expired", runs no handler, and starts no payment. This is
