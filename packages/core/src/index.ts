@@ -70,16 +70,22 @@ export { consoleLogger, maskPhone, silentLogger } from "./logger.js";
 export type { LogFields, LogLevel, Logger } from "./logger.js";
 export { NotSupportedError, interpret, renderSms, renderUssd } from "./render.js";
 export type { ChannelKind, InterpretContext, Interpretation, RenderContext, Rendered } from "./render.js";
-export { freshRecord, memoryStore } from "./session.js";
-export type { Json, SessionRecord, SessionStore } from "./session.js";
-export { ask, choose, confirm, indexSteps, isStep, menu, say } from "./steps.js";
+export { SessionConflictError, freshRecord, memoryStore } from "./session.js";
+export type { Json, PayIntent, SessionRecord, SessionSaveOptions, SessionStore } from "./session.js";
+export { ask, choose, confirm, indexSteps, isStep, languageMenu, menu, pay, say } from "./steps.js";
 export type {
   AskStep,
   Awaitable,
   ConfirmStep,
   Handler,
+  LanguageStep,
   MenuEntry,
   MenuStep,
+  PayHandler,
+  PayStep,
+  PaySpec,
+  PayTarget,
+  PaymentOutcome,
   Reply,
   SayStep,
   Step,
@@ -87,3 +93,51 @@ export type {
   Target,
   TurnContext,
 } from "./steps.js";
+
+export {
+  DEFAULT_GIVE_UP_AFTER_MS,
+  DEFAULT_POLL_REPEAT_MS,
+  DEFAULT_POLL_SCHEDULE_MS,
+  MAX_NOTIFY_ATTEMPTS,
+  createPaymentController,
+  createPolicyCheck,
+  fromMinorUnits,
+  isCurrency,
+  maskPhoneForPolicy,
+  isFinalPaymentStatus,
+  memoryPaymentStore,
+  refusalMessage,
+  toMinorUnits,
+} from "./payments/index.js";
+export type {
+  Offer,
+  OfferResult,
+  PaymentController,
+  PaymentRefused,
+  RefusalReason,
+  ReconcileOptions,
+  ReconcileReport,
+  PaymentPolicyConfig,
+  PaymentsConfig,
+  PaymentRecord,
+  PaymentStatus,
+  PaymentStore,
+  PaymentTotals,
+  PaymentLimits,
+  PaymentRefusal,
+  ProviderBounds,
+  PolicyCheck,
+  PaymentProvider,
+  ProviderChoice,
+  ProviderOutcome,
+  Refusal,
+  InitiateResult,
+  StatusResult,
+  PaymentRoute,
+} from "./payments/index.js";
+
+export { DEFAULT_LANGUAGE_PRIORS, callingCodeOf, orderLanguages } from "./languages.js";
+export type { Language, LanguagePriors } from "./languages.js";
+
+export { checkLocale, formatReport } from "./localeCheck.js";
+export type { CheckLocaleOptions, LocaleIssue, LocaleIssueCode, LocaleReport, LocaleSeverity } from "./localeCheck.js";

@@ -50,5 +50,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "prepack": "pnpm run build"
+  },
+  "bin": {
+    "kalangu": "./dist/cli.js"
   }
 }

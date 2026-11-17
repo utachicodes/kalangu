@@ -25,8 +25,8 @@ describe("parseTurn: valid turns", () => {
     { kind: "ask", question: "Describe your symptoms", input: "text" },
     { kind: "confirm", question: "Book for Monday?" },
     { kind: "confirm", question: "Réserver lundi ?", yes: "Oui", no: "Non" },
-    { kind: "pay", amount: 500, currency: "KES" },
-    { kind: "pay", amount: 2500.5, currency: "XOF", reason: "Consultation" },
+    { kind: "pay", amount: "500", currency: "KES" },
+    { kind: "pay", amount: "2500.50", currency: "XOF", reason: "Consultation" },
   ];
 
   it.each(valid.map((t) => [t.kind, t] as const))("accepts %s", (_kind, turn) => {
@@ -75,13 +75,17 @@ describe("parseTurn: rejects bad input with a path", () => {
     ["ask without input type", { kind: "ask", question: "Age?" }, "input"],
     ["confirm with same yes/no", { kind: "confirm", question: "Sure?", yes: "Ok", no: "ok " }, "no"],
     ["confirm with empty yes", { kind: "confirm", question: "Sure?", yes: "" }, "yes"],
-    ["pay with zero", { kind: "pay", amount: 0, currency: "KES" }, "amount"],
-    ["pay with negative", { kind: "pay", amount: -5, currency: "KES" }, "amount"],
-    ["pay with NaN", { kind: "pay", amount: Number.NaN, currency: "KES" }, "amount"],
-    ["pay with Infinity", { kind: "pay", amount: Number.POSITIVE_INFINITY, currency: "KES" }, "amount"],
-    ["pay with string amount", { kind: "pay", amount: "500", currency: "KES" }, "amount"],
-    ["pay with lowercase currency", { kind: "pay", amount: 5, currency: "kes" }, "currency"],
-    ["pay with symbol currency", { kind: "pay", amount: 5, currency: "$" }, "currency"],
+    ["pay with zero", { kind: "pay", amount: "0", currency: "KES" }, "amount"],
+    ["pay with negative", { kind: "pay", amount: "-5", currency: "KES" }, "amount"],
+    ["pay with NaN", { kind: "pay", amount: "NaN", currency: "KES" }, "amount"],
+    ["pay with Infinity", { kind: "pay", amount: "Infinity", currency: "KES" }, "amount"],
+    ["pay with an amount too large to keep exact", { kind: "pay", amount: "90071992547409.93", currency: "KES" }, "amount"],
+    ["pay with number amount", { kind: "pay", amount: 500, currency: "KES" }, "amount"],
+    ["pay with three decimals", { kind: "pay", amount: "5.123", currency: "KES" }, "amount"],
+    ["pay with exponent", { kind: "pay", amount: "1e3", currency: "KES" }, "amount"],
+    ["pay with zero string", { kind: "pay", amount: "0.00", currency: "KES" }, "amount"],
+    ["pay with lowercase currency", { kind: "pay", amount: "5", currency: "kes" }, "currency"],
+    ["pay with symbol currency", { kind: "pay", amount: "5", currency: "$" }, "currency"],
   ];
 
   it.each(cases)("%s", (_name, input, path) => {
