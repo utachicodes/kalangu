@@ -21,8 +21,10 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   on your operators — deferral depends on it
 - [ ] Check what a USSD short code and an SMS sender ID cost and require, per
   country (sandbox is free; production is not)
-- [ ] Search npm and the Chat SDK adapter directory for a USSD adapter
-  published since 16 Nov 2026
+- [x] Search npm and the Chat SDK adapter directory for a USSD adapter
+  published since 16 Nov 2026: none, refreshed 17 Nov 2026
+  ([docs/prior-art.md](docs/prior-art.md) §6, which also records
+  `@omoyolab/ussdkit`, the closest prior art). Repeat right before announcing
 - [ ] Ask two or three teams who run USSD services today whether deferral to
   SMS would suit their users (design doc §12, question 6, depends on this)
 
@@ -136,4 +138,5 @@ above).
 - [ ] Get a Meta test number and work through the verify-first list in §12
   (signature over raw bytes, per-market message cost, `wa_id` presence)
 - [ ] Then, and only then, WhatsApp code
-- [ ] Survey the Chat SDK adapter directory for a community USSD adapter
+- [x] Survey the Chat SDK adapter directory for a community USSD adapter:
+  none as of 17 Nov 2026 (docs/prior-art.md §6)
