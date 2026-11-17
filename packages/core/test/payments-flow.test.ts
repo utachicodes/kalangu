@@ -179,6 +179,26 @@ describe("pay step", () => {
     expect(t.fake.initiated).toHaveLength(0);
   });
 
+  it("a stale Yes from an earlier turn starts no payment; the current one does", async () => {
+    const t = setup();
+    const sms = (input: string, turnSeq?: number) =>
+      t.agent.handle({ channel: "sms", phone: PHONE, input, ...(turnSeq !== undefined ? { turnSeq } : {}) });
+    await sms("hi"); // the menu, turn 1
+    await sms("1"); // the pay confirm, turn 2
+
+    const stale = await sms("1", 1); // a tap on the old menu's "Pay consultation", read as Yes
+    expect(stale.text).toContain("That choice has expired.");
+    expect(stale.text).toContain("Pay 500 KES to CLINIC for Consultation?");
+    await flush();
+    expect(t.store.size).toBe(0);
+    expect(t.fake.initiated).toHaveLength(0);
+
+    const fresh = await sms("1", 2);
+    expect(fresh.text).toBe("You will receive a prompt to enter your PIN.");
+    await flush();
+    expect(t.store.size).toBe(1);
+  });
+
   it("declining runs onDeclined and records nothing", async () => {
     const t = setup();
     await toConfirm(t);

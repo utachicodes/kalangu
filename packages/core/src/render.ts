@@ -26,6 +26,8 @@ export interface RenderContext {
   page: number;
   /** A line shown above the turn, e.g. "Invalid choice. Try again." */
   notice?: string;
+  /** The session's current turn counter, for channels that encode it in button ids. */
+  turnSeq?: number;
 }
 
 export interface Rendered {

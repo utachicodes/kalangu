@@ -356,6 +356,11 @@ class TurnRun<M> {
       return this.deferredNotice();
     }
 
+    // A tap on a button from an earlier turn: refuse it and show what is current.
+    if (event.turnSeq !== undefined && event.turnSeq !== (record.turnSeq ?? 0)) {
+      return this.expiredChoice();
+    }
+
     const shown = record.turn;
     if (channel.live && event.newSession) {
       const replay = event.inputs ?? (event.input !== "" ? [event.input] : []);
@@ -712,10 +717,24 @@ class TurnRun<M> {
     });
   }
 
+  /** Shows a new turn, which makes every earlier button stale. */
   private showTurn(turn: Turn, stepId: string | null): Outcome {
     this.record.stepId = stepId;
     this.record.page = 0;
+    this.record.turnSeq = (this.record.turnSeq ?? 0) + 1;
     return this.display(turn);
+  }
+
+  /** The same turn again, with a notice and no handler run. */
+  private async expiredChoice(): Promise<Outcome> {
+    const shown = this.record.turn;
+    this.deps.logger.info("Expired choice ignored", {
+      channel: this.channel.id,
+      phone: this.deps.mask(this.event.phone),
+      step: this.record.stepId,
+    });
+    if (shown) return this.display(shown, this.t("common.expiredChoice"));
+    return this.showStep(this.deps.steps.start);
   }
 
   /** Renders `turn` at the record's current page and updates the position. */
@@ -724,6 +743,7 @@ class TurnRun<M> {
     const rendered: Rendered = channel.render(turn, {
       t: this.t,
       page: record.page,
+      turnSeq: record.turnSeq ?? 0,
       ...(notice ? { notice } : {}),
     });
     for (const warning of rendered.warnings) {

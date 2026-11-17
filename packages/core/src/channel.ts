@@ -66,6 +66,14 @@ export interface InboundEvent {
    * first request already carries `1*2`.
    */
   inputs?: readonly string[];
+  /**
+   * For a tap on a button or list row from a channel with tappable history:
+   * the `turnSeq` carried in that button's id, which `RenderContext.turnSeq`
+   * gave the renderer. If it is not the session's current `turnSeq` the
+   * choice has expired: the current turn is shown again and nothing runs.
+   * Leave it unset for typed input, which always answers what is on screen.
+   */
+  turnSeq?: number;
 }
 
 export interface Outcome {
