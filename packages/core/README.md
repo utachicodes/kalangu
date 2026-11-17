@@ -35,6 +35,13 @@ What it handles for you:
 
 - **Typed turns.** Steps return `say`, `choose`, `ask` or `confirm`; each
   channel renders them (numbered USSD menus, numbered SMS replies).
+- **Languages.** `createAgent({ languages: { supported } })` asks the user to
+  choose a language once and remembers it per phone number. The menu names
+  each language in itself and lists the likely ones for the caller's country
+  first. `en` and `fr` ship; others are passed in `messages`. The
+  `kalangu locale check wo.json` command (installed with this package)
+  checks a translation for lost `{placeholders}` and for how each string fits
+  USSD and SMS.
 - **The budgeter.** USSD screens stay within the screen limit (160 by
   default) and a safe character set, with `98. More` paging. SMS length is
   counted by encoding: one character outside GSM-7 drops a segment from 160
@@ -45,6 +52,17 @@ What it handles for you:
 - **Sessions** keyed by phone number, resumable on redial. In memory by
   default; pass a durable `sessionStore` in production.
 - **Privacy.** Phone numbers are masked in logs by default.
+
+## Payments: experimental, no real provider yet
+
+The package contains a `pay` step, a policy layer (no policy, no payments),
+payment polling and an SMS receipt, and `agent.payments.reconcile()` for a
+scheduled job. **It has only been run against a fake provider.** There is no
+pawaPay or other real provider package yet, so do not use it with real money.
+It also needs a durable payment store and a session store whose `save`
+honours `ifVersion` atomically (`atomic: true`), which you supply. See
+[docs/payments-design.md](https://github.com/utachicodes/kalangu/blob/main/docs/payments-design.md)
+for what is built and what is not.
 
 On serverless platforms, pass `background: { run: (task) => ctx.waitUntil(task()) }`
 (or a queue), or deferred answers are never sent.

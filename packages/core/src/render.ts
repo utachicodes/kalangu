@@ -26,6 +26,8 @@ export interface RenderContext {
   page: number;
   /** A line shown above the turn, e.g. "Invalid choice. Try again." */
   notice?: string;
+  /** The session's current turn token, for channels that encode it in button ids. */
+  turnId?: number;
 }
 
 export interface Rendered {
