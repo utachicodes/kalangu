@@ -255,7 +255,19 @@ passes it on the `InboundEvent`; the engine compares it to the stored
 
 This is a small engine change (a counter on `SessionRecord`, one optional
 field on `InboundEvent`, one message key) and it also protects any future
-adapter with tappable history. Typed answers are unaffected: a user typing
+adapter with tappable history.
+
+**As built in core (17 Nov 2026).** `SessionRecord.turnSeq` (a session
+stored before it exists reads as 0), `InboundEvent.turnSeq`, and
+`RenderContext.turnSeq`, which hands a channel's renderer the current value
+to put in its ids. The counter bumps when a **new** turn is shown and not when
+the same turn is shown again, so a typed mistake that re-sends the question
+does not expire the buttons on it. A mismatch, whether older or ahead, shows
+the current turn again with `common.expiredChoice` ("That choice has
+expired.", `en` and `fr`) and runs nothing, including a `pay` confirm. With
+no current turn it shows the start step. The engine does not expose the
+counter on `Outcome`: the renderer already receives it, and an `Outcome` only
+carries rendered text. Typed answers are unaffected: a user typing
 "1" means whatever is on screen now, as on SMS.
 
 ---

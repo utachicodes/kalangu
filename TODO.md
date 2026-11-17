@@ -111,6 +111,8 @@ above).
     webhook signing and deduplication
 - [x] Settle WhatsApp questions 1 (identity key: phone, else BSUID, no alias
   store yet) and 9 (stale-tap `turnSeq` goes into core)
+- [x] `turnSeq` stale-tap protection in core (tested, including that a stale
+  Yes starts no payment)
 - [ ] Review the rest of the WhatsApp design, especially §3 and §6, and the
   eight questions still open in §14
 - [ ] Get a Meta test number and work through the verify-first list in §12
