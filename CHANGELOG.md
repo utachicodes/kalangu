@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   settles non-final payments, re-initiates fresh never-initiated ones,
   fails old never-started ones, and marks payments past the give-up window
   `UNRESOLVED`. It reports what it did and survives a failing payment.
+- Payment refusals (policy rules and provider reasons) are localized in `en`
+  and `fr` through `payments.refusal.*` messages, which can be overridden.
 
 - `@kalangu/core` package with the turn types (`say`, `choose`, `ask`,
   `confirm`, and `pay` reserved for 0.2), `parseTurn`/`isTurn` for

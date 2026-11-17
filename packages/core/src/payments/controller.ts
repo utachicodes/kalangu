@@ -10,8 +10,8 @@
 
 import type { Clock } from "../clock.js";
 import type { Logger } from "../logger.js";
-import { createPolicyCheck, fromMinorUnits, toMinorUnits, type PolicyCheck } from "./policy.js";
-import type { PaymentProvider } from "./provider.js";
+import { createPolicyCheck, fromMinorUnits, toMinorUnits, type PaymentRefusal, type PolicyCheck } from "./policy.js";
+import type { PaymentProvider, Refusal } from "./provider.js";
 import { isFinalPaymentStatus, type PaymentRecord, type PaymentStatus, type PaymentStore } from "./store.js";
 
 /** Decimal-string limits, as written in `createAgent({ payments })`. */
@@ -84,7 +84,17 @@ export interface Offer {
   readonly providerPhone: string;
 }
 
-export type OfferResult = { ok: true; offer: Offer } | { ok: false; message: string };
+/** Why a payment was refused: a policy rule or a provider's reason. Localized by the engine. */
+export type RefusalReason = PaymentRefusal["reason"] | Refusal["kind"];
+
+export interface PaymentRefused {
+  readonly ok: false;
+  readonly reason: RefusalReason;
+  /** English, for logs and developers. Users get the localized text for `reason`. */
+  readonly message: string;
+}
+
+export type OfferResult = { ok: true; offer: Offer } | PaymentRefused;
 
 export interface PaymentController {
   readonly payeeName: string;
@@ -94,7 +104,7 @@ export interface PaymentController {
     phone: string,
     offer: Offer,
     where: { stepId: string; locale: string },
-  ): Promise<{ ok: true; payment: PaymentRecord } | { ok: false; message: string }>;
+  ): Promise<{ ok: true; payment: PaymentRecord } | PaymentRefused>;
   /** Initiates with the provider, then polls until the payment is final. Long-running. */
   run(id: string): Promise<void>;
   /** Asks the provider for the status and applies it. Safe to call from a callback route. */
@@ -130,7 +140,7 @@ export function createPaymentController(
 
   const sleep = (ms: number) => new Promise<void>((resolve) => clock.setTimeout(resolve, ms));
 
-  async function checkPolicy(phone: string, amount: string, currency: string): Promise<string | null> {
+  async function checkPolicy(phone: string, amount: string, currency: string): Promise<PaymentRefused | null> {
     const totals = await store.totals(phone, currency, clock.now() - DAY_MS);
     const refusal = policy.check({
       amount,
@@ -140,7 +150,7 @@ export function createPaymentController(
     });
     if (refusal) {
       logger.info("Payment refused by policy", { phone: mask(phone), amount, currency, rule: refusal.reason });
-      return refusal.message;
+      return { ok: false, reason: refusal.reason, message: refusal.message };
     }
     return null;
   }
@@ -217,12 +227,12 @@ export function createPaymentController(
     payeeName: config.payeeName,
 
     async offer(phone, spec) {
-      const message = await checkPolicy(phone, spec.amount, spec.currency);
-      if (message) return { ok: false, message };
+      const refused = await checkPolicy(phone, spec.amount, spec.currency);
+      if (refused) return refused;
       const choice = await provider.resolve(phone, spec.amount, spec.currency);
       if ("kind" in choice) {
         logger.info("Payment refused by provider", { phone: mask(phone), rule: choice.kind });
-        return { ok: false, message: choice.message };
+        return { ok: false, reason: choice.kind, message: choice.message };
       }
       return {
         ok: true,
@@ -237,8 +247,8 @@ export function createPaymentController(
     },
 
     async begin(phone, offer, where) {
-      const message = await checkPolicy(phone, offer.amount, offer.currency);
-      if (message) return { ok: false, message };
+      const refused = await checkPolicy(phone, offer.amount, offer.currency);
+      if (refused) return refused;
       const now = clock.now();
       const payment: PaymentRecord = {
         id: newId(),

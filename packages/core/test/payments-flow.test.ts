@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   createAgent,
+  en,
+  fr,
   memoryPaymentStore,
   memoryStore,
   menu,
@@ -8,9 +10,11 @@ import {
   say,
   smsChannel,
   ussdChannel,
+  type AgentConfig,
   type Clock,
   type InitiateResult,
   type Logger,
+  type MessageKey,
   type PaymentProvider,
   type PaymentRecord,
   type PaymentsConfig,
@@ -92,6 +96,7 @@ function setup(
     provider?: ReturnType<typeof controllableProvider>;
     payments?: Partial<PaymentsConfig>;
     amount?: string;
+    agent?: Partial<AgentConfig>;
     /** Share these with an earlier agent to simulate a restart. */
     shared?: { store: ReturnType<typeof memoryPaymentStore>; sessions: ReturnType<typeof memoryStore>; clock: Clock };
   } = {},
@@ -132,6 +137,7 @@ function setup(
     logger,
     clock,
     sessionStore: sessions,
+    ...options.agent,
     payments: {
       provider: fake.provider,
       store,
@@ -291,8 +297,42 @@ describe("pay step", () => {
     });
     await t.dial();
     const out = await t.press("1");
-    expect(out.text).toContain("We could not find your operator.");
+    expect(out.text).toContain("We could not identify your mobile money operator.");
+    expect(out.text).not.toContain("We could not find your operator."); // the provider's English is for logs
     expect(t.store.size).toBe(0);
+  });
+
+  it("shows policy refusals in the user's language", async () => {
+    const t = setup({ amount: "5000.01", agent: { defaultLocale: "fr" } });
+    await t.dial();
+    const out = await t.press("1");
+    // USSD transliterates accents to stay within the safe character set.
+    expect(out.text).toContain("Desole, ce paiement ne peut pas etre effectue. Ce paiement depasse la limite autorisee.");
+    expect(out.text).not.toContain("allowed limit");
+  });
+
+  it("names the currency in a currency refusal", async () => {
+    const t = setup({ payments: { policy: { currencies: ["XOF"], maxPerPayment: { XOF: "100000" } } } });
+    await t.dial();
+    expect((await t.press("1")).text).toContain("Payments in KES are not accepted.");
+  });
+
+  it("lets the developer override a refusal message", async () => {
+    const t = setup({
+      amount: "5000.01",
+      agent: { messages: { en: { "payments.refusal.per-payment": "Too much for one visit." } } },
+    });
+    await t.dial();
+    expect((await t.press("1")).text).toContain("Sorry, this payment cannot be made. Too much for one visit.");
+  });
+
+  it("has an English and a French message for every refusal reason", () => {
+    const reasons = ["currency", "per-payment", "per-day", "pending-limit", "provider-closed", "amount-bounds", "decimals", "unknown-operator"];
+    for (const messages of [en, fr]) {
+      for (const reason of reasons) {
+        expect(messages[`payments.refusal.${reason}` as MessageKey], reason).toBeTruthy();
+      }
+    }
   });
 
   it("allows one payment in flight per phone by default", async () => {

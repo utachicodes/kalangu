@@ -159,9 +159,11 @@ pay(
 **As built (16 Nov 2026).** A refusal before the confirm screen runs
 `onFailed` inline on the live channel with `status: "REFUSED"` and no `id`.
 The receipt goes as a second SMS after the `onPaid` message, so a long
-`onPaid` text can never push the receipt over the segment cap. Refusal
-messages from the policy layer are English only for now; localizing them is
-still to do.
+`onPaid` text can never push the receipt over the segment cap. Refusals are
+localized by reason code (`payments.refusal.<reason>`, `en` and `fr`, and
+overridable through `messages`); the English `message` on a refusal is for
+logs only. A provider's own refusal text is likewise ignored in favour of
+the localized text for its `kind`.
 
 ### 4.3 Flow
 

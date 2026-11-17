@@ -66,7 +66,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   - [x] Confirm → end session → background initiate → poll → SMS outcome
     and receipt; unknown outcomes keep polling, give up as `UNRESOLVED`
   - [x] `agent.payments.settle(id)` re-checks status for callback routes
-- [ ] Per-locale policy refusal messages (English only today)
+- [x] Localized policy and provider refusal messages (`en`, `fr`)
 - [x] `agent.payments.reconcile()` for a cron or scheduler (§6.5): finishes
   payments whose in-process polling died with a restart
 - [ ] README note: on serverless, `reconcile()` on a schedule is the only

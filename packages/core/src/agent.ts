@@ -18,6 +18,7 @@ import {
   createPaymentController,
   type PaymentController,
   type PaymentsConfig,
+  type RefusalReason,
   type ReconcileOptions,
   type ReconcileReport,
 } from "./payments/controller.js";
@@ -571,7 +572,7 @@ class TurnRun<M> {
     const reason = spec.reason === undefined ? "" : this.deps.catalog.localize(spec.reason, this.record.locale);
     const result = await payments.offer(this.event.phone, { amount: spec.amount, currency: spec.currency, reason });
     if (!result.ok) {
-      return this.runPayTarget(step.onFailed, this.refused(spec.amount, spec.currency, reason, result.message), step);
+      return this.runPayTarget(step.onFailed, this.refused(spec.amount, spec.currency, reason, result.reason), step);
     }
 
     this.record.payIntent = {
@@ -596,7 +597,7 @@ class TurnRun<M> {
     const stepId = this.deps.steps.id(step) ?? "";
     const begun = await payments.begin(this.event.phone, intent, { stepId, locale: this.record.locale });
     if (!begun.ok) {
-      return this.runPayTarget(step.onFailed, this.refused(intent.amount, intent.currency, intent.reason, begun.message), step);
+      return this.runPayTarget(step.onFailed, this.refused(intent.amount, intent.currency, intent.reason, begun.reason), step);
     }
     const { payment } = begun;
     this.deps.background.run(() => payments.run(payment.id));
@@ -610,13 +611,13 @@ class TurnRun<M> {
     return this.showTurn({ kind: "say", text: this.t("payments.pinPrompt") }, null);
   }
 
-  private refused(amount: string, currency: string, reason: string, why: string): PaymentOutcome {
+  private refused(amount: string, currency: string, reason: string, why: RefusalReason): PaymentOutcome {
     return {
       status: "REFUSED",
       amount,
       currency,
       reason,
-      failureMessage: this.t("payments.refused", { why }),
+      failureMessage: this.t("payments.refused", { why: this.t(`payments.refusal.${why}`, { currency }) }),
     };
   }
 
