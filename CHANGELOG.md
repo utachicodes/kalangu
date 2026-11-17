@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PaymentRecord.providerPhone`; `pollRepeatMs`; exact decimal sums; the
   provider minimum amount; `"100.0"` accepted for providers without decimals;
   amounts too large to hold exactly refused; payment ids cannot change.
+- A payment is failed as "not found" only if it is still in the status that
+  justified that conclusion, and an outcome is only ever announced for a
+  final payment: another process seeing the payment in the meantime can no
+  longer cause a "not completed" message for a payment still in progress.
 - Payment refusals (policy rules and provider reasons) are localized in `en`
   and `fr` through `payments.refusal.*` messages, which can be overridden.
 

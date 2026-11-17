@@ -744,6 +744,30 @@ describe("review fixes", () => {
     expect((await t.store.get("young"))?.status).toBe("PROCESSING");
   });
 
+  it("does not fail a payment as not found when another process has since seen it", async () => {
+    const t = setup();
+    const now = t.clock.now();
+    await t.store.create({
+      id: "race", phone: PHONE, provider: "TEST_MOMO", providerPhone: "254700000001", amount: "500.00", currency: "KES",
+      reason: "Consultation", stepId: "start.1", locale: "en", status: "UNKNOWN", createdAt: now - 5000, updatedAt: now - 5000,
+    });
+    // This process asks the provider and is slow to hear that it has never seen the payment.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    t.fake.provider.status = async () => {
+      await gate;
+      return { found: false };
+    };
+    const slow = t.agent.payments!.settle("race");
+    await flush();
+    // Meanwhile another process learns the provider has it.
+    await t.store.transition("race", { status: "PROCESSING" }, ["UNKNOWN"]);
+    release();
+    await slow;
+    expect((await t.store.get("race"))?.status).toBe("PROCESSING");
+    expect(t.sent).toHaveLength(0);
+  });
+
   it("uses pollRepeatMs once the schedule is used up", async () => {
     const t = setup({ payments: { pollScheduleMs: [1000], pollRepeatMs: 50_000, giveUpAfterMs: 500_000 } });
     await toConfirm(t);

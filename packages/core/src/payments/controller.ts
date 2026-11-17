@@ -166,6 +166,9 @@ export function createPaymentController(
   }
 
   async function finalize(payment: PaymentRecord): Promise<void> {
+    // Only a final payment has an outcome to announce. A record that moved on to another
+    // non-final status while a caller held an older view must never be announced as done.
+    if (!isFinalPaymentStatus(payment.status)) return;
     if (payment.notifiedAt !== undefined) return;
     // Claim first, atomically: of any number of racing callers, one wins.
     const claimed = await store.claimNotification(payment.id, clock.now());
@@ -186,7 +189,18 @@ export function createPaymentController(
     }
   }
 
-  async function apply(id: string, status: PaymentStatus, failureCode?: string): Promise<PaymentRecord> {
+  /**
+   * Records a status. `from` is what the caller's decision was based on; it defaults to any
+   * non-final status, which keeps a final status final. A conclusion drawn from one observation
+   * (the provider has never seen it) passes that observation's status, so it cannot overwrite
+   * newer state another process recorded in the meantime.
+   */
+  async function apply(
+    id: string,
+    status: PaymentStatus,
+    failureCode?: string,
+    from: readonly PaymentStatus[] = NON_FINAL,
+  ): Promise<PaymentRecord> {
     const final = isFinalPaymentStatus(status);
     const next = await store.transition(
       id,
@@ -195,7 +209,7 @@ export function createPaymentController(
         ...(failureCode !== undefined ? { failureCode } : {}),
         ...(final ? { finalizedAt: clock.now() } : {}),
       },
-      NON_FINAL,
+      from,
     );
     if (!next) {
       // Already final: someone else got there first. Their outcome stands.
@@ -218,7 +232,7 @@ export function createPaymentController(
     const result = await provider.status(id);
     if (!result.found) {
       // The provider has never seen it. Only safe to fail if initiation was unconfirmed.
-      if (current.status === "UNKNOWN") return apply(id, "FAILED", "NOT_FOUND");
+      if (current.status === "UNKNOWN") return apply(id, "FAILED", "NOT_FOUND", ["UNKNOWN"]);
       return current;
     }
     if (!result.status || result.status === current.status) return current;
@@ -340,7 +354,7 @@ export function createPaymentController(
             current =
               clock.now() - payment.createdAt <= reinitiateWithinMs
                 ? await initiate(current)
-                : await apply(payment.id, "FAILED", "NOT_FOUND");
+                : await apply(payment.id, "FAILED", "NOT_FOUND", ["CREATED"]);
           }
           if (current && !isFinalPaymentStatus(current.status) && clock.now() - payment.createdAt >= giveUpAfterMs) {
             current = await giveUp(payment);
