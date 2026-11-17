@@ -1,0 +1,44 @@
+name: Release
+
+# Manual only. Publishes the four packages to npm under the `alpha` tag.
+# Needs an `NPM_TOKEN` repository secret (an npm automation token with
+# publish rights to the @kalangu scope). Run it from main, after CI passes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Pack and check only; do not publish"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          standalone: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm -r --filter "./packages/*" publish --dry-run --no-git-checks --provenance
+          else
+            pnpm -r --filter "./packages/*" publish --no-git-checks --provenance
+          fi

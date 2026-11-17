@@ -1,10 +1,28 @@
 {
   "name": "@kalangu/ussd",
   "version": "0.1.0-alpha.0",
-  "private": true,
   "description": "Africa's Talking USSD adapter for Kalangu agents.",
+  "keywords": [
+    "ussd",
+    "africastalking",
+    "africas-talking",
+    "agents",
+    "ai",
+    "africa"
+  ],
   "license": "MIT",
+  "author": "Abdoullah Ndao",
+  "homepage": "https://github.com/utachicodes/kalangu/tree/main/packages/ussd#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/utachicodes/kalangu.git",
+    "directory": "packages/ussd"
+  },
+  "bugs": {
+    "url": "https://github.com/utachicodes/kalangu/issues"
+  },
   "type": "module",
+  "sideEffects": false,
   "engines": {
     "node": ">=20"
   },
@@ -14,13 +32,22 @@
       "default": "./dist/index.js"
     }
   },
+  "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "pnpm run build"
   },
   "dependencies": {
     "@kalangu/core": "workspace:*"

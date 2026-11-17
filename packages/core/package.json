@@ -1,10 +1,30 @@
 {
   "name": "@kalangu/core",
   "version": "0.1.0-alpha.0",
-  "private": true,
   "description": "Turn types, budgeter, engine and sessions for Kalangu agents. Zero runtime dependencies.",
+  "keywords": [
+    "ussd",
+    "sms",
+    "agents",
+    "ai",
+    "feature-phone",
+    "keypad",
+    "africa",
+    "gsm-7"
+  ],
   "license": "MIT",
+  "author": "Abdoullah Ndao",
+  "homepage": "https://github.com/utachicodes/kalangu/tree/main/packages/core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/utachicodes/kalangu.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/utachicodes/kalangu/issues"
+  },
   "type": "module",
+  "sideEffects": false,
   "engines": {
     "node": ">=20"
   },
@@ -14,13 +34,22 @@
       "default": "./dist/index.js"
     }
   },
+  "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "pnpm run build"
   },
   "bin": {
     "kalangu": "./dist/cli.js"

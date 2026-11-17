@@ -117,6 +117,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   policy layer, idempotency, signed callbacks with polling fallback, and
   what the library does not guarantee. Draft; no payment code.
 
+- Publish preparation: npm metadata (repository, keywords, `alpha` tag,
+  public access), a README and LICENSE in each package, a manual Release
+  workflow (dry run by default, npm provenance), and `RELEASING.md`.
+  Nothing is published yet.
+
 ### Changed
 
 - README: v0.1 status, package list, quick start, how to write an agent,
