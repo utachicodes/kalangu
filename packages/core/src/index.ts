@@ -48,7 +48,7 @@ export {
   DEFERRAL_TTL_MS,
   createAgent,
 } from "./agent.js";
-export type { Agent, AgentConfig } from "./agent.js";
+export type { Agent, AgentConfig, ModelMap } from "./agent.js";
 export { inProcessBackground } from "./background.js";
 export type { BackgroundWork } from "./background.js";
 export { smsChannel, ussdChannel } from "./channel.js";
@@ -136,8 +136,8 @@ export type {
   PaymentRoute,
 } from "./payments/index.js";
 
-export { DEFAULT_LANGUAGE_PRIORS, callingCodeOf, orderLanguages } from "./languages.js";
-export type { Language, LanguagePriors } from "./languages.js";
+export { DEFAULT_DETECTION_TIMEOUT_MS, DEFAULT_LANGUAGE_PRIORS, callingCodeOf, orderLanguages } from "./languages.js";
+export type { DetectedLanguage, Language, LanguageDetection, LanguageDetector, LanguagePriors } from "./languages.js";
 
 export { checkLocale, formatReport } from "./localeCheck.js";
 export type { CheckLocaleOptions, LocaleIssue, LocaleIssueCode, LocaleReport, LocaleSeverity } from "./localeCheck.js";

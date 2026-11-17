@@ -21,8 +21,10 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   on your operators — deferral depends on it
 - [ ] Check what a USSD short code and an SMS sender ID cost and require, per
   country (sandbox is free; production is not)
-- [ ] Search npm and the Chat SDK adapter directory for a USSD adapter
-  published since 16 Nov 2026
+- [x] Search npm and the Chat SDK adapter directory for a USSD adapter
+  published since 16 Nov 2026: none, refreshed 17 Nov 2026
+  ([docs/prior-art.md](docs/prior-art.md) §6, which also records
+  `@omoyolab/ussdkit`, the closest prior art). Repeat right before announcing
 - [ ] Ask two or three teams who run USSD services today whether deferral to
   SMS would suit their users (design doc §12, question 6, depends on this)
 
@@ -109,6 +111,10 @@ above).
 - [ ] Review the languages design, especially §4 (ask first, detection as a
   hint) and the seven open questions in §14
 - [x] Per-language model routing design (languages design §7)
+- [x] Detector port and model map built (languages design §9.5), tested with
+  a fake detector; no real detector ships
+- [ ] Language detection on the first SMS of a conversation (§5 proposed it;
+  only `ask` answers are checked today)
 - [x] `kalangu locale check` (placeholders, USSD and SMS fit) and the
   contributor guide for community locales (CONTRIBUTING.md); designed in
   languages design §8 and §9
@@ -136,4 +142,5 @@ above).
 - [ ] Get a Meta test number and work through the verify-first list in §12
   (signature over raw bytes, per-market message cost, `wa_id` presence)
 - [ ] Then, and only then, WhatsApp code
-- [ ] Survey the Chat SDK adapter directory for a community USSD adapter
+- [x] Survey the Chat SDK adapter directory for a community USSD adapter:
+  none as of 17 Nov 2026 (docs/prior-art.md §6)

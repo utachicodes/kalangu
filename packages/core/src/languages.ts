@@ -74,3 +74,33 @@ export function orderLanguages(
   }
   return [...first, ...languages.filter((l) => !first.includes(l))];
 }
+
+/** What a detector thinks the text is written in. */
+export interface DetectedLanguage {
+  /** A locale code from the candidates it was given. */
+  readonly code: string;
+  /** How sure it is, 0 to 1. What this means differs between detectors: measure before choosing a threshold. */
+  readonly confidence: number;
+}
+
+/**
+ * A language detector (docs/languages-design.md §5). Kalangu ships none:
+ * wrap a service, a model or a heuristic. It must answer from `candidates`
+ * (the agent's languages) or return null; anything else is ignored.
+ */
+export interface LanguageDetector {
+  detect(text: string, options: { readonly candidates: readonly string[] }): Promise<DetectedLanguage | null>;
+}
+
+/** Detection as a hint: offers to switch language, never switches silently. */
+export interface LanguageDetection {
+  readonly detector: LanguageDetector;
+  /** Minimum confidence to offer a switch. Required: no default until one is measured. */
+  readonly threshold: number;
+  /** Shorter typed answers are never sent to the detector. Required, for the same reason. */
+  readonly minChars: number;
+  /** Give up on a slow detector after this long and carry on without it. Default 1000 ms. */
+  readonly timeoutMs?: number;
+}
+
+export const DEFAULT_DETECTION_TIMEOUT_MS = 1000;

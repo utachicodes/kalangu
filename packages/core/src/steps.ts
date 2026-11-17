@@ -26,7 +26,10 @@ export interface TurnContext<M = any> {
   /** The user's locale. Setting it persists; unknown locales are ignored with a warning. */
   locale: string;
   readonly t: Translate;
-  /** Whatever the developer passed as `model` to `createAgent`. */
+  /**
+   * Whatever the developer passed as `model` to `createAgent`, or with `models`,
+   * the entry for the user's current language (falling back to `default`).
+   */
   readonly model: M;
   readonly logger: Logger;
 }

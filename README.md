@@ -162,6 +162,10 @@ export default agent.requestHandler; // standard Request -> Response
   caller's country first (a prior, not a guess; the list is never shortened).
   Each language needs messages: `en` and `fr` ship, others go in `messages`.
   `languageMenu()` is the same step for a "Language" entry in your tree.
+  Optionally, `languages.detection` takes a detector you supply and offers
+  to switch when a typed answer looks like another of your languages (it
+  never switches silently), and `models: { default, wo: ... }` gives handlers
+  a model per language as `ctx.model`.
   Check a translation with `kalangu locale check wo.json`. See
   [docs/languages-design.md](docs/languages-design.md).
 - **Sessions** are in memory by default and keyed by phone number; pass a

@@ -360,8 +360,40 @@ recommended in §14, question 2.
 - **The shipped locales are tested with it.** English is clean. French has no
   errors, and three payment strings fall back to UCS-2 on SMS because of `ê`
   and `ç`, which the test pins as the known cost.
-- **Not built:** the detector port, `candidates` and `minChars`, the model
-  map, the `locales/` directory, and Wolof, Hausa and Swahili translations.
+- **Not built in that slice:** the detector port and the model map (see
+  §9.5), the `locales/` directory, and Wolof, Hausa and Swahili translations.
+
+## 9.5 As built: detection and the model map (17 Nov 2026)
+
+- **`languages.detection: { detector, threshold, minChars, timeoutMs? }`.**
+  `LanguageDetector.detect(text, { candidates })` returns
+  `{ code, confidence }` or null. Kalangu ships no detector (§6).
+  `threshold` (above 0, at most 1) and `minChars` (a whole number, at least 1)
+  are **required, with no default**: nothing has been measured yet (§12).
+  `timeoutMs` defaults to 1000 ms. At startup, `deadlineMs` plus `timeoutMs`
+  must not exceed the 10 s USSD bound, so detection can never push a reply
+  past what a gateway waits.
+- **When it runs:** only on the text of an `ask` answer, trimmed, at least
+  `minChars` long. Never on a menu choice or a confirm. Not yet on the first
+  SMS of a conversation (§5 proposed it; left for later).
+- **What it does:** it never switches silently. When the result is one of
+  the agent's languages, at or above the threshold, and not the current one,
+  the typed answer is **held** and the user is asked, *in the suggested
+  language*, "Continue in {language}?" (`common.suggestLanguage`). Yes
+  switches the language for good. No keeps it and is remembered for the
+  session, so nothing is offered again. Either way the held answer then runs
+  through its handler, in the chosen language, so nothing the user typed is
+  lost.
+- **Failure is never the user's problem:** a detector that throws, returns a
+  language the agent does not have, or takes longer than `timeoutMs` is
+  logged as a warning and the answer is handled as if there were no detector.
+  The timeout applies on every channel, not only USSD.
+- **`models: { default, [locale]: model }`** instead of `model`. `ctx.model`
+  is the entry for the user's current language, read when the handler uses
+  it, so a handler that changes `ctx.locale` gets the new language's model
+  straight away. A language without an entry gets `default`, with one warning
+  per language. Startup fails for both `model` and `models`, for no
+  `default`, or for an entry whose language has no messages.
 
 ## 10. How the pieces fit
 
