@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agents · Kalangu</title>
+<meta name="description" content="An agent is a tree of steps that Kalangu shows to a user one screen at a time, over USSD or SMS, remembering where each phone number is. This page covers everyt">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/" aria-current="page">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="agents">Agents</h1>
+<p>An agent is a tree of steps that Kalangu shows to a user one screen at a
+time, over USSD or SMS, remembering where each phone number is. This page
+covers everything you configure. For a first agent, start with the
+<a href="/docs/quick-start/">quick start</a>.</p>
+<pre><code class="language-js">import { createAgent } from &quot;@kalangu/core&quot;;
+
+const agent = createAgent({ start, channels, model });
+</code></pre>
+<h2 id="steps">Steps<a class="anchor" href="#steps" aria-label="Link to this section">#</a></h2>
+<p>A step is data: what to show and where an answer goes. Text can be a string,
+or <code>{ en: &quot;...&quot;, fr: &quot;...&quot; }</code> for each language.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Shows</th>
+<th>The answer goes to</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>say(text)</code></td>
+<td>A final message; the conversation ends</td>
+<td></td>
+</tr>
+<tr>
+<td><code>menu(title, { label: target })</code></td>
+<td>Numbered options (<code>choose</code> is the same)</td>
+<td>The chosen option&#39;s target</td>
+</tr>
+<tr>
+<td><code>ask(question, handler, { input: &quot;text&quot; | &quot;number&quot; })</code></td>
+<td>A question to type an answer to</td>
+<td><code>handler(answer, ctx)</code></td>
+</tr>
+<tr>
+<td><code>confirm(question, { onYes, onNo, yes?, no? })</code></td>
+<td>A yes/no question</td>
+<td><code>onYes</code> or <code>onNo</code></td>
+</tr>
+<tr>
+<td><code>languageMenu(options?)</code></td>
+<td>The languages, each named in itself</td>
+<td>Sets the language, then <code>then</code> or back up</td>
+</tr>
+<tr>
+<td><code>pay(spec, { onPaid, onFailed, onDeclined })</code></td>
+<td>A payment to confirm (experimental, see below)</td>
+<td>The payment&#39;s outcome</td>
+</tr>
+</tbody></table></div>
+<p>A target is either another step or a handler. Menus can also take
+<code>[{ label, to }]</code> when labels need translations.</p>
+<pre><code class="language-js">import { ask, confirm, menu, say } from &quot;@kalangu/core&quot;;
+
+const start = menu({ en: &quot;Clinic line&quot;, fr: &quot;Ligne de la clinique&quot; }, {
+  &quot;Opening hours&quot;: say(&quot;Open Monday to Saturday, 8:00 to 18:00.&quot;),
+  &quot;Ask a nurse&quot;: ask(&quot;Type your question&quot;, (q, ctx) =&gt; ctx.model.answer(q)),
+  &quot;Book a visit&quot;: confirm(&quot;Book for Monday?&quot;, {
+    onYes: say(&quot;Booked for Monday.&quot;),
+    onNo: () =&gt; &quot;No booking made.&quot;,
+  }),
+});
+</code></pre>
+<p>A user can always answer with the number, or by typing the option&#39;s label.
+Typed labels are matched ignoring accents, case, spacing and apostrophe
+style, so whatever a USSD screen showed can be typed back.</p>
+<h2 id="handlers">Handlers<a class="anchor" href="#handlers" aria-label="Link to this section">#</a></h2>
+<p>A handler is <code>(input, ctx) =&gt; reply</code>, and may be async. Its reply decides
+what happens next:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Reply</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A string, or a <code>say</code> turn</td>
+<td>Shown as a final message</td>
+</tr>
+<tr>
+<td>A step</td>
+<td>Shown next. It must be in the tree, or listed in <code>createAgent({ steps })</code></td>
+</tr>
+<tr>
+<td>Nothing</td>
+<td>Back to the menu above</td>
+</tr>
+</tbody></table></div>
+<p><code>ctx</code> gives the handler:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ctx.input</code></td>
+<td>This turn&#39;s input</td>
+</tr>
+<tr>
+<td><code>ctx.phone</code></td>
+<td>The user&#39;s phone number. Personal data: don&#39;t log it unmasked</td>
+</tr>
+<tr>
+<td><code>ctx.channel</code>, <code>ctx.channelKind</code></td>
+<td>Which channel, and whether it is <code>&quot;ussd&quot;</code> or <code>&quot;sms&quot;</code></td>
+</tr>
+<tr>
+<td><code>ctx.session</code></td>
+<td>This phone number&#39;s state, saved for you. Must stay JSON-safe</td>
+</tr>
+<tr>
+<td><code>ctx.locale</code></td>
+<td>The user&#39;s language. Setting it switches language for good</td>
+</tr>
+<tr>
+<td><code>ctx.t(key, vars)</code></td>
+<td>Kalangu&#39;s own fixed strings, in the user&#39;s language</td>
+</tr>
+<tr>
+<td><code>ctx.model</code></td>
+<td>Your model: <code>model</code>, or the entry for the user&#39;s language from <code>models</code></td>
+</tr>
+<tr>
+<td><code>ctx.logger</code></td>
+<td>The agent&#39;s logger</td>
+</tr>
+</tbody></table></div>
+<h2 id="how-screens-are-made">How screens are made<a class="anchor" href="#how-screens-are-made" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong>USSD:</strong> each screen fits 160 characters (<code>maxScreenChars</code> on the
+channel; Airtel Kenya allows 184). Longer text is split across screens with
+a <code>98. More</code> option, never cut. Screens are plain ASCII, because
+operators cannot show anything else: accents are dropped (<code>é</code> becomes
+<code>e</code>), letters such as <code>ŋ</code> become <code>ng</code>, and other characters are removed
+with a warning in the log.</li>
+<li><strong>SMS:</strong> options are numbered the same way. A reply may take up to 4
+segments (<code>maxSegments</code> on the SMS channel); a longer one is an error you
+see, never a silently cut message. One character outside the GSM-7
+alphabet makes the whole message UCS-2, 70 characters per segment instead
+of 160.</li>
+</ul>
+<h2 id="slow-answers">Slow answers<a class="anchor" href="#slow-answers" aria-label="Link to this section">#</a></h2>
+<p>On USSD the gateway waits only about 10 seconds for a reply. A handler gets
+<code>deadlineMs</code> (default 4000, at most 10000). If it is slower, the user sees
+&quot;We are working on your question. You will receive an SMS shortly.&quot;, the
+session ends, and the answer is sent by SMS when it is ready. This needs an
+SMS channel that can send. Menus and other fixed steps never wait.</p>
+<p>The late work runs after the response is sent. On a server that keeps
+running, that just works. On platforms that freeze the process after a
+response, pass something that keeps it alive, or the late answers are never
+sent:</p>
+<pre><code class="language-js">createAgent({
+  // Cloudflare Workers, for example:
+  background: { run: (task) =&gt; ctx.waitUntil(task()) },
+  // ...
+});
+</code></pre>
+<h2 id="sessions">Sessions<a class="anchor" href="#sessions" aria-label="Link to this section">#</a></h2>
+<p>Sessions are keyed by phone number, not by the gateway&#39;s session id, so a
+dropped USSD call resumes where it was if the user dials again within
+<code>resumeWindowMs</code> (default 5 minutes); after that they start at the top, with
+their data and language kept.</p>
+<p>The default store is in memory and is lost on restart. In production pass a
+durable <code>sessionStore</code>:</p>
+<pre><code class="language-ts">interface SessionStore {
+  load(phone: string): Promise&lt;SessionRecord | null&gt;;
+  save(record: SessionRecord, options?: { ifVersion?: number }): Promise&lt;void&gt;;
+  clear(phone: string): Promise&lt;void&gt;;
+  readonly atomic?: boolean;
+}
+</code></pre>
+<p><code>save</code> bumps <code>record.version</code>. With <code>ifVersion</code> it must save only if the
+stored version is still that one (a compare-and-set) and otherwise throw
+<code>SessionConflictError</code>. Agents that take payments require a store that does
+this atomically and says so with <code>atomic: true</code>.</p>
+<h2 id="languages">Languages<a class="anchor" href="#languages" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-js">createAgent({
+  languages: {
+    supported: [
+      { code: &quot;fr&quot;, name: &quot;Français&quot; },
+      { code: &quot;wo&quot;, name: &quot;Wolof&quot; },
+      { code: &quot;en&quot;, name: &quot;English&quot; },
+    ],
+  },
+  messages: { wo: { /* Kalangu&#39;s fixed strings in Wolof */ } },
+  // ...
+});
+</code></pre>
+<ul>
+<li>On first contact the user picks a language, and it is remembered for
+their phone number on every channel. The menu names each language in
+itself and lists the likely ones for the caller&#39;s country first (a prior,
+never a guess; every language is always listed).</li>
+<li>Each language needs messages: <code>en</code> and <code>fr</code> ship, others go in <code>messages</code>.
+Missing ones fall back to the default language, then English. Check a
+translation with <code>npx kalangu locale check wo.json</code>; see the
+<a href="/docs/guides/translating/">translation guide</a>.</li>
+<li><code>languageMenu()</code> is the same menu for a &quot;Language&quot; entry in your tree.</li>
+<li><strong>A model per language:</strong> <code>models: { default: multilingual, wo: wolofModel }</code>
+instead of <code>model</code>. <code>ctx.model</code> is the entry for the user&#39;s language, or
+<code>default</code>.</li>
+<li><strong>Detection, as a hint:</strong> <code>languages.detection: { detector, threshold, minChars }</code> takes a detector you supply. When a typed answer looks like
+another of your languages, the user is asked, in that language, whether to
+continue in it, and their answer is held until they reply. It never
+switches silently, offers at most once per conversation, never sees number
+answers, and has no default threshold until one is measured. Kalangu
+ships no detector.</li>
+</ul>
+<h2 id="payments-experimental">Payments (experimental)<a class="anchor" href="#payments-experimental" aria-label="Link to this section">#</a></h2>
+<p>Payments have only been run against a fake provider. There is no real
+provider package yet, so do not use them with real money. In outline:</p>
+<ul>
+<li>A <code>pay</code> step shows &quot;Pay 500 KES to CLINIC for Consultation?&quot; only after a
+policy check and an operator lookup, ends the USSD session, and starts the
+payment in the background. The outcome and a receipt arrive by SMS.</li>
+<li><code>createAgent({ payments: { provider, store, payeeName, policy } })</code>. The
+policy is mandatory: allowed currencies and a limit per payment.</li>
+<li>Call <code>agent.payments.reconcile()</code> from a scheduled job, about every 5
+minutes, so payments finish even after a restart.</li>
+</ul>
+<p>The full design, and what it does not guarantee, is in the
+<a href="/docs/design/payments/">payments design</a>.</p>
+<h2 id="channels">Channels<a class="anchor" href="#channels" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-js">import { africasTalkingUssd } from &quot;@kalangu/ussd&quot;;
+import { africasTalkingSms } from &quot;@kalangu/sms&quot;;
+
+africasTalkingUssd({ code: &quot;*384*1#&quot;, path: &quot;/ussd&quot; });
+africasTalkingSms({ username, apiKey, senderId, sandbox, path: &quot;/sms&quot; });
+</code></pre>
+<p>Each channel adds its callback routes, and <code>agent.requestHandler</code> dispatches
+requests to them by path: a standard <code>Request</code> to <code>Response</code> function.</p>
+<p><strong>Callbacks are not signed</strong> by Africa&#39;s Talking. Use hard-to-guess paths
+and, where you can, allow only the gateway&#39;s IP addresses.</p>
+<h2 id="testing">Testing<a class="anchor" href="#testing" aria-label="Link to this section">#</a></h2>
+<p><code>@kalangu/sim</code> replaces the agent&#39;s channels with a simulated phone, so
+nothing real is called:</p>
+<pre><code class="language-js">import { createPhone } from &quot;@kalangu/sim&quot;;
+
+const phone = createPhone(agent, { code: &quot;*384*1#&quot; });
+await phone.dial(&quot;*384*1#&quot;);     // { text: &quot;Clinic line\n1. ...&quot;, end: false }
+await phone.press(&quot;1&quot;);
+phone.hangUp();                  // dial again to resume
+phone.onSms((sms) =&gt; console.log(sms.text));
+</code></pre>
+<p><code>runTerminal(agent, { code })</code> gives you the same phone in a terminal.</p>
+<h2 id="before-production">Before production<a class="anchor" href="#before-production" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>A durable <code>sessionStore</code> (atomic, if you take payments).</li>
+<li>An SMS channel that can send, for answers that miss the deadline.</li>
+<li>A <code>background</code> that keeps the process alive, on serverless platforms.</li>
+<li>Hard-to-guess callback paths, and the gateway&#39;s IP addresses only.</li>
+<li>Phone numbers are masked in logs by default (<code>logPhoneNumbers: false</code>);
+keep it that way.</li>
+<li>For payments: the scheduled <code>reconcile()</code>, and not before a real provider
+exists.</li>
+</ul>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/agents.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/agents.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#steps">Steps</a></li><li><a href="#handlers">Handlers</a></li><li><a href="#how-screens-are-made">How screens are made</a></li><li><a href="#slow-answers">Slow answers</a></li><li><a href="#sessions">Sessions</a></li><li><a href="#languages">Languages</a></li><li><a href="#payments-experimental">Payments (experimental)</a></li><li><a href="#channels">Channels</a></li><li><a href="#testing">Testing</a></li><li><a href="#before-production">Before production</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

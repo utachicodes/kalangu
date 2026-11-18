@@ -33,6 +33,14 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [ ] Ask two or three teams who run USSD services today whether deferral to
   SMS would suit their users (design doc §12, question 6, depends on this)
 
+## Website
+
+- [x] Documentation on the website: quick start, agents, guides, design,
+  contributing, roadmap, changelog; generated from the markdown and checked
+  in CI (`pnpm site:check`)
+- [ ] Look over the docs pages on a real phone and a desktop after the next
+  deploy
+
 ## v0.1 build order (each piece independently testable)
 
 - [x] Turn types: `say`, `choose`, `ask`, `confirm`; `pay` reserved in the union

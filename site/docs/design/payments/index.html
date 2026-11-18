@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalangu — 0.2 payments design · Kalangu</title>
+<meta name="description" content="Status: draft for review. No payment code exists, and none should be written until this document is reviewed (CONTRIBUTING: money code should not be rushed). Da">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/" aria-current="page">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="kalangu--02-payments-design">Kalangu — 0.2 payments design</h1>
+<p>Status: <strong>draft for review. No payment code exists, and none should be
+written until this document is reviewed</strong> (CONTRIBUTING: money code should
+not be rushed).
+Date: 2026-11-16. Scope: version 0.2 only: collecting money from the user
+(a mobile-money deposit) through pawaPay. Payouts and refunds are out of
+scope (§11).</p>
+<hr>
+<h2 id="1-what-02-is">1. What 0.2 is<a class="anchor" href="#1-what-02-is" aria-label="Link to this section">#</a></h2>
+<p>An agent can ask the user to pay, safely:</p>
+<blockquote>
+<p>On a keypad phone, the user picks &quot;Pay for consultation&quot;, sees
+&quot;Pay 500 KES to CLINIC for Consultation? 1. Yes 2. No&quot;, presses 1, gets
+their mobile-money PIN prompt from their own operator, enters the PIN
+there, and receives an SMS receipt. The agent continues from &quot;paid&quot; or
+&quot;not paid&quot;, and never sees the PIN.</p>
+</blockquote>
+<p>Three properties matter more than features:</p>
+<ol>
+<li><strong>No double charge.</strong> Every payment has one id, stored before the
+provider is called, and every retry reuses it.</li>
+<li><strong>No lost outcome.</strong> A payment&#39;s final status is always reached, by
+callback or by polling, even when callbacks never arrive.</li>
+<li><strong>Refused before asked.</strong> Limits are checked before the user sees a
+confirm screen, so the user is never asked to approve a payment the
+agent would then refuse.</li>
+</ol>
+<hr>
+<h2 id="2-pawapay-facts-read-16-nov-2026">2. pawaPay facts (read 16 Nov 2026)<a class="anchor" href="#2-pawapay-facts-read-16-nov-2026" aria-label="Link to this section">#</a></h2>
+<p>Sources: pawaPay v2 documentation, <code>docs.pawapay.io/v2/docs/deposits</code>,
+<code>docs.pawapay.io/v2/docs/what_to_know</code>, <code>docs.pawapay.io/v2/docs/signatures</code>
+and the v2 API reference. <strong>pawaPay&#39;s terms of service have not been read
+yet</strong>; that item stays open on the TODO. Everything below needs
+confirming in the sandbox before code relies on it (§12).</p>
+<h3 id="21-deposits">2.1 Deposits<a class="anchor" href="#21-deposits" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Initiate</strong>: <code>POST /v2/deposits</code> (sandbox host
+<code>api.sandbox.pawapay.io</code>; bearer-token auth, and sandbox tokens only
+work against the sandbox).</li>
+<li><strong>Fields</strong>: <code>depositId</code> (a UUIDv4 the merchant generates), <code>amount</code> as a
+<strong>string</strong> (<code>&quot;100&quot;</code>), <code>currency</code>, and <code>payer: { type: &quot;MMO&quot;, accountDetails: { phoneNumber, provider } }</code>. The phone number is an
+MSISDN with country code and <strong>no <code>+</code></strong> (<code>250783456789</code>); the provider is
+a code such as <code>MTN_MOMO_RWA</code>.</li>
+<li><strong>The docs say to store <code>depositId</code> before initiating.</strong> Sending the same
+id again is safe and returns <code>DUPLICATE_IGNORED</code>.</li>
+<li><strong>Initiation response</strong>: <code>ACCEPTED</code>, <code>REJECTED</code> (with <code>failureReason: { failureCode, failureMessage }</code>) or <code>DUPLICATE_IGNORED</code>. An HTTP 500
+with <code>UNKNOWN_ERROR</code> carries no status at all: the outcome is unknown
+and must be checked.</li>
+<li><strong>Statuses</strong> seen in the docs: <code>ACCEPTED</code>, <code>PROCESSING</code>, <code>COMPLETED</code>,
+<code>FAILED</code>, <code>IN_RECONCILIATION</code>. Check-status lookups return <code>FOUND</code> or
+<code>NOT_FOUND</code>.</li>
+<li><strong>Failure codes</strong> named in the docs include <code>INVALID_AMOUNT</code>,
+<code>AMOUNT_OUT_OF_BOUNDS</code>, <code>INVALID_CURRENCY</code>,
+<code>PROVIDER_TEMPORARILY_UNAVAILABLE</code>, <code>UNSPECIFIED_FAILURE</code>. The full list
+is on pawaPay&#39;s failure-codes page and is not reproduced here.</li>
+<li><strong>&quot;Accepted&quot; is not &quot;paid&quot;.</strong> A user&#39;s real wallet limits depend on their
+history, so an accepted deposit can still fail.</li>
+</ul>
+<h3 id="22-before-initiating">2.2 Before initiating<a class="anchor" href="#22-before-initiating" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Predict provider</strong>: <code>POST /v2/predict-provider</code> with a phone number
+returns the country, the provider, and a sanitised phone number.</li>
+<li><strong>Active configuration</strong>: <code>GET /v2/active-conf?country=…&amp;operationType=DEPOSIT</code>
+returns, per provider: <code>minAmount</code>, <code>maxAmount</code>, <code>decimalsInAmount</code>
+(<code>NONE</code> or <code>TWO_PLACES</code>), <code>status</code> (<code>OPERATIONAL</code> or <code>CLOSED</code>),
+<code>pinPrompt</code> (<code>AUTOMATIC</code> or <code>MANUAL</code>), <code>pinPromptRevivable</code>, and
+instructions. A provider with <code>decimalsInAmount: NONE</code> rejects
+<code>&quot;100.50&quot;</code>. (One example in the docs contradicts itself on a provider&#39;s
+decimals; trust the live configuration, not examples.)</li>
+<li>pawaPay stops accepting payments to an operator whose success rate drops,
+so a provider can be <code>CLOSED</code> at any moment.</li>
+</ul>
+<h3 id="23-callbacks">2.3 Callbacks<a class="anchor" href="#23-callbacks" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Sent once a deposit reaches a final status, to a URL set in the pawaPay
+dashboard. The handler must answer <code>200</code> quickly (10 s to connect, 30 s
+to respond), must be <strong>idempotent</strong>, and must not sit behind normal auth.</li>
+<li><strong>Retries</strong>: up to 8 attempts over about 25 minutes (0, 1, 2, 5, 10, 15,
+20, 25 min). Slow answers or <code>429</code> can make attempts be skipped.</li>
+<li><strong>Callbacks can be missed</strong> (pawaPay&#39;s own words: network issues,
+downtime, misconfiguration). Resend is possible for 90 days; after that,
+only check-status.</li>
+<li><strong>Signed callbacks</strong> can be switched on in the dashboard: RFC 9421 HTTP
+message signatures (<code>Signature</code>, <code>Signature-Input</code>, <code>Signature-Date</code>,
+<code>Content-Digest</code> headers), verified with pawaPay&#39;s public key from a
+public-keys endpoint. Unlike Africa&#39;s Talking, this gives us something
+real to verify.</li>
+<li><strong>Source IPs</strong> are published (one for sandbox, six for production), so
+an allowlist is possible as a second layer.</li>
+<li>During operator trouble, final statuses can be delayed while pawaPay
+reconciles; <code>IN_RECONCILIATION</code> covers this.</li>
+</ul>
+<hr>
+<h2 id="3-the-ussd-problem-this-design-is-built-around">3. The USSD problem this design is built around<a class="anchor" href="#3-the-ussd-problem-this-design-is-built-around" aria-label="Link to this section">#</a></h2>
+<p>A phone runs <strong>one USSD session at a time</strong>. The operator&#39;s PIN prompt for
+a mobile-money payment is usually itself a network-initiated USSD (or
+SIM-toolkit) prompt. If our USSD session is still open when the deposit is
+initiated, the PIN prompt may be blocked, delayed or dropped, depending on
+the operator.</p>
+<p><strong>Decision: on USSD, a payment always ends our session first.</strong> The
+confirm screen&#39;s &quot;Yes&quot; answers <code>END</code> with &quot;You will receive a prompt to
+enter your PIN&quot;, and only then is the deposit initiated, in the
+background. This has a useful side effect: the 10-second USSD response
+bound never applies to the provider call.</p>
+<p>This behaviour is <strong>not verified</strong> on any operator (§12, item 1). It is
+the single most important thing to test, since the design depends on it.</p>
+<hr>
+<h2 id="4-turns-and-steps">4. Turns and steps<a class="anchor" href="#4-turns-and-steps" aria-label="Link to this section">#</a></h2>
+<h3 id="41-the-pay-turn">4.1 The <code>pay</code> turn<a class="anchor" href="#41-the-pay-turn" aria-label="Link to this section">#</a></h3>
+<p>v0.1 reserved <code>{ kind: &quot;pay&quot;; amount: number; currency: string; reason?: string }</code>. <strong>Proposed change before 0.2 ships: <code>amount</code> becomes a decimal
+string</strong> (<code>&quot;500&quot;</code>, <code>&quot;2500.50&quot;</code>). pawaPay takes strings, and binary floats
+cannot represent most decimal amounts exactly. <code>parseTurn</code> would accept
+<code>/^\d+(\.\d{1,2})?$/</code> and reject anything else. No channel renders <code>pay</code>
+yet, so nothing breaks.</p>
+<h3 id="42-the-pay-step">4.2 The <code>pay</code> step<a class="anchor" href="#42-the-pay-step" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-ts">pay(
+  // The amount may depend on the session (e.g. the visit type chosen).
+  (ctx) =&gt; ({ amount: &quot;500&quot;, currency: &quot;KES&quot;, reason: { en: &quot;Consultation&quot;, fr: &quot;Consultation&quot; } }),
+  {
+    onPaid: say({ en: &quot;Paid. See you on Monday.&quot;, fr: &quot;Payé. À lundi.&quot; }),
+    onFailed: (payment, ctx) =&gt; `Payment not completed: ${payment.failureMessage}`,
+    onDeclined: menu(&quot;No problem&quot;, { … }),   // user said No on the confirm
+  },
+)
+</code></pre>
+<ul>
+<li>The step renders as a <strong>confirm</strong>: &quot;Pay 500 KES to CLINIC for
+Consultation?&quot; with localized Yes/No. The payee name comes from agent
+config (<code>payments.payeeName</code>), never from the model.</li>
+<li><strong>Model output never sets the amount.</strong> The amount function receives the
+context, so a developer <em>can</em> compute it from model output, but the
+documentation says not to, and the policy layer caps it either way.</li>
+<li><code>onPaid</code> / <code>onFailed</code> run when the final status arrives, which is after
+the USSD session has ended, so their output goes out <strong>by SMS</strong>, the same
+path as a deferred answer (v0.1 §4.6). <code>onFailed</code> receives a reason the
+user can read (§7.3), never a raw provider code.</li>
+</ul>
+<p><strong>As built (16 Nov 2026).</strong> A refusal before the confirm screen runs
+<code>onFailed</code> inline on the live channel with <code>status: &quot;REFUSED&quot;</code> and no <code>id</code>.
+The receipt goes as a second SMS after the <code>onPaid</code> message, so a long
+<code>onPaid</code> text can never push the receipt over the segment cap. Refusals are
+localized by reason code (<code>payments.refusal.&lt;reason&gt;</code>, <code>en</code> and <code>fr</code>, and
+overridable through <code>messages</code>); the English <code>message</code> on a refusal is for
+logs only. A provider&#39;s own refusal text is likewise ignored in favour of
+the localized text for its <code>kind</code>.</p>
+<h3 id="43-flow">4.3 Flow<a class="anchor" href="#43-flow" aria-label="Link to this section">#</a></h3>
+<pre><code>pay step reached
+  → policy check (§5)            refused → onFailed with a policy reason, no confirm shown
+  → resolve provider (§6.2)      unknown/closed → onFailed, no confirm shown
+  → confirm screen (CON)
+user presses 2 → onDeclined
+user presses 1
+  → record payment as CREATED, with a new UUIDv4 (durable store, §6.1)
+  → END &quot;You will receive a prompt to enter your PIN&quot; (localized)
+  → background: initiate deposit (§6.3)
+  → PIN prompt on the user&#39;s phone (operator, not us)
+  → final status via callback or polling (§6.4, §6.5)
+  → onPaid / onFailed rendered for SMS and sent; receipt included (§7.2)
+</code></pre>
+<p>On SMS the same flow applies, except the confirm is &quot;Reply YES or NO&quot; and
+there is no live session to end.</p>
+<hr>
+<h2 id="5-policy-layer">5. Policy layer<a class="anchor" href="#5-policy-layer" aria-label="Link to this section">#</a></h2>
+<p>Checked <strong>before</strong> the confirm screen, and again (cheaply) just before
+initiating, in case the limits changed in between.</p>
+<pre><code class="language-ts">createAgent({
+  payments: {
+    provider: pawapay({ token: process.env.PAWAPAY_TOKEN, sandbox: true }),
+    store: myDurablePaymentStore,
+    payeeName: &quot;CLINIC&quot;,
+    policy: {
+      currencies: [&quot;KES&quot;],              // anything else is refused
+      maxPerPayment: { KES: &quot;5000&quot; },
+      maxPerDayPerPhone: { KES: &quot;10000&quot; },
+      maxPendingPerPhone: 1,            // one payment in flight per user
+    },
+  },
+});
+</code></pre>
+<ul>
+<li><strong>Daily limits count pending payments too</strong>, not only completed ones;
+otherwise a user could start several payments at once. &quot;Day&quot; is a
+rolling 24 hours, which avoids time-zone questions.</li>
+<li><strong>Amounts are compared as decimals</strong>, using integer minor units
+internally; never as floats.</li>
+<li>Provider limits (<code>minAmount</code>/<code>maxAmount</code> from active configuration) are
+checked as well; the stricter of ours and theirs wins.</li>
+<li><strong>No policy, no payments.</strong> <code>payments</code> without a <code>policy</code> is a startup
+error. Unbounded payments should be impossible to configure by accident.</li>
+<li>A refusal is logged (masked phone, amount, rule) and reaches <code>onFailed</code>
+with a localized reason. The user is never shown the confirm screen.</li>
+</ul>
+<hr>
+<h2 id="6-provider-integration">6. Provider integration<a class="anchor" href="#6-provider-integration" aria-label="Link to this section">#</a></h2>
+<h3 id="61-the-payment-store">6.1 The payment store<a class="anchor" href="#61-the-payment-store" aria-label="Link to this section">#</a></h3>
+<p>Payments get their own durable store, separate from sessions:</p>
+<pre><code class="language-ts">interface PaymentStore {
+  create(payment: PaymentRecord): Promise&lt;void&gt;;          // fails if the id exists
+  update(id: string, change: Partial&lt;PaymentRecord&gt;): Promise&lt;PaymentRecord&gt;;
+  // Atomic primitives (see below): the store, not the engine, makes these safe.
+  transition(id: string, change: Partial&lt;PaymentRecord&gt;, from: PaymentStatus[]): Promise&lt;PaymentRecord | null&gt;;
+  claimNotification(id: string, at: number): Promise&lt;PaymentRecord | null&gt;;
+  releaseNotification(id: string): Promise&lt;void&gt;;         // undo a claim after a failed delivery
+  unnotified(): Promise&lt;PaymentRecord[]&gt;;                 // final, outcome not delivered
+  withPhoneLock&lt;T&gt;(phone: string, work: () =&gt; Promise&lt;T&gt;): Promise&lt;T&gt;;
+  get(id: string): Promise&lt;PaymentRecord | null&gt;;
+  pending(olderThanMs: number): Promise&lt;PaymentRecord[]&gt;; // for reconciliation
+  totals(phone: string, currency: string, sinceMs: number): Promise&lt;{ pending: string; completed: string }&gt;;
+}
+
+interface PaymentRecord {
+  id: string;              // our UUIDv4, also pawaPay&#39;s depositId
+  phone: string;           // personal data: masked in logs
+  provider: string;        // e.g. &quot;MTN_MOMO_KEN&quot;
+  providerPhone: string;   // the payer&#39;s number in the provider&#39;s format, as resolved
+  amount: string;
+  currency: string;
+  reason: string;
+  stepId: string;          // which pay step, to resume onPaid/onFailed
+  locale: string;
+  status: &quot;CREATED&quot; | &quot;ACCEPTED&quot; | &quot;PROCESSING&quot; | &quot;IN_RECONCILIATION&quot;
+        | &quot;COMPLETED&quot; | &quot;FAILED&quot; | &quot;REJECTED&quot; | &quot;UNKNOWN&quot;;
+  failureCode?: string;    // the provider&#39;s, verbatim, for the developer
+  createdAt: number;
+  updatedAt: number;
+  finalizedAt?: number;
+  notifiedAt?: number;     // when onPaid/onFailed was sent; makes it once-only
+  notifyAttempts?: number; // failed deliveries released for retry
+}
+</code></pre>
+<ul>
+<li><strong>Three operations must be atomic across every process that shares the
+store.</strong> The in-memory store gets them for free; a durable store has to
+provide them:<ul>
+<li><code>transition(id, change, from)</code> is a compare-and-set on <code>status</code>. It
+keeps a final status final when a stale status check or a late callback
+arrives after another process has recorded the outcome. In SQL:
+<code>UPDATE … SET … WHERE id = $1 AND status = ANY($2)</code>.</li>
+<li><code>claimNotification(id, at)</code> is a compare-and-set on <code>notifiedAt</code>, so of
+any number of racing deliverers exactly one gets the claim. In SQL:
+<code>UPDATE … SET notified_at = $2 WHERE id = $1 AND notified_at IS NULL</code>.</li>
+<li><code>withPhoneLock(phone, work)</code> serialises the limit check and the create
+for one phone, so two simultaneous &quot;Yes&quot; answers cannot both pass a
+limit of one. In Postgres, <code>pg_advisory_xact_lock(hashtext(phone))</code>.</li>
+</ul>
+</li>
+<li><strong>A double-tapped &quot;Yes&quot; starts one payment.</strong> Before touching money, the
+engine consumes the stored offer with a versioned session save
+(<code>ifVersion</code>). A second &quot;Yes&quot; that read the same stored session loses the
+compare-and-set, starts nothing and is told &quot;Your payment is already being
+processed&quot;. This holds even with <code>maxPendingPerPhone</code> above 1, and it is why
+an agent with <code>payments</code> refuses to start on a session store that is not
+<code>atomic</code>. If the process dies between that claim and recording the payment,
+nothing was charged and the next &quot;Yes&quot; simply re-offers.</li>
+<li>An in-memory store ships <strong>for tests and the simulator only</strong>. Using it
+with a real provider logs an error at startup: a restart would forget
+pending payments.</li>
+<li><code>notifiedAt</code> makes the user-facing outcome <strong>exactly once</strong>: whichever of
+callback or poll reaches a final status first sets it (a conditional
+update), and the other sees it set and does nothing.</li>
+</ul>
+<h3 id="62-resolving-the-provider">6.2 Resolving the provider<a class="anchor" href="#62-resolving-the-provider" aria-label="Link to this section">#</a></h3>
+<p>Predict the provider from the phone number, then check active
+configuration: provider <code>OPERATIONAL</code>, amount within its bounds, decimals
+allowed. Cache active configuration briefly (proposed 5 minutes) to keep
+the confirm screen fast; re-check just before initiating. If prediction
+fails, v0.2 refuses with a localized message rather than asking the user
+to pick an operator (open question 4).</p>
+<h3 id="63-initiating">6.3 Initiating<a class="anchor" href="#63-initiating" aria-label="Link to this section">#</a></h3>
+<ol>
+<li>Write the record as <code>CREATED</code> (this is the idempotency anchor).</li>
+<li>Call <code>POST /v2/deposits</code> with <code>depositId = record.id</code>.</li>
+<li><code>ACCEPTED</code> or <code>DUPLICATE_IGNORED</code> → <code>ACCEPTED</code>. <code>REJECTED</code> → final
+<code>REJECTED</code>, keep <code>failureCode</code>. Network error, timeout or HTTP 500
+<code>UNKNOWN_ERROR</code> → <code>UNKNOWN</code>: <strong>never re-initiate blindly with a new
+id</strong>; check status for the same id, and re-send the same id only if the
+provider says <code>NOT_FOUND</code>.</li>
+</ol>
+<h3 id="64-callbacks">6.4 Callbacks<a class="anchor" href="#64-callbacks" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>A route in the adapter, like the gateway routes in v0.1. It answers
+<code>200</code> immediately and processes in the background.</li>
+<li><strong>Signature verification is on by default</strong> (RFC 9421, pawaPay&#39;s public
+key, fetched and cached). An unsigned or badly signed callback is logged
+and ignored, and <code>200</code> is still returned so pawaPay stops retrying a
+request we will never trust. Turning verification off is an explicit,
+logged opt-out for local testing.</li>
+<li><strong>The callback body is a hint, not the truth.</strong> On a valid callback the
+adapter calls check-status for that id and acts on that answer. One
+extra request per payment is worth not trusting a body alone with money.</li>
+<li>Unknown ids are logged and ignored.</li>
+</ul>
+<h3 id="65-polling-and-reconciliation">6.5 Polling and reconciliation<a class="anchor" href="#65-polling-and-reconciliation" aria-label="Link to this section">#</a></h3>
+<p>Callbacks can be missed, and MTN MoMo callbacks are known not to always
+arrive (TODO), so every accepted payment is also polled:</p>
+<ul>
+<li>After initiating, check status at about 30 s, 1, 2, 5, 10 and 30 minutes,
+then hourly until final or 72 hours old.</li>
+<li>These timers run in-process via <code>BackgroundWork</code> for convenience, but a
+restart loses them. So there is also a <strong><code>reconcilePayments()</code></strong> function
+that a cron job or scheduler calls (proposed every 5 minutes); it checks
+every non-final payment from <code>PaymentStore.pending()</code>. On serverless
+platforms this is the only reliable path, and the README says so.</li>
+<li><strong>As built:</strong> <code>agent.payments.reconcile({ minAgeMs, reinitiateWithinMs })</code>
+returns a report (<code>checked</code>, <code>completed</code>, <code>failed</code>, <code>unresolved</code>,
+<code>stillPending</code>, <code>errors</code>). It skips payments younger than <code>minAgeMs</code>
+(default 30 s), which makes overlap with the process still starting
+them unlikely but does not rule it out. That is safe: initiating twice is
+idempotent on our id, and a status change is a compare-and-set, so a final
+status is never overwritten. One failing payment is counted and retried
+next sweep without stopping the rest; if its status check keeps failing
+past the give-up window it is still marked <code>UNRESOLVED</code>, so a provider
+outage cannot keep a payment pending forever. A payment recorded but never initiated (the process died in
+between) is initiated again while younger than <code>reinitiateWithinMs</code>
+(default 10 minutes), which is safe because our id is the idempotency
+key. An older one that the provider has never seen is failed as not
+started, with nothing charged. A payment past the give-up window becomes
+<code>UNRESOLVED</code>, not <code>UNKNOWN</code> as first drafted, so that <code>UNKNOWN</code> can keep
+meaning &quot;initiate outcome not yet known&quot;.</li>
+<li><strong>An outcome that could not be delivered is retried.</strong> <code>notifiedAt</code> is a
+claim taken before the SMS is sent. If sending fails after its retries the
+claim is released (<code>releaseNotification</code>, counted in <code>notifyAttempts</code>) and
+the next <code>reconcile</code> sweep sends it, through <code>unnotified()</code>, which also
+recovers a process that died between recording the status and sending it.
+After 5 failed deliveries it stays in the store with an error logged, for
+a human. <code>reconcile</code> reports <code>redelivered</code>.</li>
+<li>Polling waits <code>pollScheduleMs</code> in turn and then <code>pollRepeatMs</code> (default
+hourly) until the give-up window, as first drafted. An earlier build
+repeated the last scheduled interval instead.</li>
+<li>After 72 hours still non-final: mark <code>UNKNOWN</code>, log an error for a human,
+and tell the user &quot;we could not confirm your payment; contact …&quot;
+(configurable). Never guess &quot;paid&quot;.</li>
+</ul>
+<hr>
+<h2 id="7-what-the-user-sees">7. What the user sees<a class="anchor" href="#7-what-the-user-sees" aria-label="Link to this section">#</a></h2>
+<h3 id="71-screens-and-messages-localized-enfr-first">7.1 Screens and messages (localized, <code>en</code>/<code>fr</code> first)<a class="anchor" href="#71-screens-and-messages-localized-enfr-first" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Confirm: &quot;Pay {amount} {currency} to {payee} for {reason}?&quot;</li>
+<li>After Yes on USSD (<code>END</code>): &quot;You will receive a prompt to enter your PIN.
+We will send an SMS when the payment is done.&quot;</li>
+<li>If <code>pinPromptRevivable</code> and no final status after about 15 s: an SMS with
+the operator&#39;s own instructions for bringing the prompt back (from
+active configuration). Proposed; see open question 5.</li>
+<li>Policy refusal: &quot;This payment is above the allowed limit.&quot;</li>
+<li>Provider closed: &quot;Payments with your operator are unavailable right now.
+Please try later.&quot;</li>
+</ul>
+<h3 id="72-receipts">7.2 Receipts<a class="anchor" href="#72-receipts" aria-label="Link to this section">#</a></h3>
+<p>Every completed payment sends an SMS receipt: amount, currency, payee,
+reason, date, and a short reference (the first 8 characters of the id).
+<code>onPaid</code>&#39;s message follows in the same SMS if it fits the segment budget,
+otherwise as a second one. Receipts are fixed strings in the locale files.</p>
+<h3 id="73-failure-reasons">7.3 Failure reasons<a class="anchor" href="#73-failure-reasons" aria-label="Link to this section">#</a></h3>
+<p>Provider codes are mapped to a few user-facing reasons: &quot;not enough
+balance&quot;, &quot;payment cancelled or timed out&quot;, &quot;limit reached&quot;, &quot;operator
+unavailable&quot;, &quot;something went wrong&quot;. The raw code goes to the developer
+log and <code>payment.failureCode</code>, never to the user.</p>
+<hr>
+<h2 id="8-never-the-pin">8. Never the PIN<a class="anchor" href="#8-never-the-pin" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>Kalangu never asks for, receives, stores or logs a PIN. The PIN goes
+from the user to their operator.</li>
+<li><strong>Guard</strong>: <code>createAgent</code> warns when an <code>ask</code> step&#39;s text, in any locale,
+mentions &quot;PIN&quot;, &quot;code secret&quot;, &quot;mot de passe&quot; or &quot;password&quot;. A warning,
+not an error: legitimate uses exist (&quot;Do not share your PIN&quot;).</li>
+<li>The docs say plainly: an agent that asks for a PIN is a phishing
+pattern, and operators and users are right to treat it as one.</li>
+</ul>
+<hr>
+<h2 id="9-what-kalangu-does-not-guarantee">9. What Kalangu does not guarantee<a class="anchor" href="#9-what-kalangu-does-not-guarantee" aria-label="Link to this section">#</a></h2>
+<p>Stated in the README and the package docs, not only here:</p>
+<ul>
+<li>That money arrives. Kalangu reports what pawaPay reports.</li>
+<li>That a payment within your limits succeeds. Operators apply their own
+wallet limits, which depend on the user&#39;s history.</li>
+<li>Fast outcomes. During operator trouble, final statuses can take a long
+time (<code>IN_RECONCILIATION</code>).</li>
+<li>Anything about fees. pawaPay deducts fees from the collected amount.</li>
+<li>Regulatory compliance. Licensing, KYC, consumer protection and tax are
+the deployer&#39;s responsibility, per country.</li>
+<li>Reliability with an in-memory payment store, or without
+<code>reconcile()</code> running somewhere.</li>
+<li><strong>That the outcome message never overwrites a concurrent turn.</strong> The SMS
+that reports a payment&#39;s outcome loads the user&#39;s session, runs <code>onPaid</code> or
+<code>onFailed</code>, and saves it. If the user is in the middle of another turn at
+that moment, the later write wins, as for deferred answers. The payment&#39;s
+own record is never affected, and nothing is charged twice; the cost is
+that one conversation&#39;s position can be lost. Making this a retried
+compare-and-set would mean re-running the developer&#39;s <code>onPaid</code> handler, so
+it is left as a known limit rather than risking a handler running twice.</li>
+<li><strong>Fast operator lookup.</strong> On a live channel the lookup before the confirm
+screen shares the USSD deadline. If it misses, the user is told payments
+are unavailable and to try again, nothing is started, and the late answer
+is dropped. On SMS there is no deadline.</li>
+</ul>
+<hr>
+<h2 id="10-packages">10. Packages<a class="anchor" href="#10-packages" aria-label="Link to this section">#</a></h2>
+<pre><code>packages/core    pay turn + step, policy layer, PaymentStore interface,
+                 PaymentProvider interface, memory store, reconcilePayments
+packages/pawapay @kalangu/pawapay: the PaymentProvider for pawaPay v2 (HTTP,
+                 signatures, callbacks, active configuration)
+packages/sim     a fake provider: prints &quot;PIN prompt: pay 500 KES to CLINIC?
+                 (y/n)&quot; and settles the payment after a delay
+</code></pre>
+<p>Core keeps zero runtime dependencies. Signature verification uses Web
+Crypto (<code>crypto.subtle</code>), available in Node 20, Deno, Bun and Workers.</p>
+<pre><code class="language-ts">interface PaymentProvider {
+  readonly id: string;
+  resolve(phone: string, amount: string, currency: string): Promise&lt;ProviderChoice | Refusal&gt;;
+  initiate(payment: PaymentRecord): Promise&lt;InitiateResult&gt;;
+  status(id: string): Promise&lt;StatusResult&gt;;      // FOUND with status, or NOT_FOUND
+  readonly routes?: readonly Route[];             // callbacks
+}
+</code></pre>
+<hr>
+<h2 id="11-out-of-scope-for-02">11. Out of scope for 0.2<a class="anchor" href="#11-out-of-scope-for-02" aria-label="Link to this section">#</a></h2>
+<p>Payouts (sending money to users), refunds, partial payments, payment
+links, card payments, currency conversion, subscriptions and recurring
+payments, more than one payment provider in the same agent, and any
+provider other than pawaPay.</p>
+<hr>
+<h2 id="12-verify-first-needs-a-sandbox-account-or-a-real-phone">12. Verify first (needs a sandbox account or a real phone)<a class="anchor" href="#12-verify-first-needs-a-sandbox-account-or-a-real-phone" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>A USSD session ending just before the PIN prompt</strong>: does the prompt
+arrive reliably on each operator we target? How soon after <code>END</code> is it
+safe to initiate? (§3; the design depends on this.)</li>
+<li>pawaPay&#39;s <strong>terms of service</strong>, fees, settlement, and which countries
+and operators are live (the 24-country figure is the company&#39;s own).</li>
+<li>Exact <strong>check-status</strong> path and response shape, and the full
+<strong>failure-code</strong> list.</li>
+<li><strong>Signed callbacks</strong> in the sandbox: header set, algorithm, and the
+public-key endpoint, end to end.</li>
+<li>Real <strong>callback reliability</strong> per operator, especially MTN MoMo, to tune
+the polling schedule.</li>
+<li>What the user sees when they ignore or cancel the PIN prompt, and how
+long until pawaPay reports <code>FAILED</code>.</li>
+</ol>
+<hr>
+<h2 id="13-testing-plan-priority-order">13. Testing plan (priority order)<a class="anchor" href="#13-testing-plan-priority-order" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>Idempotency</strong>: retries after network errors, timeouts and HTTP 500
+reuse the same id; <code>DUPLICATE_IGNORED</code> is handled; no path creates a
+second id for one confirm.</li>
+<li><strong>Exactly-once outcome</strong>: callback and poll racing; duplicate callbacks;
+callback before the initiate response returns; process restart with
+pending payments, then <code>reconcilePayments()</code>.</li>
+<li><strong>Policy</strong>: per-payment, daily (including pending), pending-count and
+currency limits; decimal edge cases; refusal before any confirm screen.</li>
+<li><strong>Signatures</strong>: valid, tampered body, wrong key, missing headers,
+verification turned off.</li>
+<li><strong>Provider configuration</strong>: <code>CLOSED</code> operator, amount outside bounds,
+decimals not allowed, unknown phone prefix.</li>
+<li><strong>Flow on both channels</strong>: USSD ends before initiating; SMS confirm;
+receipts within the SMS budget in <code>en</code> and <code>fr</code>.</li>
+<li>A recorded sandbox run as fixtures, once an account exists.</li>
+</ol>
+<hr>
+<h2 id="14-decisions-16-nov-2026">14. Decisions (16 Nov 2026)<a class="anchor" href="#14-decisions-16-nov-2026" aria-label="Link to this section">#</a></h2>
+<p>Settled as defaults for the 0.2 build. Items marked <em>revisit</em> change if
+sandbox testing (§12) contradicts them.</p>
+<ol>
+<li><strong><code>amount</code> is a decimal string</strong> in the <code>pay</code> turn. Done (<code>parseTurn</code>
+accepts <code>/^\d+(\.\d{1,2})?$/</code>, positive only).</li>
+<li><strong>Re-check every callback with check-status.</strong> One extra request per
+payment is cheap next to the cost of crediting a forged or replayed
+callback. A verified signature alone is not enough.</li>
+<li><strong>Polling: backoff, give up at 72 hours.</strong> Poll at 1, 2, 5, 15 and 60
+minutes, then hourly. At 72 hours mark the payment <code>UNRESOLVED</code>, alert
+the developer through the logger, and tell the user to contact the
+payee. Never auto-fail a payment whose status is unknown. <em>Revisit</em>
+against the provider&#39;s actual settlement windows.</li>
+<li><strong>Unknown operator: refuse.</strong> Guessing an operator can charge the wrong
+wallet. An operator menu is deferred until a country needs it.</li>
+<li><strong>Revival SMS: send once, after 60 seconds with no final status</strong>, not
+immediately. Never more than once per payment. Short enough to help,
+late enough not to be noise. <em>Revisit</em> with operator timing data.</li>
+<li><strong><code>maxPendingPerPhone</code> defaults to 1.</strong> Raising it is an explicit
+opt-in in the policy.</li>
+<li><strong>Receipt SMS failure: retry 3 times with backoff, then log and
+continue.</strong> The payment&#39;s status is never affected by a failed
+receipt. <code>onPaid</code> is not blocked on it, and the receipt can be
+re-sent from the stored record.</li>
+</ol>
+<h3 id="3-ussd-session-vs-pin-prompt">§3 (USSD session vs PIN prompt)<a class="anchor" href="#3-ussd-session-vs-pin-prompt" aria-label="Link to this section">#</a></h3>
+<p>The design stands: <strong>on USSD, end our session first, then initiate the
+deposit.</strong> It is the safe order whichever way operators behave, and it
+removes the 10-second bound from the provider call. The cost is one extra
+screen of friction. What remains unknown is operator behaviour, which only
+a real phone can show (§12, item 1). Until then the engine is built to
+this decision and nothing depends on the opposite being true.</p>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/payments-design.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/payments-design.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-what-02-is">1. What 0.2 is</a></li><li><a href="#2-pawapay-facts-read-16-nov-2026">2. pawaPay facts (read 16 Nov 2026)</a></li><li><a href="#3-the-ussd-problem-this-design-is-built-around">3. The USSD problem this design is built around</a></li><li><a href="#4-turns-and-steps">4. Turns and steps</a></li><li><a href="#5-policy-layer">5. Policy layer</a></li><li><a href="#6-provider-integration">6. Provider integration</a></li><li><a href="#7-what-the-user-sees">7. What the user sees</a></li><li><a href="#8-never-the-pin">8. Never the PIN</a></li><li><a href="#9-what-kalangu-does-not-guarantee">9. What Kalangu does not guarantee</a></li><li><a href="#10-packages">10. Packages</a></li><li><a href="#11-out-of-scope-for-02">11. Out of scope for 0.2</a></li><li><a href="#12-verify-first-needs-a-sandbox-account-or-a-real-phone">12. Verify first (needs a sandbox account or a real phone)</a></li><li><a href="#13-testing-plan-priority-order">13. Testing plan (priority order)</a></li><li><a href="#14-decisions-16-nov-2026">14. Decisions (16 Nov 2026)</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

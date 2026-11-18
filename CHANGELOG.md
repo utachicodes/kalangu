@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Documentation on the website (kalangu.utachi.website/docs/): a quick start,
+  a guide to building agents, guides (the Africa's Talking sandbox,
+  translating, releasing), the design documents, contributing, the roadmap
+  and the changelog. The pages are generated from the repository's markdown
+  by `scripts/build-site.mjs` (`pnpm site:build`), and CI fails if they are
+  out of date or have a broken link (`pnpm site:check`). The landing page
+  links to them. The translation instructions moved from CONTRIBUTING.md to
+  `docs/translating.md`.
+
 ## [0.1.0-alpha.3] - 2026-11-17
 
 ### Fixed

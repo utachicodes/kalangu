@@ -12,6 +12,10 @@ between towns across West Africa for centuries by imitating the tones of
 speech — a long-distance, low-bandwidth messaging network that needed no
 literacy and no smartphone. That is the job this toolkit does for agents.
 
+**Documentation:** <https://kalangu.utachi.website/docs/>, with a
+[quick start](docs/quick-start.md), a guide to [building agents](docs/agents.md),
+and guides for the Africa's Talking sandbox and translating.
+
 ## Status: alpha
 
 **Alpha packages are on npm**: `@kalangu/core`, `@kalangu/ussd`,

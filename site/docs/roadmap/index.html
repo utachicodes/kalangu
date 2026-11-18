@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TODO · Kalangu</title>
+<meta name="description" content="State as of 16 Nov 2026. Design reference: docs/design.md.">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/" aria-current="page">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="todo">TODO</h1>
+<p>State as of 16 Nov 2026. Design reference: <a href="/docs/design/">docs/design.md</a>.</p>
+<h2 id="verify-first-checklist-before-announcing-anything">Verify-first checklist (before announcing anything)<a class="anchor" href="#verify-first-checklist-before-announcing-anything" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Read the official Africa&#39;s Talking USSD and SMS docs — done; findings in
+design doc §2, corrections in §2.5</li>
+<li><input checked="" disabled="" type="checkbox"> Claim the <code>@kalangu</code> npm scope: claimed, and <code>0.1.0-alpha.0</code>,
+<code>0.1.0-alpha.1</code> and <code>0.1.0-alpha.2</code> published on 17 Nov 2026 (see
+RELEASING.md)
+(packages are ready to publish: see <a href="/docs/guides/releasing/">RELEASING.md</a>; needs your
+npm login, which this repo&#39;s tooling does not have)</li>
+<li><input disabled="" type="checkbox"> Claim the GitHub organisation / repo name</li>
+<li><input disabled="" type="checkbox"> Domain</li>
+<li><input disabled="" type="checkbox"> Trademark search (a Hausa word — check local usage in target markets)</li>
+<li><input disabled="" type="checkbox"> Run the clinic example on the Africa&#39;s Talking sandbox end to end
+(<a href="/docs/guides/sandbox/">docs/sandbox-guide.md</a>): proves the gateway
+integration and the deferral to SMS, not operator behaviour. Needs a free
+account; correct the guide from what the first run shows</li>
+<li><input disabled="" type="checkbox"> Test the real session timeout and screen length on the operators you can
+reach; published figures vary and Kenya-only numbers are verified so far</li>
+<li><input disabled="" type="checkbox"> Check that no operator you can reach intercepts <code>98</code> (our &quot;More&quot;)
+before it reaches the gateway; if one does, change <code>budget.more</code></li>
+<li><input disabled="" type="checkbox"> Confirm that a USSD session and an SMS to the same number work together
+on your operators — deferral depends on it</li>
+<li><input disabled="" type="checkbox"> Check what a USSD short code and an SMS sender ID cost and require, per
+country (sandbox is free; production is not)</li>
+<li><input checked="" disabled="" type="checkbox"> Search npm and the Chat SDK adapter directory for a USSD adapter
+published since 16 Nov 2026: none, refreshed 17 Nov 2026
+(<a href="/docs/design/prior-art/">docs/prior-art.md</a> §6, which also records
+<code>@omoyolab/ussdkit</code>, the closest prior art). Repeat right before announcing</li>
+<li><input disabled="" type="checkbox"> Ask two or three teams who run USSD services today whether deferral to
+SMS would suit their users (design doc §12, question 6, depends on this)</li>
+</ul>
+<h2 id="website">Website<a class="anchor" href="#website" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Documentation on the website: quick start, agents, guides, design,
+contributing, roadmap, changelog; generated from the markdown and checked
+in CI (<code>pnpm site:check</code>)</li>
+<li><input disabled="" type="checkbox"> Look over the docs pages on a real phone and a desktop after the next
+deploy</li>
+</ul>
+<h2 id="v01-build-order-each-piece-independently-testable">v0.1 build order (each piece independently testable)<a class="anchor" href="#v01-build-order-each-piece-independently-testable" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Turn types: <code>say</code>, <code>choose</code>, <code>ask</code>, <code>confirm</code>; <code>pay</code> reserved in the union</li>
+<li><input checked="" disabled="" type="checkbox"> Budgeter: encoding-aware counting (GSM-7 160/153 vs UCS-2 70/67,
+extension-table chars count double), pagination, reserved nav numbers</li>
+<li><input checked="" disabled="" type="checkbox"> Engine + in-memory session store keyed by phone number</li>
+<li><input checked="" disabled="" type="checkbox"> <code>@kalangu/ussd</code> adapter, validated against recorded request fixtures</li>
+<li><input checked="" disabled="" type="checkbox"> Terminal keypad simulator</li>
+<li><input checked="" disabled="" type="checkbox"> <code>@kalangu/sms</code> adapter, validated against recorded request fixtures</li>
+<li><input checked="" disabled="" type="checkbox"> Deferral + pluggable background-work interface</li>
+<li><input checked="" disabled="" type="checkbox"> Clinic example agent with the fake slow model; <code>pnpm demo</code></li>
+<li><input checked="" disabled="" type="checkbox"> README how-to and docs polish</li>
+<li><input checked="" disabled="" type="checkbox"> CI: typecheck + vitest on push (Node 22/24), runtime smoke test on Node 20</li>
+</ul>
+<h2 id="design-review--open-questions-design-doc-12-settled-17-nov-2026">Design review — open questions (design doc §12), settled 17 Nov 2026<a class="anchor" href="#design-review--open-questions-design-doc-12-settled-17-nov-2026" aria-label="Link to this section">#</a></h2>
+<p>Decisions are recorded under &quot;Decisions&quot; in §12. Question 1 stays unverified
+until a real operator confirms <code>98</code> is not intercepted (see the checklist
+above).</p>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> 1. Navigation numbers: use <code>98</code> (More) ourselves, given telcos reserve
+it for auto-pagination?</li>
+<li><input checked="" disabled="" type="checkbox"> 2. Unsafe-character policy on USSD screens: strip + warn vs strict mode</li>
+<li><input checked="" disabled="" type="checkbox"> 3. Legacy vs new bulk SMS endpoint (legacy recommended until its sandbox
+ships)</li>
+<li><input checked="" disabled="" type="checkbox"> 4. SMS split cap (proposed max 4 segments, never silent truncation)</li>
+<li><input checked="" disabled="" type="checkbox"> 5. Callback authenticity: document path-secret/IP-allowlist mitigations
+(no signing exists to implement)</li>
+<li><input checked="" disabled="" type="checkbox"> 6. Re-notice vs block-screen when a user redials during a pending
+deferral</li>
+<li><input checked="" disabled="" type="checkbox"> 7. <code>enqueue</code> default on SMS send (proposed: omit unless configured)</li>
+</ul>
+<h2 id="version-02--payments-do-not-rush-money-code-needs-care">Version 0.2 — payments (do not rush; money code needs care)<a class="anchor" href="#version-02--payments-do-not-rush-money-code-needs-care" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Draft the design: <a href="/docs/design/payments/">docs/payments-design.md</a><ul>
+<li><input checked="" disabled="" type="checkbox"> Policy layer: per-payment, per-day per-user and pending limits,
+allowed currencies, refused before the user sees anything (§5)</li>
+<li><input checked="" disabled="" type="checkbox"> What the library does not guarantee; the agent never sees a PIN
+(§8, §9)</li>
+<li><input checked="" disabled="" type="checkbox"> Polling fallback for missed callbacks (§6.5)</li>
+</ul>
+</li>
+<li><input checked="" disabled="" type="checkbox"> Review the design, especially §3 (USSD session vs PIN prompt) and the
+open questions in §14</li>
+<li><input checked="" disabled="" type="checkbox"> Prep code against the fake provider, no pawaPay (tested end to end):<ul>
+<li><input checked="" disabled="" type="checkbox"> Decimal-string <code>pay</code> turn amount</li>
+<li><input checked="" disabled="" type="checkbox"> Policy layer, payment store, provider port, fake provider</li>
+<li><input checked="" disabled="" type="checkbox"> <code>pay</code> step, <code>payments</code> config validation (no policy, no payments)</li>
+<li><input checked="" disabled="" type="checkbox"> Confirm → end session → background initiate → poll → SMS outcome
+and receipt; unknown outcomes keep polling, give up as <code>UNRESOLVED</code></li>
+<li><input checked="" disabled="" type="checkbox"> <code>agent.payments.settle(id)</code> re-checks status for callback routes</li>
+</ul>
+</li>
+<li><input checked="" disabled="" type="checkbox"> Localized policy and provider refusal messages (<code>en</code>, <code>fr</code>)</li>
+<li><input checked="" disabled="" type="checkbox"> <code>agent.payments.reconcile()</code> for a cron or scheduler (§6.5): finishes
+payments whose in-process polling died with a restart</li>
+<li><input checked="" disabled="" type="checkbox"> README note: on serverless, <code>reconcile()</code> on a schedule is the only
+reliable path (§6.5)</li>
+<li><input checked="" disabled="" type="checkbox"> Address the CodeRabbit review of the payments PR: old in-flight payments
+counted by the pending limit, failed outcome deliveries retried by
+<code>reconcile</code>, outcome delivery waits for the turn&#39;s session save, <code>reconcile</code>
+gives up when a status check keeps failing, root pay step refusal no longer
+loops, operator lookup under the USSD deadline, provider phone stored,
+exact decimal totals, provider minimum, <code>&quot;100.0&quot;</code> accepted for NONE
+decimals, ids immutable</li>
+<li><input disabled="" type="checkbox"> Make outcome delivery and a concurrent turn safe together (known limit,
+payments design §9): needs a way to retry <code>onPaid</code> without running it twice</li>
+<li><input checked="" disabled="" type="checkbox"> Atomic store primitives (<code>transition</code>, <code>claimNotification</code>,
+<code>withPhoneLock</code>) so two processes cannot notify or begin twice (§6.1)</li>
+<li><input checked="" disabled="" type="checkbox"> Session store compare-and-set, so a double-tapped Yes cannot start two
+payments when <code>maxPendingPerPhone</code> is above 1</li>
+<li><input disabled="" type="checkbox"> Read pawaPay&#39;s terms of service (the v2 API docs were read on
+16 Nov 2026; the 24-country figure is the company&#39;s own claim)</li>
+<li><input disabled="" type="checkbox"> Sandbox account; work through the verify-first list in §12</li>
+<li><input disabled="" type="checkbox"> Then, and only then, payment code</li>
+</ul>
+<h2 id="version-03--languages">Version 0.3 — languages<a class="anchor" href="#version-03--languages" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Desk-check CommonLingua (read 17 Nov 2026): Apache-2.0 per its model
+card; 2.35M parameters; PyTorch only, no ONNX or JS build; 77.6% strict
+accuracy on paragraphs; &quot;not assessed on very short text&quot;; Wolof, Hausa and
+Swahili not named as covered</li>
+<li><input disabled="" type="checkbox"> Hands-on detector evaluation on short keypad-typed text in Wolof, Hausa
+and Swahili (languages design §12): coverage, accuracy, what the score means</li>
+<li><input disabled="" type="checkbox"> Review the languages design, especially §4 (ask first, detection as a
+hint) and the seven open questions in §14</li>
+<li><input checked="" disabled="" type="checkbox"> Per-language model routing design (languages design §7)</li>
+<li><input checked="" disabled="" type="checkbox"> Detector port and model map built (languages design §9.5), tested with
+a fake detector; no real detector ships</li>
+<li><input disabled="" type="checkbox"> Language detection on the first SMS of a conversation (§5 proposed it;
+only <code>ask</code> answers are checked today)</li>
+<li><input checked="" disabled="" type="checkbox"> <code>kalangu locale check</code> (placeholders, USSD and SMS fit) and the
+contributor guide for community locales (CONTRIBUTING.md); designed in
+languages design §8 and §9</li>
+<li><input checked="" disabled="" type="checkbox"> Language menu: <code>createAgent({ languages })</code>, <code>languageMenu()</code>, country
+priors (languages design §4, §9.4)</li>
+<li><input checked="" disabled="" type="checkbox"> Gemini drafting script for translations (<code>scripts/translate-locale.mjs</code>,
+CONTRIBUTING.md): drafts only, marked unreviewed</li>
+<li><input disabled="" type="checkbox"> Wolof, Hausa and Swahili translations, through the checker: draft with
+the script if useful, then native speakers (see the next item)</li>
+<li><input checked="" disabled="" type="checkbox"> Draft the text normalization design:
+<a href="/docs/design/normalization/">docs/normalization-design.md</a> (fold,
+render for USSD, canonicalize; Gemini offline only; own repo later)</li>
+<li><input checked="" disabled="" type="checkbox"> Fix: a typed language name without its accent (&quot;francais&quot;) was refused,
+though USSD itself shows it that way. Typed answers are now matched ignoring
+accents, case, spacing and apostrophe style, and against the USSD form of
+the label (normalization design §11 step 1)</li>
+<li><input disabled="" type="checkbox"> Review the normalization design and its questions for native speakers
+(§10, §12)</li>
+<li><input disabled="" type="checkbox"> Native speakers to supply and review the Wolof and Hausa translations
+(the first draft&#39;s sample Wolof strings were removed: unverified)</li>
+</ul>
+<h2 id="version-04--channels">Version 0.4 — channels<a class="anchor" href="#version-04--channels" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Draft the WhatsApp Cloud API adapter design:
+<a href="/docs/design/whatsapp/">docs/whatsapp-design.md</a><ul>
+<li><input checked="" disabled="" type="checkbox"> Meta facts read from the official docs (17 Nov 2026), with what could
+not be confirmed listed in §12</li>
+<li><input checked="" disabled="" type="checkbox"> Identity (BSUIDs), the 24-hour window and cost, rendering, stale taps,
+webhook signing and deduplication</li>
+</ul>
+</li>
+<li><input checked="" disabled="" type="checkbox"> Settle WhatsApp questions 1 (identity key: phone, else BSUID, no alias
+store yet) and 9 (stale-tap <code>turnId</code> goes into core)</li>
+<li><input checked="" disabled="" type="checkbox"> <code>turnId</code> stale-tap protection in core, a random per-turn token (tested,
+including that a stale Yes starts no payment)</li>
+<li><input disabled="" type="checkbox"> Review the rest of the WhatsApp design, especially §3 and §6, and the
+eight questions still open in §14</li>
+<li><input disabled="" type="checkbox"> Get a Meta test number and work through the verify-first list in §12
+(signature over raw bytes, per-market message cost, <code>wa_id</code> presence)</li>
+<li><input disabled="" type="checkbox"> Then, and only then, WhatsApp code</li>
+<li><input checked="" disabled="" type="checkbox"> Survey the Chat SDK adapter directory for a community USSD adapter:
+none as of 17 Nov 2026 (docs/prior-art.md §6)</li>
+</ul>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/TODO.md">Edit this page on GitHub</a>
+      <span>Generated from <code>TODO.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#verify-first-checklist-before-announcing-anything">Verify-first checklist (before announcing anything)</a></li><li><a href="#website">Website</a></li><li><a href="#v01-build-order-each-piece-independently-testable">v0.1 build order (each piece independently testable)</a></li><li><a href="#design-review--open-questions-design-doc-12-settled-17-nov-2026">Design review — open questions (design doc §12), settled 17 Nov 2026</a></li><li><a href="#version-02--payments-do-not-rush-money-code-needs-care">Version 0.2 — payments (do not rush; money code needs care)</a></li><li><a href="#version-03--languages">Version 0.3 — languages</a></li><li><a href="#version-04--channels">Version 0.4 — channels</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

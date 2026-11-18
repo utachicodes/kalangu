@@ -30,6 +30,8 @@ jobs:
       - run: pnpm build
       # The repository scripts' own tests (they load the built core).
       - run: node --test "scripts/**/*.test.mjs"
+      # The website's docs pages are generated from the markdown; they must be current.
+      - run: pnpm site:check
 
   runtime-node-20:
     name: Runtime smoke test (Node 20)

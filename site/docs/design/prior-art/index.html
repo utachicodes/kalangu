@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prior art — USSD packages and the Chat SDK adapter directory · Kalangu</title>
+<meta name="description" content="Survey date: 16 Nov 2026. This document feeds the verify-first checklist item &amp;quot;Search npm and the Chat SDK adapter directory for a USSD adapter published s">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/" aria-current="page">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="prior-art--ussd-packages-and-the-chat-sdk-adapter-directory">Prior art — USSD packages and the Chat SDK adapter directory</h1>
+<p>Survey date: 16 Nov 2026. This document feeds the verify-first checklist item
+<em>&quot;Search npm and the Chat SDK adapter directory for a USSD adapter published
+since 16 Nov 2026&quot;</em>. Bottom line: <strong>nothing on npm or in the Chat SDK adapter
+directory combines a USSD/SMS agent engine with typed turns, an encoding-aware
+budgeter, and model-deferral to SMS.</strong> At the time no <code>@kalangu/*</code> package
+existed on the registry. (That does not prove an organisation name is free:
+an organisation can exist with no packages. The scope has since been
+claimed and the packages published; see §6.)</p>
+<hr>
+<h2 id="1-npm--ussd-related-packages">1. npm — USSD-related packages<a class="anchor" href="#1-npm--ussd-related-packages" aria-label="Link to this section">#</a></h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version</th>
+<th>License</th>
+<th>Weekly downloads</th>
+<th>What it is</th>
+<th>Gap vs. <code>@kalangu/*</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>africastalking</code></td>
+<td>0.8.4</td>
+<td>MIT</td>
+<td>~27,636</td>
+<td>Official Africa&#39;s Talking Node.js SDK. Covers SMS, USSD, voice, payments, airtime. Low-level API wrapper; you write the session logic yourself.</td>
+<td>No engine, no typed turns, no budgeter, no deferral, no AI model port.</td>
+</tr>
+<tr>
+<td><code>ussd-builder</code></td>
+<td>1.3.2</td>
+<td>MIT</td>
+<td>~11,495</td>
+<td>State-based USSD menu composer (<code>con</code>/<code>end</code>, regex input matching, Express handler). Claims compatibility with Africastalking, Hubtel, Emergent, Arkesel, Nalo, Beem.</td>
+<td>No session store, no AI, no SMS channel, no deferral, no encoding budgeter. Last updated 2024-05.</td>
+</tr>
+<tr>
+<td><code>ussd-at</code></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>Same state-machine menu-builder pattern as <code>ussd-builder</code>, Africastalking callback shape.</td>
+<td>Same gaps.</td>
+</tr>
+<tr>
+<td><code>ussd-menu-builder</code></td>
+<td>1.2.0</td>
+<td>MIT</td>
+<td>~1,348</td>
+<td>State-based menus, Africastalking-compatible. Last updated ~2020.</td>
+<td>Same gaps; effectively unmaintained.</td>
+</tr>
+<tr>
+<td><code>africastalking-ts</code></td>
+<td>0.0.3</td>
+<td>MIT</td>
+<td>~1,191</td>
+<td>Unofficial TypeScript port of the Africa&#39;s Talking SDK.</td>
+<td>Same gaps; last updated ~2021.</td>
+</tr>
+<tr>
+<td><code>@stead/at-js</code></td>
+<td>0.0.14</td>
+<td>MIT</td>
+<td>~24</td>
+<td>Customized Africa&#39;s Talking wrapper.</td>
+<td>Same gaps.</td>
+</tr>
+<tr>
+<td><code>@goonerlabs/ussd-router</code></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>Tiny dependency-free state-machine router for Africastalking USSD; replays the <code>*</code>-joined input trail, <code>CON</code>/<code>END</code> replies, no session store by design.</td>
+<td>No engine, no SMS, no deferral, no budgeter.</td>
+</tr>
+<tr>
+<td><code>ussd-state-builder</code></td>
+<td>2.6.0</td>
+<td>MIT</td>
+<td>~398</td>
+<td>State machine with back navigation, lifecycle hooks, middleware, validation, i18n, testing utilities, multiple storage adapters.</td>
+<td>Menu builder, not an agent; no SMS channel, no deferral, no budgeter. Updated 17 days before the survey.</td>
+</tr>
+<tr>
+<td><code>ananse</code></td>
+<td>1.12.0</td>
+<td>MIT</td>
+<td>~283</td>
+<td>TypeScript USSD framework: session management, menu routing, validation, pagination, CLI simulator, pluggable gateways (wigal, hubtel, africas_talking).</td>
+<td>Built around USSD menus and session storage; no AI model port, no typed turns, no SMS deferral, no GSM-7/UCS-2 budgeter.</td>
+</tr>
+</tbody></table></div>
+<p>None of these publish under <code>@kalangu</code>, and none render AI-generated answers as budgeted keypad screens or fall back to SMS when a model exceeds the gateway&#39;s response bound.</p>
+<hr>
+<h2 id="2-chat-sdk-adapter-directory-chat-sdkdevadapters">2. Chat SDK adapter directory (chat-sdk.dev/adapters)<a class="anchor" href="#2-chat-sdk-adapter-directory-chat-sdkdevadapters" aria-label="Link to this section">#</a></h2>
+<p>The directory lists three classes of adapters:</p>
+<ul>
+<li><strong>Official</strong> (Vercel, <code>@chat-adapter/*</code>): Slack, Teams, Google Chat, Gmail, Discord, GitHub, GitLab, Linear, Notion, Telegram, WhatsApp, web chat, plus state adapters (Redis, ioredis, PostgreSQL, memory).</li>
+<li><strong>Vendor-official</strong>: Resend (email), Sendblue (iMessage/SMS/RCS), Linq (iMessage/SMS), AgentPhone (SMS/MMS/iMessage/voice), Liveblocks, Lark/Feishu, Telnyx (SMS/MMS).</li>
+<li><strong>Community</strong>: signal-cli, Rocket.Chat, Zoom Team Chat, and others.</li>
+</ul>
+<p>The catalog is exposed statically via <code>@chat-adapter/catalog</code> (<code>listAdapters()</code>, <code>getFeatureSupport()</code>). <strong>There is no USSD adapter</strong> in any class — official, vendor-official, or community. SMS is covered (Twilio, Sendblue, AgentPhone, Linq), but no keypad/USSD channel exists in the directory.</p>
+<hr>
+<h2 id="3-closest-concept-in-spirit">3. Closest concept in spirit<a class="anchor" href="#3-closest-concept-in-spirit" aria-label="Link to this section">#</a></h2>
+<p><code>ussd-platform</code> on the Hermes Marketplace is a Hermes plugin, not an npm package and not a Chat SDK adapter. It speaks the Africa&#39;s Talking USSD callback format (<code>sessionId</code>, <code>phoneNumber</code>, <code>serviceCode</code>, <code>text</code>; <code>CON</code>/<code>END</code> replies), pages agent output to 160-character screens with a <code>98.More</code> control, defers slow answers to an inbox or SMS (&quot;Text me the answer&quot;), resumes dropped calls on redial, and ships a localhost-only keypad simulator. It authenticates callbacks with a path-secret because USSD gateways do not sign requests.</p>
+<p>Differences from Kalangu: it is a Hermes plugin (Python <code>adapter.py</code>), not a TypeScript library; it has no typed turn system (<code>say</code>/<code>choose</code>/<code>ask</code>/<code>confirm</code>/<code>pay</code>), no per-channel renderers, no encoding-aware segment budget, and no model-deferral deadline with SMS fallback built around a 10 s gateway bound.</p>
+<hr>
+<h2 id="4-what-this-means-for-kalangu">4. What this means for Kalangu<a class="anchor" href="#4-what-this-means-for-kalangu" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong>Name:</strong> no <code>@kalangu/*</code> package existed on 16 Nov 2026. The scope was claimed and <code>0.1.0-alpha.0</code> published on 17 Nov 2026.</li>
+<li><strong>Positioning:</strong> existing npm USSD tools are menu builders or low-level gateway wrappers. Kalangu&#39;s distinct combination is: AI agent with typed turns, encoding-aware budgeter (GSM-7/UCS-2), phone-number-keyed sessions, and deferral to SMS when a model turn misses the gateway deadline. None of the packages above do that.</li>
+<li><strong>Chat SDK:</strong> no USSD adapter exists in the directory, so a future <code>@kalangu</code> adapter would be filling a genuine gap rather than duplicating one (see the v0.4 WhatsApp/channel survey item in TODO.md).</li>
+</ul>
+<hr>
+<h2 id="5-verify-first-status">5. Verify-first status<a class="anchor" href="#5-verify-first-status" aria-label="Link to this section">#</a></h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Checklist item</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Search npm and the Chat SDK adapter directory for a USSD adapter published since 16 Nov 2026</td>
+<td>Done — none found; documented here. Refreshed 17 Nov 2026 (§6): still none</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2 id="6-refresh-17-nov-2026">6. Refresh, 17 Nov 2026<a class="anchor" href="#6-refresh-17-nov-2026" aria-label="Link to this section">#</a></h2>
+<p>Rerun of the checklist item, plus two packages the first survey missed.</p>
+<p><strong>How.</strong> npm&#39;s public search API (<code>registry.npmjs.org/-/v1/search</code>) for
+<code>ussd</code>, <code>ussd agent</code>, <code>ussd ai</code>, <code>ussd llm</code> and <code>keywords:ussd</code> (394 unique
+packages, of which 124 mention USSD), filtered by publish date. For the
+Chat SDK directory, whose website did not answer a script, the package it is
+built from, <code>@chat-adapter/catalog</code>, read as text from its published tarball
+(not installed or run).</p>
+<p><strong>Published or updated since 16 Nov 2026 and mentioning USSD:</strong> only
+<code>@kalangu/core</code>, <code>@kalangu/ussd</code> and <code>@kalangu/sim</code> themselves, and
+<code>opscms-paystack-plugin</code> (Paystack card, bank-transfer and USSD <em>payments</em>
+for a CMS; not a USSD app toolkit).</p>
+<p><strong>Chat SDK directory:</strong> <code>@chat-adapter/catalog</code> 4.45.0 was last published on
+13 Nov 2026, before the first survey, so the directory cannot have gained an
+adapter since. Its files contain no mention of USSD, Africa&#39;s Talking,
+keypad or feature phones (the same search finds WhatsApp 66 times and
+Telegram 52 times, so the search itself works).</p>
+<p><strong>Missed by the first survey, and worth knowing:</strong></p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version, date</th>
+<th>What it is</th>
+<th>Versus Kalangu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>@omoyolab/ussdkit</code></td>
+<td>0.3.0, 4 Oct 2026, MIT</td>
+<td>Build USSD apps in Node: declarative screens, session handling, gateway adapters (Africa&#39;s Talking among its keywords), a terminal phone simulator and a test helper, zero dependencies. Its README covers screen room (<code>ctx.room</code>, warnings past <code>maxLength</code>), pagination, and warnings about reply time.</td>
+<td><strong>The closest prior art</strong>: much of Kalangu v0.1&#39;s surface (sessions, simulator, screen budget, zero dependencies). Its README never mentions a model, SMS deferral, SMS encoding (GSM-7/UCS-2) or languages.</td>
+</tr>
+<tr>
+<td><code>baselineos</code></td>
+<td>1.7.1, 8 Aug 2026, Apache-2.0</td>
+<td>Its description says &quot;AI that runs where AI doesn&#39;t — offline, USSD, low-bandwidth&quot;.</td>
+<td>Its README never mentions USSD or SMS; it describes a general AI operations runtime with an Anthropic SDK dependency. Not a USSD toolkit as far as its published docs show.</td>
+</tr>
+</tbody></table></div>
+<p><strong>Conclusion unchanged, with one caveat.</strong> Still nothing combines a model
+with typed turns, deferral to SMS within the gateway bound, and an
+encoding-aware SMS budget. But &quot;existing tools are menu builders&quot; undersells
+<code>ussdkit</code>: it is a careful, modern USSD framework, and Kalangu&#39;s claim to
+difference rests on the agent side (deferral, the SMS budget, payments,
+languages), not on menus, sessions or the simulator.</p>
+<p>Repeat this check right before announcing; it is a snapshot.</p>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/prior-art.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/prior-art.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-npm--ussd-related-packages">1. npm — USSD-related packages</a></li><li><a href="#2-chat-sdk-adapter-directory-chat-sdkdevadapters">2. Chat SDK adapter directory (chat-sdk.dev/adapters)</a></li><li><a href="#3-closest-concept-in-spirit">3. Closest concept in spirit</a></li><li><a href="#4-what-this-means-for-kalangu">4. What this means for Kalangu</a></li><li><a href="#5-verify-first-status">5. Verify-first status</a></li><li><a href="#6-refresh-17-nov-2026">6. Refresh, 17 Nov 2026</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>
