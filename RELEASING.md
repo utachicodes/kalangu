@@ -120,12 +120,17 @@ packing.
 
 ## Not yet done
 
-- Published so far, all four packages, with verified provenance, on 17 Nov
-  2026: `0.1.0-alpha.0` (tag `v0.1.0-alpha.0`, its installed `kalangu`
-  command does nothing), `0.1.0-alpha.1` (tag `v0.1.0-alpha.1`, which fixes
-  it) and `0.1.0-alpha.2` (tag `v0.1.0-alpha.2`, `latest`: typed answers
-  match regardless of accents, language detection as a hint, a model per
-  language), each checked with a clean install. For `0.1.0-alpha.2` the
-  files took between two and three minutes after approval to download.
+- Published so far, all four packages, with verified provenance, each
+  checked with a clean install and tagged `v<version>`:
+  - 17 Nov 2026: `0.1.0-alpha.0` (its installed `kalangu` command does
+    nothing), `0.1.0-alpha.1` (which fixes it), `0.1.0-alpha.2` (typed
+    answers match regardless of accents, language detection as a hint, a
+    model per language; its files took two to three minutes after approval
+    to download) and `0.1.0-alpha.3` (fixes from an independent review of
+    the language features).
+  - 18 Nov 2026: `0.1.0-alpha.4`, `latest` (fixes from CodeRabbit's review
+    of everything since #20: a shared time budget per turn, races around
+    language suggestions, the language menu's order, the SMS cap on direct
+    sends).
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.

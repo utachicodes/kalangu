@@ -1,16 +1,14 @@
 # TODO
 
-State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
+State as of 18 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 
 ## Verify-first checklist (before announcing anything)
 
 - [x] Read the official Africa's Talking USSD and SMS docs: done; findings in
   design doc §2, corrections in §2.5
-- [x] Claim the `@kalangu` npm scope: claimed, and `0.1.0-alpha.0`,
-  `0.1.0-alpha.1` and `0.1.0-alpha.2` published on 17 Nov 2026 (see
-  RELEASING.md)
-  (packages are ready to publish: see [RELEASING.md](RELEASING.md); needs your
-  npm login, which this repo's tooling does not have)
+- [x] Claim the `@kalangu` npm scope: claimed; `0.1.0-alpha.0` to
+  `0.1.0-alpha.3` published on 17 Nov 2026 and `0.1.0-alpha.4` on
+  18 Nov 2026 (see [RELEASING.md](RELEASING.md))
 - [ ] Claim the GitHub organisation / repo name
 - [ ] Domain
 - [ ] Trademark search (a Hausa word: check local usage in target markets)
