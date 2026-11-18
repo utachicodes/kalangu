@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The clinic example can answer with a local Ollama model:
+  `OLLAMA_MODEL=llama3.2 pnpm demo` (and the same for the server), with
+  `OLLAMA_HOST` for another machine. Answers are shortened to fit the SMS
+  cap, formatting and reasoning blocks are stripped, and an apology is sent
+  when Ollama is down. Without `OLLAMA_MODEL`, the fake nurse as before. The
+  quick start shows the same call for your own agent.
+
 ## [0.1.0-alpha.4] - 2026-11-18
 
 ### Added
@@ -19,12 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   out of date or have a broken link (`pnpm site:check`). The landing page
   links to them. The translation instructions moved from CONTRIBUTING.md to
   `docs/translating.md`.
-- The clinic example can answer with a local Ollama model:
-  `OLLAMA_MODEL=llama3.2 pnpm demo` (and the same for the server), with
-  `OLLAMA_HOST` for another machine. Answers are shortened to fit the SMS
-  cap, formatting and reasoning blocks are stripped, and an apology is sent
-  when Ollama is down. Without `OLLAMA_MODEL`, the fake nurse as before. The
-  quick start shows the same call for your own agent.
 
 ### Fixed
 
