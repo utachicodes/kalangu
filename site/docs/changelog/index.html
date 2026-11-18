@@ -41,8 +41,36 @@ out of date or have a broken link (<code>pnpm site:check</code>). The landing pa
 links to them. The translation instructions moved from CONTRIBUTING.md to
 <code>docs/translating.md</code>.</li>
 </ul>
-<h2 id="010-alpha3---2026-11-17">[0.1.0-alpha.3] - 2026-11-17<a class="anchor" href="#010-alpha3---2026-11-17" aria-label="Link to this section">#</a></h2>
 <h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
+<p>From CodeRabbit&#39;s review of everything since #20 (#32):</p>
+<ul>
+<li>A live turn&#39;s time limit is now shared. Language detection, the handler
+and a payment&#39;s preparation each had their own, so one turn could run past
+the 10 seconds a USSD gateway waits. Together they now get <code>deadlineMs</code>
+plus the detection timeout, and a dial string that runs several handlers
+shares it too.</li>
+<li>A slow language detector could overwrite a newer turn: if the user moved on
+while it was answering, its suggestion replaced the newer screen. It is
+now dropped when another turn has saved the session first.</li>
+<li>Two Yes answers to a language suggestion arriving together could both run
+the held answer&#39;s handler. The first one now claims it, the same way a
+payment&#39;s Yes is claimed.</li>
+<li>The language menu now resolves a number against the languages it showed,
+not today&#39;s order: a deployment that reordered them could switch a caller
+who chose <code>1. English</code> to French. A language no longer offered shows the
+menu again.</li>
+<li>A held answer runs only if its step still asks the same question; after a
+change to the tree the offer lapses instead of reaching another handler.
+Offers saved by earlier versions lapse too.</li>
+<li><code>@kalangu/sms</code>: a direct <code>send</code> now enforces <code>maxSegments</code>, as replies did.</li>
+<li>The translation drafting script no longer overwrites a file created at its
+output path while Gemini was answering, unless <code>--force</code> is given.</li>
+<li>RELEASING.md: what to do when a release fails part-way, and the smoke test
+installs the exact new version. The translation guide says how to use a
+translation and where to send one.</li>
+</ul>
+<h2 id="010-alpha3---2026-11-17">[0.1.0-alpha.3] - 2026-11-17<a class="anchor" href="#010-alpha3---2026-11-17" aria-label="Link to this section">#</a></h2>
+<h3 id="fixed-1">Fixed<a class="anchor" href="#fixed-1" aria-label="Link to this section">#</a></h3>
 <p>From an independent review of everything merged in #21 and #26 to #30:</p>
 <ul>
 <li>A pending language suggestion could answer a later question: after a
@@ -92,7 +120,7 @@ first dot, so <code>wo.draft.json</code> is checked as <code>wo</code>.</li>
 USSD spelling, canonicalizing; Gemini offline only; its own repository
 later).</li>
 </ul>
-<h3 id="fixed-1">Fixed<a class="anchor" href="#fixed-1" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-2">Fixed<a class="anchor" href="#fixed-2" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>A typed answer that names an option without its accents was refused: on
 USSD the language menu shows &quot;Français&quot; as &quot;Francais&quot;, and typing that back
@@ -103,7 +131,7 @@ the yes and no words ignoring accents, case, spacing and apostrophe style
 folded match that fits more than one label is refused.</li>
 </ul>
 <h2 id="010-alpha1---2026-11-17">[0.1.0-alpha.1] - 2026-11-17<a class="anchor" href="#010-alpha1---2026-11-17" aria-label="Link to this section">#</a></h2>
-<h3 id="fixed-2">Fixed<a class="anchor" href="#fixed-2" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-3">Fixed<a class="anchor" href="#fixed-3" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>The installed <code>kalangu</code> command did nothing. npm installs a package&#39;s
 command as a symlink, and the check for &quot;started as a command&quot; compared

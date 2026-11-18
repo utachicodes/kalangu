@@ -248,7 +248,15 @@ export async function main(argv, io = defaultIo()) {
     return 1;
   }
   const file = draftFile({ code: opts.code, name: opts.name, model: opts.model, messages, date: io.today() });
-  await io.writeFile(out, `${JSON.stringify(file, null, 2)}\n`);
+  try {
+    // Checked again here, not only before the request: a file saved at this
+    // path while Gemini was answering is not overwritten without --force.
+    await io.writeFile(out, `${JSON.stringify(file, null, 2)}\n`, { overwrite: opts.force });
+  } catch (err) {
+    if (err?.code !== "EEXIST") throw err;
+    io.stderr(`${out} was created while the draft was being made. Use --force to overwrite it, or --out to write elsewhere.`);
+    return 1;
+  }
 
   const report = core.checkLocale(opts.code, messages, { complete: true });
   io.stdout(`Wrote ${out}\n\n${core.formatReport(report, { verbose: true })}`);
@@ -268,9 +276,9 @@ function defaultIo() {
     fetch: (...args) => globalThis.fetch(...args),
     exists: (p) => existsSync(resolve(p)),
     readFile: (p) => readFile(resolve(p), "utf8"),
-    writeFile: async (p, text) => {
+    writeFile: async (p, text, { overwrite = false } = {}) => {
       await mkdir(dirname(resolve(p)), { recursive: true });
-      await writeFile(resolve(p), text);
+      await writeFile(resolve(p), text, { flag: overwrite ? "w" : "wx" });
     },
     today: () => new Date().toISOString().slice(0, 10),
     loadCore: () => import(pathToFileURL(resolve(root, "packages/core/dist/index.js")).href),

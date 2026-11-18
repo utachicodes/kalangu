@@ -51,20 +51,34 @@ switching.</li>
 </ol>
 <h2 id="each-release">Each release<a class="anchor" href="#each-release" aria-label="Link to this section">#</a></h2>
 <ol>
-<li>Bump <code>version</code> in all four <code>packages/*/package.json</code> (same number).
+<li><p>Bump <code>version</code> in all four <code>packages/*/package.json</code> (same number).
 Alpha releases look like <code>0.1.0-alpha.1</code>. The packages ask for the
 <code>alpha</code> dist-tag (<code>publishConfig.tag</code>), but <strong>on the first release npm&#39;s
 staged-publishing approval set <code>latest</code> instead and created no <code>alpha</code>
 tag</strong>, so a plain <code>npm install @kalangu/core</code> gets the alpha. Check the
-tags after approving (step 6) rather than assuming.</li>
-<li>Move the CHANGELOG&#39;s <code>[Unreleased]</code> entries under the new version and
-date.</li>
-<li>Merge to <code>main</code> and wait for CI to pass.</li>
-<li>Run the <strong>Release</strong> workflow from <code>main</code>. It defaults to a dry run
+tags after approving (step 6) rather than assuming.</p>
+</li>
+<li><p>Move the CHANGELOG&#39;s <code>[Unreleased]</code> entries under the new version and
+date.</p>
+</li>
+<li><p>Merge to <code>main</code> and wait for CI to pass.</p>
+</li>
+<li><p>Run the <strong>Release</strong> workflow from <code>main</code>. It defaults to a dry run
 (typecheck, tests, build, and what would be published); run it again with
 <code>dry_run</code> off. A dry run does <strong>not</strong> prove the token or the organisation
-work: only a real run does. Publishes carry npm provenance.</li>
-<li><strong>Approve the staged versions.</strong> npm&#39;s staged publishing holds CI
+work: only a real run does. Publishes carry npm provenance.</p>
+<p><strong>If the run fails part-way</strong> (say core was accepted and an adapter
+refused), do not bump the version. Find out where each of the four
+versions stands: <code>npm stage list</code> for staged ones, and
+<code>npm view @kalangu/&lt;name&gt;@&lt;version&gt; version</code> for each package, which
+prints the version only if it is live. Then, once the cause is fixed:
+approve or reject what is staged, and run the workflow again for the
+rest. <code>pnpm -r publish</code> skips versions already in the registry, but a
+version that is staged and not yet approved is not in the registry, so
+settle the staged ones first or the rerun may try to stage them twice
+(this has not happened yet; check the run&#39;s log for what it published).</p>
+</li>
+<li><p><strong>Approve the staged versions.</strong> npm&#39;s staged publishing holds CI
 publishes until a maintainer approves them, so a successful run is not a
 release. The workflow log says &quot;Published package&quot; for each package, but
 the version is not installable yet. On npmjs.com open the <strong>Staged
@@ -72,15 +86,18 @@ Packages</strong> tab, review the four versions and click <strong>Approve</stron
 approve a batch with one two-factor prompt). Or from a terminal:
 <code>npm stage list</code>, then <code>npm stage approve &lt;stage-id&gt;</code> for each (it
 prompts for two-factor; <code>npm stage reject &lt;stage-id&gt;</code> removes one). npm&#39;s
-docs do not say whether a staged version expires, so approve promptly.</li>
-<li><strong>Check the registry</strong> (read-only, no login needed):
+docs do not say whether a staged version expires, so approve promptly.</p>
+</li>
+<li><p><strong>Check the registry</strong> (read-only, no login needed):
 <code>npm view @kalangu/core versions dist-tags</code> for all four packages. The
 new version must be listed and <code>latest</code> must point at it (or <code>alpha</code>, if
 npm set that instead; set the one you want with
 <code>npm dist-tag add @kalangu/core@&lt;version&gt; &lt;tag&gt;</code>). <code>npm audit signatures</code>
 in an install should report verified attestations. Then, in an empty
-folder, <code>npm install @kalangu/core @kalangu/ussd @kalangu/sms @kalangu/sim</code>,
-import them, and run the <strong>installed</strong> command
+folder, install <strong>the exact new version</strong> of all four, so a tag still
+pointing at the previous release cannot make an old build pass:
+<code>npm install @kalangu/core@&lt;version&gt; @kalangu/ussd@&lt;version&gt; @kalangu/sms@&lt;version&gt; @kalangu/sim@&lt;version&gt;</code>.
+Import them, and run the <strong>installed</strong> command
 (<code>./node_modules/.bin/kalangu locale check &lt;file&gt;</code>), not the file in
 <code>dist/</code>: running the file directly hid a bug in <code>0.1.0-alpha.0</code> where the
 installed command did nothing.
@@ -90,10 +107,12 @@ returned <code>404</code> for a short while, so an install straight away failed 
 <code>E404 ... core-0.1.0-alpha.1.tgz</code>. If that happens, wait and retry before
 suspecting the release. Approving the four packages can also land at
 different times; packages that depend on <code>@kalangu/core</code> cannot install
-until core&#39;s new version is live.</li>
-<li>Tag the commit the workflow built (its run shows the commit), with an
+until core&#39;s new version is live.</p>
+</li>
+<li><p>Tag the commit the workflow built (its run shows the commit), with an
 annotated tag, and push only that tag:
-<code>git tag -a v&lt;version&gt; &lt;commit&gt; -m &quot;v&lt;version&gt;: ...&quot; &amp;&amp; git push origin v&lt;version&gt;</code>.</li>
+<code>git tag -a v&lt;version&gt; &lt;commit&gt; -m &quot;v&lt;version&gt;: ...&quot; &amp;&amp; git push origin v&lt;version&gt;</code>.</p>
+</li>
 </ol>
 <h3 id="the-000-stage-placeholder">The <code>0.0.0-stage</code> placeholder<a class="anchor" href="#the-000-stage-placeholder" aria-label="Link to this section">#</a></h3>
 <p>When a package does not exist yet, npm publishes a <strong>public</strong> placeholder

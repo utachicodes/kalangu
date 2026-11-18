@@ -171,8 +171,10 @@ alphabet makes the whole message UCS-2, 70 characters per segment instead
 of 160.</li>
 </ul>
 <h2 id="slow-answers">Slow answers<a class="anchor" href="#slow-answers" aria-label="Link to this section">#</a></h2>
-<p>On USSD the gateway waits only about 10 seconds for a reply. A handler gets
-<code>deadlineMs</code> (default 4000, at most 10000). If it is slower, the user sees
+<p>On USSD the gateway waits only about 10 seconds for a reply. A turn gets
+<code>deadlineMs</code> (default 4000, at most 10000), shared by everything it waits for:
+the handler, a payment&#39;s checks, and any further handlers a dial string runs
+(language detection adds its own timeout on top). If it runs out, the user sees
 &quot;We are working on your question. You will receive an SMS shortly.&quot;, the
 session ends, and the answer is sent by SMS when it is ready. This needs an
 SMS channel that can send. Menus and other fixed steps never wait.</p>

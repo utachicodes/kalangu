@@ -32,9 +32,25 @@ the [languages design](languages-design.md) §8 and §9 for the why.
    that makes a word ambiguous, choose a wording that survives it. On SMS one
    such letter makes the whole message UCS-2, 70 characters per segment
    instead of 160. The checker lists both, so you can judge.
-5. Open a pull request. A translation is marked **reviewed** only when a
-   speaker of that language other than the author has checked it, and the file
-   says who; until then it ships as **experimental**.
+5. **Use it.** Kalangu does not load translation files on its own. Pass the
+   messages to your agent:
+
+   ```js
+   import { readFileSync } from "node:fs";
+
+   const wo = JSON.parse(readFileSync("wo.json", "utf8"));
+   createAgent({ messages: { wo }, languages: { supported: [/* ..., */ { code: "wo", name: "Wolof" }] } });
+   ```
+
+   If the file came from the drafting script below, pass its `messages`
+   object, not the whole file.
+6. **Share it.** Open a pull request with the file at `locales/<code>.json`.
+   That folder is where contributions wait; Kalangu does not read it. Shipping
+   a language inside `@kalangu/core`, as `en` and `fr` are, is still an open
+   decision ([languages design](languages-design.md) §14), so until then a
+   merged translation is used as in step 5. A translation is marked
+   **reviewed** only when a speaker of that language other than the author has
+   checked it, and the file says who; until then it is **experimental**.
 
 ## Starting from a machine draft
 
