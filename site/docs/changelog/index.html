@@ -40,6 +40,12 @@ by <code>scripts/build-site.mjs</code> (<code>pnpm site:build</code>), and CI fa
 out of date or have a broken link (<code>pnpm site:check</code>). The landing page
 links to them. The translation instructions moved from CONTRIBUTING.md to
 <code>docs/translating.md</code>.</li>
+<li>The clinic example can answer with a local Ollama model:
+<code>OLLAMA_MODEL=llama3.2 pnpm demo</code> (and the same for the server), with
+<code>OLLAMA_HOST</code> for another machine. Answers are shortened to fit the SMS
+cap, formatting and reasoning blocks are stripped, and an apology is sent
+when Ollama is down. Without <code>OLLAMA_MODEL</code>, the fake nurse as before. The
+quick start shows the same call for your own agent.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
 <p>From CodeRabbit&#39;s review of everything since #20 (#32):</p>

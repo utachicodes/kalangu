@@ -42,6 +42,14 @@ a question. The example&#39;s fake nurse takes 6 seconds and the deadline is 4,
 so the screen says the answer will come by SMS, and a couple of seconds later
 it does. <code>x</code> hangs up mid-session (dial again to resume), <code>sms &lt;text&gt;</code> texts
 the agent, <code>q</code> quits.</p>
+<p><strong>With a real model.</strong> Install <a href="https://ollama.com" rel="noopener">Ollama</a>, pull a model and
+run the demo with it:</p>
+<pre><code class="language-sh">ollama pull llama3.2
+OLLAMA_MODEL=llama3.2 pnpm demo
+</code></pre>
+<p>Ask anything now; a local model usually takes more than 4 seconds, so most
+answers come by SMS. If Ollama runs on another machine, set <code>OLLAMA_HOST</code>
+too, for example <code>OLLAMA_HOST=192.168.1.20:11434</code>.</p>
 <h2 id="2-write-your-first-agent">2. Write your first agent<a class="anchor" href="#2-write-your-first-agent" aria-label="Link to this section">#</a></h2>
 <p>In a new folder:</p>
 <pre><code class="language-sh">npm init -y
@@ -86,6 +94,33 @@ console.log(await phone.press(&quot;Is the clinic open on Sunday?&quot;));
 <p>Each line is one USSD screen. <code>end: true</code> means the session is over. To use
 the keypad in your terminal instead, run
 <code>import { runTerminal } from &quot;@kalangu/sim&quot;; await runTerminal(agent, { code: &quot;*384*1#&quot; });</code>.</p>
+<p>To answer with Ollama instead of echoing, make <code>answer</code> call its chat API:</p>
+<pre><code class="language-js">const model = {
+  async answer(question) {
+    const res = await fetch(&quot;http://localhost:11434/api/chat&quot;, {
+      method: &quot;POST&quot;,
+      headers: { &quot;content-type&quot;: &quot;application/json&quot; },
+      body: JSON.stringify({
+        model: &quot;llama3.2&quot;,
+        stream: false,
+        options: { num_predict: 150 },
+        messages: [
+          { role: &quot;system&quot;, content: &quot;You answer clinic questions sent from basic phones. Plain text, at most 2 short sentences.&quot; },
+          { role: &quot;user&quot;, content: question },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`Ollama answered ${res.status}`);
+    return (await res.json()).message.content.trim();
+  },
+};
+</code></pre>
+<p>Keep answers short: a long answer is split across USSD screens, which is
+fine, but an SMS reply over 4 segments is an error, never cut. The example&#39;s
+<a href="https://github.com/utachicodes/kalangu/blob/main/examples/clinic/src/ollama.ts" rel="noopener"><code>ollama.ts</code></a> shortens to fit, strips
+formatting, and apologises when Ollama is down. Ollama must be reachable
+from wherever the agent runs, so not from a serverless host unless you expose
+it.</p>
 <h2 id="4-put-it-on-a-real-gateway">4. Put it on a real gateway<a class="anchor" href="#4-put-it-on-a-real-gateway" aria-label="Link to this section">#</a></h2>
 <p>Add the Africa&#39;s Talking channels and serve the agent:</p>
 <pre><code class="language-sh">npm install @kalangu/ussd @kalangu/sms

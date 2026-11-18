@@ -83,6 +83,9 @@ serves:
 | `/sms/delivery` | SMS delivery reports |
 
 `AT_SANDBOX=1` makes the SMS adapter use `api.sandbox.africastalking.com`.
+Add `OLLAMA_MODEL=llama3.2` to have a local [Ollama](https://ollama.com)
+model answer instead of the fake nurse (the server prints which nurse it
+uses).
 Leave `AT_SENDER_ID` unset in the sandbox unless you create a short code for
 it (step 7).
 
