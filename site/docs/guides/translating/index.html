@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Translating Kalangu · Kalangu</title>
+<meta name="description" content="Kalangu&amp;#39;s fixed strings (the &amp;quot;Yes&amp;quot;, &amp;quot;Invalid choice&amp;quot;, payment messages and so on) can be translated by anyone who speaks the language, w">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/" aria-current="page">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="translating-kalangu">Translating Kalangu</h1>
+<p>Kalangu&#39;s fixed strings (the &quot;Yes&quot;, &quot;Invalid choice&quot;, payment messages and so
+on) can be translated by anyone who speaks the language, with no code. See
+the <a href="/docs/design/languages/">languages design</a> §8 and §9 for the why.</p>
+<h2 id="steps">Steps<a class="anchor" href="#steps" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><p>Copy the English messages from <code>packages/core/src/locales.ts</code> (the <code>en</code>
+object) into a JSON file named for the language, e.g. <code>wo.json</code>, and
+translate the values. Keep the keys exactly. You may translate only some:
+anything missing falls back to the default language.</p>
+</li>
+<li><p>Keep every <code>{placeholder}</code> exactly as written: the program fills it in
+(<code>{amount}</code>, <code>{yes}</code>). You can move it within the sentence.</p>
+</li>
+<li><p>Run the checker from the repository root:</p>
+<pre><code>pnpm build
+node packages/core/dist/cli.js locale check wo.json --verbose
+</code></pre>
+<p>Outside the repository, the same checker comes with the published
+package: <code>npm install @kalangu/core</code>, then
+<code>npx kalangu locale check wo.json --verbose</code>.</p>
+<p>It reports lost or invented placeholders (errors), strings that will take
+more than one USSD screen or SMS segment, and the letters USSD shows
+differently. <code>--complete</code> makes a missing message an error, and <code>--strict</code>
+makes warnings fail.</p>
+</li>
+<li><p><strong>Mind the channels.</strong> USSD shows plain ASCII, so Wolof <code>ë</code>, <code>ŋ</code> and <code>ó</code>
+and Hausa <code>ɓ</code>, <code>ɗ</code> and <code>ƙ</code> appear as <code>e</code>, <code>ng</code>, <code>o</code> and <code>b</code>, <code>d</code>, <code>k</code>. If
+that makes a word ambiguous, choose a wording that survives it. On SMS one
+such letter makes the whole message UCS-2, 70 characters per segment
+instead of 160. The checker lists both, so you can judge.</p>
+</li>
+<li><p>Open a pull request. A translation is marked <strong>reviewed</strong> only when a
+speaker of that language other than the author has checked it, and the file
+says who; until then it ships as <strong>experimental</strong>.</p>
+</li>
+</ol>
+<h2 id="starting-from-a-machine-draft">Starting from a machine draft<a class="anchor" href="#starting-from-a-machine-draft" aria-label="Link to this section">#</a></h2>
+<p>If no speaker is at hand to write the first
+version, <code>scripts/translate-locale.mjs</code> asks Gemini for a draft and runs the
+checker on it:</p>
+<pre><code>pnpm build
+export GEMINI_API_KEY=...   # your own key; never paste it into a chat, issue or commit
+node scripts/translate-locale.mjs wo --name Wolof --reference fr
+</code></pre>
+<p>It writes <code>locales/wo.draft.json</code>, marked as an unreviewed machine draft, and
+sends Google only Kalangu&#39;s fixed strings. Models are much weaker in Wolof,
+Hausa and other African languages than their fluent output suggests, so a
+draft is a starting point for a native speaker, never a translation to ship
+as it is. <code>--dry-run</code> shows the request without sending anything.</p>
+<h2 id="your-agent39s-own-text">Your agent&#39;s own text<a class="anchor" href="#your-agent39s-own-text" aria-label="Link to this section">#</a></h2>
+<p>Agent content (menu titles, answers) is the developer&#39;s own and lives in the
+agent definition as <code>{ en: &quot;...&quot;, wo: &quot;...&quot; }</code>, not in these files.</p>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/translating.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/translating.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#steps">Steps</a></li><li><a href="#starting-from-a-machine-draft">Starting from a machine draft</a></li><li><a href="#your-agent39s-own-text">Your agent&#39;s own text</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

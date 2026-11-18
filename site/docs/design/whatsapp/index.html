@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalangu — 0.4 WhatsApp adapter design · Kalangu</title>
+<meta name="description" content="Status: draft for review. No WhatsApp code exists. Date: 2026-11-17. Scope: a @kalangu/whatsapp channel for the WhatsApp Cloud API (Meta&amp;#39;s own hosted API), ">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/" aria-current="page">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="kalangu--04-whatsapp-adapter-design">Kalangu — 0.4 WhatsApp adapter design</h1>
+<p>Status: <strong>draft for review. No WhatsApp code exists.</strong>
+Date: 2026-11-17. Scope: a <code>@kalangu/whatsapp</code> channel for the WhatsApp
+Cloud API (Meta&#39;s own hosted API), so the same agent that answers on USSD and
+SMS answers on WhatsApp. Business solution providers&#39; wrappers, templates,
+marketing, calling and Flows are out of scope (§11). Payments over WhatsApp
+are out of scope for 0.4 (§9).</p>
+<hr>
+<h2 id="1-what-this-is">1. What this is<a class="anchor" href="#1-what-this-is" aria-label="Link to this section">#</a></h2>
+<blockquote>
+<p>A user messages the clinic&#39;s WhatsApp number. The agent answers with the
+same menus, as tappable buttons or a list instead of numbers to type. A
+slow model answer needs no &quot;we&#39;ll text you&quot; screen: there is no live
+session to keep alive, so the reply simply arrives when it is ready.</p>
+</blockquote>
+<p>WhatsApp is the easiest channel for the engine in one way and the hardest in
+three:</p>
+<ul>
+<li><strong>Easier:</strong> no 10-second deadline, no 160-character screen, no character
+restrictions (accents and emoji are fine), and a real interactive UI.</li>
+<li><strong>Harder:</strong> the user&#39;s identity may not be a phone number (§3), replies
+outside a 24-hour window need a pre-approved template and every reply costs
+money (§4), and old buttons stay tappable forever (§6).</li>
+</ul>
+<hr>
+<h2 id="2-meta-facts-read-17-nov-2026">2. Meta facts (read 17 Nov 2026)<a class="anchor" href="#2-meta-facts-read-17-nov-2026" aria-label="Link to this section">#</a></h2>
+<p>Sources, all on <code>developers.facebook.com</code>: the WhatsApp Cloud API <em>Get
+started</em>, <em>Business-scoped user IDs</em>, <em>Service messages</em>, <em>Text messages</em>,
+<em>Interactive list messages</em>, <em>Interactive reply buttons messages</em> and
+<em>Upcoming pricing updates for Meta Business Agent, service and utility
+messages</em> pages, plus <em>Webhooks from Meta: Getting started</em> from the Graph
+API docs. Several of these pages carry no date. <strong>Treat every number as
+&quot;as read on 17 Nov 2026&quot; and check Meta&#39;s changelog before building;</strong>
+§12 lists what only a real test number can confirm.</p>
+<h3 id="21-sending">2.1 Sending<a class="anchor" href="#21-sending" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><code>POST https://graph.facebook.com/v23.0/&lt;PHONE_NUMBER_ID&gt;/messages</code> with
+<code>Authorization: Bearer &lt;system user token&gt;</code> and a JSON body:
+<code>messaging_product: &quot;whatsapp&quot;</code>, <code>recipient_type: &quot;individual&quot;</code>, <code>to</code>,
+<code>type</code>, and the type&#39;s object. <code>v23.0</code> is what the page showed; the
+version must be configurable.</li>
+<li>A long-lived token comes from a <strong>system user</strong> with the
+<code>whatsapp_business_messaging</code> and <code>whatsapp_business_management</code>
+permissions (and <code>business_management</code>). The temporary token from the
+dashboard expires quickly.</li>
+<li>The API response only confirms the request was <strong>accepted</strong>, not that the
+message was delivered. Delivery arrives later as a status webhook
+(<code>sent</code>, <code>delivered</code>, <code>read</code>, or <code>failed</code>).</li>
+<li><strong>Ordering is not guaranteed</strong>: delivery order may differ from request
+order. Meta&#39;s advice is to wait for <code>delivered</code> before sending the next
+message when order matters.</li>
+<li>Text body: <strong>4096 characters</strong> maximum. The page does not say what
+happens beyond that.</li>
+<li><code>preview_url: true</code> asks the client to render a link preview for the first
+URL. URLs are hyperlinked either way.</li>
+</ul>
+<h3 id="22-interactive-messages">2.2 Interactive messages<a class="anchor" href="#22-interactive-messages" aria-label="Link to this section">#</a></h3>
+<div class="table"><table>
+<thead>
+<tr>
+<th></th>
+<th>Reply buttons</th>
+<th>List</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Choices</td>
+<td>up to <strong>3</strong></td>
+<td>up to <strong>10</strong> rows, in 1–10 sections</td>
+</tr>
+<tr>
+<td>Choice label</td>
+<td>20 chars (<code>reply.title</code>, unique)</td>
+<td>row title 24 chars, optional description 72</td>
+</tr>
+<tr>
+<td>Choice id</td>
+<td>256 chars</td>
+<td>200 chars</td>
+</tr>
+<tr>
+<td>Body</td>
+<td>1024 chars</td>
+<td>4096 chars (see note)</td>
+</tr>
+<tr>
+<td>Other</td>
+<td>optional header (text, image, video, document), footer 60</td>
+<td>button label 20, header 60 (text only), footer 60, section title 24</td>
+</tr>
+</tbody></table></div>
+<p>Note: the list page says 4096 for the body; a search summary of Meta&#39;s
+messages reference said 1024. The fetched list page is what the table shows;
+this stays on the verify list (§12) and the renderer assumes the stricter
+<strong>1024</strong> until then.</p>
+<p>The user&#39;s tap arrives as a <code>messages</code> webhook whose message has
+<code>interactive.type</code> of <code>button_reply</code> (<code>id</code>, <code>title</code>) or <code>list_reply</code> (<code>id</code>,
+<code>title</code>, <code>description</code>). Neither page says whether these can be sent outside
+the 24-hour window; the design only sends them as replies (§4).</p>
+<h3 id="23-the-24-hour-window-and-cost">2.3 The 24-hour window and cost<a class="anchor" href="#23-the-24-hour-window-and-cost" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>A <strong>customer service window</strong> opens when the user messages the business
+and resets with each user message. Non-template messages can only be sent
+while it is open. After that only a pre-approved <strong>template</strong> goes out.</li>
+<li>Meta&#39;s pricing page says service messages inside the window &quot;have not been
+charged since November 1, 2024&quot; and that <strong>from 1 October 2026 Meta
+charges per message for all service messages</strong>, at the same per-market
+rate as utility messages, with no volume tiers. It also says businesses
+without a payment method on file by 30 September 2026 have service message
+delivery stopped from 1 October.</li>
+<li>The only per-country rate on that page is Brazil (0.68 US cents per
+utility or authentication message, 1 July 2026). <strong>Rates for Kenya,
+Senegal, Nigeria and other target markets were not on the pages I read.</strong>
+Every reply the agent sends is, in principle, billable (§12, item 4).</li>
+</ul>
+<h3 id="24-identity-business-scoped-user-ids-bsuids">2.4 Identity: business-scoped user IDs (BSUIDs)<a class="anchor" href="#24-identity-business-scoped-user-ids-bsuids" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>WhatsApp is rolling out <strong>usernames</strong> gradually from 2026. A user with a
+username may hide their phone number. Per Meta&#39;s page, BSUIDs began
+appearing in webhooks in April 2026, and sending to a BSUID is supported from
+July 2026.</li>
+<li>A BSUID looks like <code>US.13491208655302741918</code>: a two-letter country code, a
+dot, up to 128 alphanumeric characters. It is specific to one business
+portfolio and <strong>regenerates when the user changes their phone number</strong>.
+A parent BSUID (<code>US.ENT.…</code>) exists too, when enabled.</li>
+<li>For a user <strong>with</strong> a username, the phone number is left out of webhooks
+unless one of these holds: the business messaged or called that number in
+the last 30 days, received a message or call from it in the last 30 days,
+or the user is in the business&#39;s contact book. The conditions are
+evaluated per business phone number.</li>
+<li>In an incoming message webhook: <code>wa_id</code> is always present for a user
+<strong>without</strong> a username and only present with a username when a phone is
+available. <code>user_id</code> / <code>from_user_id</code> (the BSUID) are always present.
+<code>username</code> appears when set.</li>
+<li>Sending: set <code>to</code> (phone) <strong>or</strong> <code>recipient</code> (BSUID); if both are set,
+<code>to</code> wins. BSUIDs cannot be used for some authentication templates.</li>
+<li>Two system messages announce a change: <code>user_changed_number</code> (new phone
+shareable; carries the new and previous BSUID) and <code>user_changed_user_id</code>
+(no phone shareable; carries both BSUIDs, usually no <code>wa_id</code>).</li>
+<li>A business can ask the user for their number with a <code>REQUEST_CONTACT_INFO</code>
+button; tapping it delivers a contacts webhook with the number. A user can
+also share a contact card.</li>
+<li>Meta says supporting BSUIDs &quot;is required for all partners and
+directly-integrated businesses&quot; but gave no deadline on the pages read.</li>
+</ul>
+<h3 id="25-webhooks">2.5 Webhooks<a class="anchor" href="#25-webhooks" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Setup:</strong> Meta sends <code>GET</code> with <code>hub.mode=subscribe</code>, <code>hub.challenge</code> and
+<code>hub.verify_token</code>; the endpoint checks the token and answers with the
+challenge. The endpoint must serve valid HTTPS (no self-signed
+certificates) before fields can be subscribed.</li>
+<li><strong>Signing:</strong> every event <code>POST</code> carries <code>X-Hub-Signature-256: sha256=&lt;hex&gt;</code>, an HMAC-SHA256 of the payload keyed with the <strong>app
+secret</strong>. Meta calls validation &quot;recommended but not required&quot;. The Graph
+page does not say whether the HMAC covers the raw bytes; a community
+thread reports WhatsApp-specific mismatches with code that works for
+Facebook and Instagram, with no confirmed cause (§12, item 1). During a
+secret reset, signatures from the old and new secrets are both accepted
+for a period.</li>
+<li><strong>Delivery:</strong> answer <code>200</code>. On failure Meta retries immediately and then
+with decreasing frequency for <strong>36 hours</strong>, then drops the update.
+<strong>Duplicates are possible</strong>; Meta tells you to deduplicate. A request can
+batch up to <strong>1000</strong> updates, and nothing is said about ordering. History
+cannot be queried afterwards.</li>
+<li>Payload shape: <code>object: &quot;whatsapp_business_account&quot;</code>, an <code>entry</code> array,
+and <code>metadata.phone_number_id</code> (which of your numbers received it).
+Incoming messages and outgoing status updates both arrive as <code>messages</code>
+webhooks.</li>
+</ul>
+<hr>
+<h2 id="3-the-identity-problem">3. The identity problem<a class="anchor" href="#3-the-identity-problem" aria-label="Link to this section">#</a></h2>
+<p>Every layer of Kalangu keys on a phone number: sessions are keyed by it,
+deferral and payment outcomes are texted to it, the payment policy limits
+count per phone, and pawaPay needs it as the payer&#39;s MSISDN. Africa&#39;s
+Talking always supplies one. WhatsApp may not (§2.4).</p>
+<p><strong>Proposal:</strong></p>
+<ul>
+<li>The adapter builds the engine&#39;s user key as: the phone in E.164 form with
+a leading <code>+</code> when <code>wa_id</code> is present (the same key USSD and SMS use, so a
+person who appears on both channels is one person); otherwise the BSUID
+as given. A key that does not start with <code>+</code> is, by definition, &quot;no phone
+known&quot;.</li>
+<li><strong>Logging masks BSUIDs like phone numbers.</strong> They identify a person.</li>
+<li><strong>No cross-linking in the first slice.</strong> A user who has both a username and
+a phone-less BSUID is a separate session from their USSD self. An alias
+store (BSUID to phone, filled whenever a webhook carries both, and updated
+on <code>user_changed_number</code>) can come later; it needs a durable store and
+decisions about merging sessions (§14, decision 1).</li>
+<li><strong><code>user_changed_number</code> and <code>user_changed_user_id</code></strong> must be handled, or a
+user&#39;s session and history silently orphan when they change phone. First
+slice: log it, move the stored session to the new key when both keys are
+known, otherwise start fresh.</li>
+<li><strong>Anything that needs a phone refuses cleanly without one.</strong> SMS fallback
+(§8) is skipped, and a <code>pay</code> step refuses cleanly (§9).</li>
+</ul>
+<p>Engine change: none beyond treating the key as an opaque string. <code>phone</code> in
+<code>InboundEvent</code> keeps its name for compatibility and is documented as &quot;the
+user key&quot;.</p>
+<hr>
+<h2 id="4-the-window-and-what-a-reply-costs">4. The window and what a reply costs<a class="anchor" href="#4-the-window-and-what-a-reply-costs" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>The adapter only ever sends <strong>replies inside an open window</strong>: a turn&#39;s
+output is sent in response to a user message, so the window is open by
+construction.</li>
+<li><strong>Cost model for developers.</strong> Each outbound message is billable from
+1 October 2026 (§2.3), so the adapter sends <strong>exactly one message per
+turn</strong>, as SMS already does. It never sends &quot;typing…&quot; text, never splits a
+long answer when it fits in 4096 characters, and never sends a separate
+receipt unless the agent says to. The README must say replies cost money
+and link Meta&#39;s rate card, not promise a number.</li>
+<li><strong>Late messages</strong> (a deferred answer, a payment outcome hours later) may
+arrive after the window closed. See §8.</li>
+</ul>
+<hr>
+<h2 id="5-rendering-turns">5. Rendering turns<a class="anchor" href="#5-rendering-turns" aria-label="Link to this section">#</a></h2>
+<p>A new channel kind, <code>whatsapp</code>, with a renderer beside <code>renderUssd</code> and
+<code>renderSms</code>. No transliteration and no character budget beyond the limits
+below: <code>toUssdSafe</code> does not apply.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Turn</th>
+<th>WhatsApp output</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>say</code></td>
+<td>text body, 4096 max; the conversation continues at the start step on the next message (like SMS)</td>
+</tr>
+<tr>
+<td><code>ask</code></td>
+<td>text body (the question); the user types the answer</td>
+</tr>
+<tr>
+<td><code>confirm</code></td>
+<td><strong>reply buttons</strong>, two: yes and no (labels ≤ 20)</td>
+</tr>
+<tr>
+<td><code>choose</code></td>
+<td>≤ 3 options with every label ≤ 20: <strong>reply buttons</strong>. ≤ 10 options with every label ≤ 24: <strong>list</strong>. Otherwise a <strong>numbered text list</strong>, answered by typing the number, as on SMS</td>
+</tr>
+<tr>
+<td><code>pay</code></td>
+<td>not rendered in 0.4 (§9)</td>
+</tr>
+</tbody></table></div>
+<p>Rules:</p>
+<ul>
+<li><strong>Never truncate a label.</strong> If a label is too long for a button or row,
+the whole turn falls back to the next form, ending at numbered text. A
+silently shortened &quot;Pay consultation fee&quot; is how a user taps the wrong
+thing.</li>
+<li>A <code>choose</code> question becomes the body. If there is none, the body is a
+localized &quot;Choose an option&quot; (the API requires a body; verify, §12).</li>
+<li>A body over <strong>1024</strong> characters on a buttons or list message falls back to
+numbered text (which allows 4096). A <code>say</code> over 4096 is a developer-visible
+<code>BudgetError</code>, never a silent cut, matching the SMS policy (§5.3 of
+<code>design.md</code>). It is not split, because Meta does not guarantee delivery
+order.</li>
+<li>A user can always <strong>type</strong> instead of tapping: <code>2</code>, or the label&#39;s text.
+The existing <code>interpret</code> already reads both.</li>
+<li><strong>Messages the adapter cannot answer</strong> (voice notes, images, locations,
+stickers, contacts without a prompt) get one localized &quot;please send text&quot;
+reply and do not reach the agent.</li>
+</ul>
+<hr>
+<h2 id="6-stale-taps">6. Stale taps<a class="anchor" href="#6-stale-taps" aria-label="Link to this section">#</a></h2>
+<p>On USSD the user can only answer what is on screen. On WhatsApp a button
+from an hour-old message is still tappable, so a tap can arrive for a turn
+that is no longer current. Mapped naively to &quot;option 1 of the current turn&quot;,
+an old <strong>Yes</strong> could confirm a different question, and for a <code>pay</code> step that
+means money.</p>
+<p><strong>Proposal:</strong> a per-turn token, <code>turnId</code>, stored on the session and new each
+time a turn is displayed. Button and row ids carry it: <code>&lt;id&gt;.&lt;n&gt;</code> (for
+example <code>1204873611.2</code>). The adapter passes it on the <code>InboundEvent</code>; the
+engine compares it to the stored <code>turnId</code>.</p>
+<ul>
+<li>Equal: the tap is <code>n</code>, as if typed.</li>
+<li>Different: the engine answers with a localized &quot;That choice has expired&quot;
+and shows the current turn again. Nothing runs.</li>
+</ul>
+<p>The token is <strong>random, not a counter</strong>. A counter was the first draft and
+failed review twice: a session that is cleared (or an in-memory store that
+restarts) starts counting again, so an old button numbered 1 would pass the
+check against the new session&#39;s turn 1; and two requests that both read the
+same session and render different turns at the same moment would both
+produce &quot;turn 2&quot;, so a Yes tapped on one confirmation could start the
+payment named on the other. A random 31-bit token has neither problem: a new
+session cannot collide with an old one, and two concurrent renders get
+different tokens, so whichever turn the session ends up on is the only one
+whose buttons work.</p>
+<p>This is a small engine change (a token on <code>SessionRecord</code>, one optional
+field on <code>InboundEvent</code>, one message key) and it also protects any future
+adapter with tappable history.</p>
+<p><strong>As built in core (17 Nov 2026).</strong> <code>SessionRecord.turnId</code> (a session
+stored before it exists reads as 0, which no turn ever has), <code>InboundEvent.turnId</code>,
+and <code>RenderContext.turnId</code>, which hands a channel&#39;s renderer the current value
+to put in its ids. The token changes when a <strong>new</strong> turn is shown and not when
+the same turn is shown again, so a typed mistake that re-sends the question
+does not expire the buttons on it. Any other token, whether from an earlier
+turn, another session or a concurrent request, shows
+the current turn again with <code>common.expiredChoice</code> (&quot;That choice has
+expired.&quot;, <code>en</code> and <code>fr</code>) and runs nothing, including a <code>pay</code> confirm. With
+no current turn it shows the start step. The engine does not expose the
+token on <code>Outcome</code>: the renderer already receives it, and an <code>Outcome</code> only
+carries rendered text. Typed answers are unaffected: a user typing
+&quot;1&quot; means whatever is on screen now, as on SMS.</p>
+<hr>
+<h2 id="7-webhook-handling">7. Webhook handling<a class="anchor" href="#7-webhook-handling" aria-label="Link to this section">#</a></h2>
+<p><code>@kalangu/whatsapp</code> exposes a route like the other adapters
+(<code>agent.requestHandler</code> dispatches by path). All of this uses only Web
+Crypto and <code>fetch</code>, so core keeps zero runtime dependencies.</p>
+<ul>
+<li><strong><code>GET</code> (verification):</strong> compare <code>hub.verify_token</code> and answer
+<code>hub.challenge</code> as text/plain; otherwise <code>403</code>.</li>
+<li><strong><code>POST</code> signature:</strong> <code>appSecret</code> is <strong>required by default</strong>. The adapter
+computes the HMAC-SHA256 over the <strong>raw request bytes</strong> (read before any
+JSON parsing) and verifies it against the header after <code>sha256=</code> with
+Web Crypto&#39;s HMAC <code>verify</code>, not a hand-written string compare. <code>appSecret</code> accepts
+an array so a secret rotation does not drop traffic. A missing or wrong
+signature gets <code>401</code> and is logged with no payload. Opting out needs an
+explicit <code>unsafeSkipSignatureCheck: true</code> that logs a warning at startup;
+Meta&#39;s &quot;recommended&quot; is not good enough for an endpoint that can start a
+payment. Unlike Africa&#39;s Talking, WhatsApp has a signature, so unlike
+<code>design.md</code> §12 question 5 there is something to verify.</li>
+<li><strong>Acknowledge fast, process after.</strong> Verify and parse, answer <code>200</code>, and do
+the work through <code>agent.background</code>, because a slow model call must not
+trigger Meta&#39;s retries. Meta&#39;s acknowledgement timeout is not stated on the
+pages read (§12, item 2). The cost is that a crash after the <code>200</code> loses
+that message; the user&#39;s next message recovers, and the failure is logged.
+Acknowledging only after a durable enqueue is <strong>not</strong> possible today:
+<code>BackgroundWork.run</code> returns nothing, so the route cannot wait for an
+enqueue to finish before it answers <code>200</code>. It would need an awaitable
+enqueue, a change to core that has not been made. Until it is, a crash
+after the <code>200</code> can lose the message.</li>
+<li><strong>Deduplicate</strong> on the inbound message <code>id</code> with a <code>DedupeStore</code>
+(<code>seen(id): Promise&lt;boolean&gt;</code> with a TTL of at least 36 hours, since
+that is how long Meta retries). The in-memory default is for development;
+serverless needs a durable one, and the README says so, as it does for
+sessions. A duplicate gets <code>200</code> and nothing else.</li>
+<li><strong>Batches:</strong> process every <code>entry</code> and <code>change</code>. Updates for <strong>one user are
+handled one at a time</strong> in arrival order, and different users may run in
+parallel. Meta promises no ordering inside or across requests, so the
+adapter sorts one user&#39;s messages in a batch by their <code>timestamp</code> and
+documents that two messages sent within the same second can swap.</li>
+<li><strong>Status webhooks</strong> (<code>sent</code>, <code>delivered</code>, <code>read</code>, <code>failed</code>) never reach the
+agent. <code>failed</code> is logged with Meta&#39;s error and exposed to an optional
+<code>onDeliveryFailed</code> callback (§8). The others are debug logs.</li>
+<li><strong>Which number:</strong> <code>metadata.phone_number_id</code> must match the configured one;
+anything else is ignored and logged, since one app can serve several
+numbers.</li>
+<li>Always <code>200</code> for a verified, well-formed request, even if the engine later
+fails; an internal error becomes the localized apology to the user, as on
+the other channels.</li>
+</ul>
+<hr>
+<h2 id="8-sending-and-replies-that-miss-the-window">8. Sending, and replies that miss the window<a class="anchor" href="#8-sending-and-replies-that-miss-the-window" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-ts">whatsapp({
+  phoneNumberId: &quot;…&quot;,
+  accessToken: process.env.WHATSAPP_TOKEN,
+  appSecret: process.env.WHATSAPP_APP_SECRET,   // or [current, previous]
+  verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
+  path: &quot;/whatsapp&quot;,
+  graphVersion: &quot;v23.0&quot;,                        // configurable
+})
+</code></pre>
+<ul>
+<li>A transport seam like the SMS adapter&#39;s: the default uses <code>fetch</code>; tests and
+alternative hosts replace it.</li>
+<li><strong>Outbound failures:</strong> HTTP errors are surfaced with Meta&#39;s error code and
+message. A <code>4xx</code> is never retried. <strong>A send is retried only when Meta
+cannot have accepted it</strong>: the connection failed before the request went
+out, or the response proves a rejection. Meta documents no idempotency key
+for the messages endpoint, so a timeout or <code>5xx</code> <em>after</em> the request went
+out is ambiguous: Meta may have accepted and sent the message, and sending
+again would deliver a second, billable copy with a new message id. Those
+are not resent. They are logged as &quot;outcome unknown&quot; and settled by the
+status webhooks (<code>sent</code>, <code>delivered</code>, <code>failed</code>). Whether a send can carry
+our own correlation data that comes back on the status webhook, so an
+unknown outcome can be matched to its message, is unverified (§12, item
+11). A message can still fail later (status <code>failed</code>), so &quot;accepted&quot; is
+never logged as &quot;delivered&quot;.</li>
+<li><strong>One message per turn</strong>, so a single turn never reorders its own messages
+(§2.1). Delivery order across turns is not guaranteed, so a later turn&#39;s
+message can arrive before an earlier one. A typed answer is always read
+against what is on screen now (§6).</li>
+<li><strong>A deferred answer or payment outcome has no deadline to miss on
+WhatsApp</strong>, but it can arrive after the window closed, for example a
+payment that settles the next day. The engine currently sends those through
+the SMS channel only. <strong>Proposal:</strong> a <code>deliveryChannel(record)</code> choice: the
+channel the user last wrote on, if it is WhatsApp and its window is still
+open (the session records the time of the last inbound WhatsApp message);
+otherwise SMS, when a phone number is known; otherwise nothing is sent,
+an error is logged, and the outcome stays in the payment store for the
+developer. Sending a template instead is out of scope for 0.4 (§11).</li>
+<li><code>onDeliveryFailed(event)</code> lets a developer fall back to SMS themselves
+when WhatsApp reports <code>failed</code>.</li>
+</ul>
+<hr>
+<h2 id="9-payments-over-whatsapp">9. Payments over WhatsApp<a class="anchor" href="#9-payments-over-whatsapp" aria-label="Link to this section">#</a></h2>
+<p><strong>Not in 0.4.</strong> A <code>pay</code> step on a WhatsApp conversation refuses with a
+localized &quot;payments are not available here&quot; until these are settled:</p>
+<ol>
+<li>pawaPay needs the payer&#39;s phone number (MSISDN), and a BSUID-only user
+has none (§3). The user must supply it through <code>REQUEST_CONTACT_INFO</code> or
+a typed number, and the agent must show it back for confirmation.</li>
+<li>The stale-tap protection (§6) must exist and be tested for the confirm
+buttons, since money depends on it.</li>
+<li>The PIN prompt is on the user&#39;s phone either way, so §3 of
+<code>payments-design.md</code> (end the session first) does not apply, but &quot;never
+the PIN&quot; (§8 there) applies unchanged.</li>
+</ol>
+<p>Revisit after the payments package has run against a sandbox.</p>
+<hr>
+<h2 id="10-packages-and-engine-changes">10. Packages and engine changes<a class="anchor" href="#10-packages-and-engine-changes" aria-label="Link to this section">#</a></h2>
+<pre><code>packages/whatsapp   @kalangu/whatsapp: the channel, the webhook route,
+                    signature check, deduplication, the Graph transport
+packages/core       ChannelKind gains &quot;whatsapp&quot;; renderWhatsapp + interpret
+                    for it; turnId and InboundEvent.turnId; the expired-choice
+                    message; deliveryChannel
+packages/sim        a WhatsApp-style simulator view is optional
+</code></pre>
+<p>Core&#39;s engine changes, all small and all testable without Meta:</p>
+<ul>
+<li><code>ChannelKind</code> and <code>TurnContext.channelKind</code> include <code>&quot;whatsapp&quot;</code>.</li>
+<li>A renderer that returns a structured message (text, buttons, or list)
+rather than a string, since a string cannot carry button ids. <code>Rendered</code>
+gains an optional <code>interactive</code> field; channels that do not support it
+ignore it. The text form is always present as the fallback, so a renderer
+bug degrades to numbered text rather than silence.</li>
+<li><code>turnId</code> (§6, settled in §14, decision 9).</li>
+<li>The user key is opaque (§3).</li>
+</ul>
+<hr>
+<h2 id="11-out-of-scope-for-04">11. Out of scope for 0.4<a class="anchor" href="#11-out-of-scope-for-04" aria-label="Link to this section">#</a></h2>
+<p>Template messages (so no way to start a conversation, and no messages after
+the window closes), marketing, WhatsApp Flows, catalogues, calling, groups,
+media in either direction beyond the &quot;please send text&quot; reply, read receipts
+and typing indicators (nice to have, §14, question 8), embedded signup,
+multiple numbers per agent, and other providers&#39; APIs (Twilio, 360dialog and
+similar wrap or differ from the Cloud API; a community adapter can use the
+same renderer).</p>
+<hr>
+<h2 id="12-verify-first-needs-a-meta-test-number-or-a-real-waba">12. Verify first (needs a Meta test number or a real WABA)<a class="anchor" href="#12-verify-first-needs-a-meta-test-number-or-a-real-waba" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><p><strong>Signature on raw bytes.</strong> Does the HMAC match when computed over the
+exact request bytes? A community report says WhatsApp differs from
+Facebook here. Capture real requests, including ones with non-ASCII text
+and emoji, and check; the adapter&#39;s tests must use those fixtures.</p>
+</li>
+<li><p><strong>Acknowledgement timeout and the retry schedule</strong> when we answer slowly.</p>
+</li>
+<li><p><strong>Whether <code>wa_id</code> is present for real users in the target markets</strong> (Kenya,
+Senegal and so on) today, and how often a BSUID arrives alone.</p>
+</li>
+<li><p><strong>What a service message costs in each target market</strong> since 1 October
+2026, and whether a payment method on file is enforced for the sandbox and
+test numbers.</p>
+</li>
+<li><p><strong>Interactive message rules:</strong> whether a body is required, whether the
+list body limit is 1024 or 4096, and whether either type can be sent
+outside the window.</p>
+</li>
+<li><p><strong>Delivery order</strong> for two messages sent quickly, to confirm one message
+per turn is enough.</p>
+</li>
+<li><p><strong>Error code and body for sending outside the window</strong>, so the failure can
+be logged precisely.</p>
+</li>
+<li><p><strong>Typing indicator and mark-as-read</strong> request shapes (the <em>Service
+messages</em> page only described them in passing).</p>
+</li>
+<li><p><strong>Throughput and messaging limits</strong> per number and the quality rating&#39;s
+effect; none of the pages read stated them.</p>
+</li>
+<li><p><strong>That the pages above are current.</strong> Several are undated. Read Meta&#39;s
+WhatsApp changelog and the <em>Business-scoped user IDs</em> section for any
+entry after 5 November 2026 before building.</p>
+</li>
+<li><p><strong>Retrying a send.</strong> Whether a send can carry our own correlation data
+that comes back on the status webhook, and whether a timeout or <code>5xx</code>
+after a send means Meta accepted it or not. Until known, ambiguous
+failures are not resent (§8).</p>
+</li>
+</ol>
+<hr>
+<h2 id="13-testing-plan-priority-order">13. Testing plan (priority order)<a class="anchor" href="#13-testing-plan-priority-order" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>Renderer unit tests:</strong> every turn kind to its output, the label and body
+limit fallbacks, the 1024 and 4096 boundaries, emoji and accents passing
+through untouched, never a truncated label.</li>
+<li><strong>Signature and webhook tests:</strong> valid, wrong, missing and re-encoded
+bodies; secret rotation with two secrets; verification handshake; wrong
+<code>phone_number_id</code>; batches with several users; duplicates; status
+webhooks ignored.</li>
+<li><strong>Identity tests:</strong> <code>wa_id</code> present, BSUID only, both, <code>user_changed_number</code>
+and <code>user_changed_user_id</code>.</li>
+<li><strong>Stale-tap tests (core):</strong> current tap, expired tap, a typed answer, and
+an old Yes after the step changed.</li>
+<li><strong>Fixture tests</strong> against recorded requests, as for USSD and SMS.</li>
+<li><strong>Delivery tests:</strong> window open, closed with a phone, closed without.</li>
+<li>A manual run against a Meta test number once §12 is done.</li>
+</ol>
+<hr>
+<h2 id="14-decisions-and-open-questions">14. Decisions and open questions<a class="anchor" href="#14-decisions-and-open-questions" aria-label="Link to this section">#</a></h2>
+<h3 id="decisions-17-nov-2026">Decisions (17 Nov 2026)<a class="anchor" href="#decisions-17-nov-2026" aria-label="Link to this section">#</a></h3>
+<p><strong>1. Identity key: the phone when present, otherwise the BSUID. No alias
+store in the first slice.</strong></p>
+<ul>
+<li>The key is <code>+&lt;wa_id&gt;</code> when <code>wa_id</code> is present, else the BSUID as given. A
+key that does not start with <code>+</code> means &quot;no phone known&quot; everywhere
+(§3): SMS fallback is skipped, and <code>pay</code> refuses.</li>
+<li>When a webhook carries both <code>wa_id</code> and a BSUID, nothing is stored about
+the pairing. The session lives under the phone key.</li>
+<li><code>user_changed_number</code> and <code>user_changed_user_id</code> move the stored session to
+the new key when both the old and new keys are known to the adapter from
+that one webhook, and otherwise start the user fresh, logging that they
+did.</li>
+<li><strong>Why not the alias store now:</strong> it needs a durable store of its own and
+rules for merging two sessions that both have state, and we do not yet know
+how common a phone-less BSUID is in the target markets (§12, item 3). The
+first slice is correct without it, only less continuous for users who hide
+their number.</li>
+<li><strong>Revisit when</strong> the test-number work shows phone-less BSUIDs are common for
+your users, or the first user reports a lost session after changing phone.
+The key stays an opaque string, so adding an alias lookup later changes the
+adapter and nothing in core.</li>
+</ul>
+<p><strong>9. Stale-tap protection goes into core now, not only into the WhatsApp
+package.</strong></p>
+<ul>
+<li>It is a property of the engine, not of one channel: any adapter with
+tappable history needs it, and the check has to compare against the stored
+session, which only the engine can read. An adapter-only version would
+need its own session lookup and could disagree with the engine.</li>
+<li><strong>What changes in core:</strong> an optional <code>turnId</code> on <code>SessionRecord</code> (a
+session stored before it exists reads as 0), an optional <code>turnId</code> on
+<code>InboundEvent</code>, the comparison in the engine, a <code>common.expiredChoice</code>
+message in <code>en</code> and <code>fr</code>, and tests. USSD and SMS never set the field and
+are unaffected.</li>
+<li><strong>A random token, not a counter</strong> (revised after review, §6): a counter
+restarts with a cleared session and repeats across concurrent renders, so
+an old or other-session button could pass the check.</li>
+<li><strong>When the token changes:</strong> when a <strong>new</strong> turn is shown, that is, whenever
+the engine moves to a different step or message. It does <strong>not</strong> change when
+the same turn is shown again (an invalid answer re-shown with a notice, a
+page change). Otherwise tapping a button on the message the user is looking
+at, just after a typed mistake re-sent it, would be refused as expired.
+Buttons from the earlier, identical message stay valid for the same reason.</li>
+<li><strong>A tap with no <code>turnId</code></strong> (an adapter that does not send one) is treated
+as a typed answer, as today.</li>
+<li><strong>An expired tap</strong> shows the current turn again with the localized
+&quot;That choice has expired&quot;, runs no handler, and starts no payment. This is
+required before payments are ever offered over a tappable channel (§9).</li>
+</ul>
+<h3 id="still-open">Still open<a class="anchor" href="#still-open" aria-label="Link to this section">#</a></h3>
+<ol start="2">
+<li><strong>Over-long <code>say</code>.</strong> Error for the developer (recommended, consistent with
+SMS), or paginate with a &quot;More&quot; button?</li>
+<li><strong>Buttons, then list, then numbered text</strong> for <code>choose</code>, never shortening
+labels (recommended). Agree?</li>
+<li><strong>Signature required by default</strong> with an explicit opt-out
+(recommended). Agree, given that Meta calls it optional?</li>
+<li><strong>Acknowledge first, process in the background</strong> (recommended), accepting
+a lost message if the process dies right after the <code>200</code>?</li>
+<li><strong>No payments on WhatsApp in 0.4</strong> (recommended).</li>
+<li><strong>Late messages:</strong> SMS fallback when a phone is known, otherwise log and
+drop (recommended). Or send an approved template, which needs template
+management that is out of scope?</li>
+<li><strong>Typing indicator and read receipts:</strong> later (recommended). They need no
+extra billable message but their request shapes are unverified.</li>
+<li><strong>Package name and pinning:</strong> <code>@kalangu/whatsapp</code>, with <code>graphVersion</code>
+configurable and a default that is bumped deliberately (recommended).</li>
+</ol>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/whatsapp-design.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/whatsapp-design.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-what-this-is">1. What this is</a></li><li><a href="#2-meta-facts-read-17-nov-2026">2. Meta facts (read 17 Nov 2026)</a></li><li><a href="#3-the-identity-problem">3. The identity problem</a></li><li><a href="#4-the-window-and-what-a-reply-costs">4. The window and what a reply costs</a></li><li><a href="#5-rendering-turns">5. Rendering turns</a></li><li><a href="#6-stale-taps">6. Stale taps</a></li><li><a href="#7-webhook-handling">7. Webhook handling</a></li><li><a href="#8-sending-and-replies-that-miss-the-window">8. Sending, and replies that miss the window</a></li><li><a href="#9-payments-over-whatsapp">9. Payments over WhatsApp</a></li><li><a href="#10-packages-and-engine-changes">10. Packages and engine changes</a></li><li><a href="#11-out-of-scope-for-04">11. Out of scope for 0.4</a></li><li><a href="#12-verify-first-needs-a-meta-test-number-or-a-real-waba">12. Verify first (needs a Meta test number or a real WABA)</a></li><li><a href="#13-testing-plan-priority-order">13. Testing plan (priority order)</a></li><li><a href="#14-decisions-and-open-questions">14. Decisions and open questions</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

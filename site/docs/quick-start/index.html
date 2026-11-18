@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick start · Kalangu</title>
+<meta name="description" content="Kalangu builds AI agents that work on any phone, keypad phones included, over USSD and SMS. This page gets you from nothing to an agent you can talk to in a few">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/" aria-current="page">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="quick-start">Quick start</h1>
+<p>Kalangu builds AI agents that work on any phone, keypad phones included, over
+USSD and SMS. This page gets you from nothing to an agent you can talk to in
+a few minutes, with no account and no API key.</p>
+<p>You need Node 20 or later.</p>
+<h2 id="1-see-it-work">1. See it work<a class="anchor" href="#1-see-it-work" aria-label="Link to this section">#</a></h2>
+<p>Clone the repository and run the demo:</p>
+<pre><code class="language-sh">git clone https://github.com/utachicodes/kalangu.git
+cd kalangu
+pnpm install
+pnpm demo
+</code></pre>
+<p>A keypad phone appears in your terminal. Dial <code>*384*1#</code>, choose <code>2</code>, and ask
+a question. The example&#39;s fake nurse takes 6 seconds and the deadline is 4,
+so the screen says the answer will come by SMS, and a couple of seconds later
+it does. <code>x</code> hangs up mid-session (dial again to resume), <code>sms &lt;text&gt;</code> texts
+the agent, <code>q</code> quits.</p>
+<h2 id="2-write-your-first-agent">2. Write your first agent<a class="anchor" href="#2-write-your-first-agent" aria-label="Link to this section">#</a></h2>
+<p>In a new folder:</p>
+<pre><code class="language-sh">npm init -y
+npm pkg set type=module
+npm install @kalangu/core @kalangu/sim
+</code></pre>
+<p>Create <code>agent.mjs</code>:</p>
+<pre><code class="language-js">import { ask, createAgent, menu, say } from &quot;@kalangu/core&quot;;
+
+// Any object can be the model: handlers receive it as ctx.model.
+const model = {
+  async answer(question) {
+    return `You asked: ${question}`;
+  },
+};
+
+export const agent = createAgent({
+  model,
+  channels: [], // the simulator brings its own; real channels come in step 4
+  start: menu(&quot;Clinic line&quot;, {
+    &quot;Opening hours&quot;: say(&quot;Open Monday to Saturday, 8:00 to 18:00.&quot;),
+    &quot;Ask a nurse&quot;: ask(&quot;Type your question&quot;, (question, ctx) =&gt; ctx.model.answer(question)),
+  }),
+});
+</code></pre>
+<h2 id="3-talk-to-it">3. Talk to it<a class="anchor" href="#3-talk-to-it" aria-label="Link to this section">#</a></h2>
+<p>Create <code>try.mjs</code>, which drives the agent with a simulated phone:</p>
+<pre><code class="language-js">import { createPhone } from &quot;@kalangu/sim&quot;;
+import { agent } from &quot;./agent.mjs&quot;;
+
+const phone = createPhone(agent, { code: &quot;*384*1#&quot; });
+
+console.log(await phone.dial(&quot;*384*1#&quot;));
+console.log(await phone.press(&quot;2&quot;));
+console.log(await phone.press(&quot;Is the clinic open on Sunday?&quot;));
+</code></pre>
+<p>Run it with <code>node try.mjs</code>:</p>
+<pre><code class="language-text">{ text: &#39;Clinic line\n1. Opening hours\n2. Ask a nurse&#39;, end: false }
+{ text: &#39;Type your question&#39;, end: false }
+{ text: &#39;You asked: Is the clinic open on Sunday?&#39;, end: true }
+</code></pre>
+<p>Each line is one USSD screen. <code>end: true</code> means the session is over. To use
+the keypad in your terminal instead, run
+<code>import { runTerminal } from &quot;@kalangu/sim&quot;; await runTerminal(agent, { code: &quot;*384*1#&quot; });</code>.</p>
+<h2 id="4-put-it-on-a-real-gateway">4. Put it on a real gateway<a class="anchor" href="#4-put-it-on-a-real-gateway" aria-label="Link to this section">#</a></h2>
+<p>Add the Africa&#39;s Talking channels and serve the agent:</p>
+<pre><code class="language-sh">npm install @kalangu/ussd @kalangu/sms
+</code></pre>
+<pre><code class="language-js">import { africasTalkingSms } from &quot;@kalangu/sms&quot;;
+import { africasTalkingUssd } from &quot;@kalangu/ussd&quot;;
+
+export const agent = createAgent({
+  model,
+  channels: [
+    africasTalkingUssd({ code: &quot;*384*1#&quot;, path: &quot;/ussd&quot; }),
+    africasTalkingSms({ username: &quot;sandbox&quot;, apiKey: process.env.AT_API_KEY, sandbox: true, path: &quot;/sms&quot; }),
+  ],
+  start: /* as before */,
+});
+</code></pre>
+<p><code>agent.requestHandler</code> is a standard <code>Request</code> to <code>Response</code> function, so it
+runs anywhere that serves one: for example <code>Bun.serve({ fetch: agent.requestHandler })</code> or <code>Deno.serve(agent.requestHandler)</code>. For Node&#39;s
+<code>http</code> module, copy the small adapter in
+<a href="https://github.com/utachicodes/kalangu/blob/main/examples/clinic/src/server.ts" rel="noopener"><code>examples/clinic/src/server.ts</code></a>.</p>
+<p>To try it on Africa&#39;s Talking&#39;s free sandbox with their phone simulator,
+follow the <a href="/docs/guides/sandbox/">sandbox guide</a>.</p>
+<h2 id="next">Next<a class="anchor" href="#next" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><a href="/docs/agents/">Agents</a>: steps, handlers, sessions, slow answers, languages,
+and what to set before production.</li>
+<li><a href="/docs/guides/sandbox/">Guides</a>: the sandbox, translating Kalangu, releasing.</li>
+<li><a href="/docs/design/">Design</a>: why it works the way it does.</li>
+</ul>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/quick-start.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/quick-start.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-see-it-work">1. See it work</a></li><li><a href="#2-write-your-first-agent">2. Write your first agent</a></li><li><a href="#3-talk-to-it">3. Talk to it</a></li><li><a href="#4-put-it-on-a-real-gateway">4. Put it on a real gateway</a></li><li><a href="#next">Next</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

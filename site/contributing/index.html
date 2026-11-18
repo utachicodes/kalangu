@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contributing · Kalangu</title>
+<meta name="description" content="Kalangu&amp;#39;s packages are published on npm as alpha releases (see RELEASING.md for how a release is made). Reviewing docs/design.md is still the most useful co">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/">Docs</a>
+    <a href="/contributing/" aria-current="true">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/" aria-current="page">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="contributing">Contributing</h1>
+<p>Kalangu&#39;s packages are published on npm as alpha releases (see
+<a href="/docs/guides/releasing/">RELEASING.md</a> for how a release is made). Reviewing
+<a href="/docs/design/">docs/design.md</a> is still the most useful contribution;
+code contributions are welcome too.</p>
+<h2 id="reviewing-the-design">Reviewing the design<a class="anchor" href="#reviewing-the-design" aria-label="Link to this section">#</a></h2>
+<ol>
+<li>Read <a href="/docs/design/">docs/design.md</a> end to end. It is deliberately
+honest about what was verified against official documentation (§2) and
+what still rests on secondary sources (§2.5).</li>
+<li>Answer or challenge the open questions in §12 — they decide defaults.</li>
+<li>If you run USSD services in production, say so; operator-specific reality
+(timeouts, screen limits, auto-pagination behaviour) beats published
+figures.</li>
+<li>Open an issue, or comment inline on the document. Arguments for a better
+design are always welcome — the brief for this project explicitly asks
+for that over workarounds.</li>
+</ol>
+<h2 id="working-on-the-docs">Working on the docs<a class="anchor" href="#working-on-the-docs" aria-label="Link to this section">#</a></h2>
+<p>The documentation on the website (<code>/docs/</code> and <code>/contributing/</code>) is generated
+from the markdown in this repository: <code>docs/*.md</code>, <code>CONTRIBUTING.md</code>,
+<code>RELEASING.md</code>, <code>TODO.md</code> and <code>CHANGELOG.md</code>. Edit the markdown, never the
+generated HTML under <code>site/</code>, then run <code>pnpm site:build</code> and commit both. CI
+runs <code>pnpm site:check</code>, which fails if the pages are out of date or if a link
+points to a page or heading that does not exist. The list of pages and the
+sidebar are in <code>scripts/build-site.mjs</code>.</p>
+<h2 id="working-on-the-code">Working on the code<a class="anchor" href="#working-on-the-code" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><code>pnpm install</code>, then <code>pnpm test</code>, <code>pnpm typecheck</code> and <code>pnpm build</code> at the
+root. <code>pnpm demo</code> runs the example on the simulator.</li>
+<li>Build order and test priorities are in <code>docs/design.md</code> §10 and §13.
+<code>@kalangu/core</code> must keep <strong>zero runtime dependencies</strong> and must never
+import a model SDK or a gateway SDK.</li>
+<li>Adapters are built on standard <code>Request</code>/<code>Response</code> so they work across
+runtimes; don&#39;t tie them to one framework.</li>
+<li>Tests: the budgeter and the engine&#39;s deadline behaviour (fake clock) are
+the two suites that matter most.</li>
+<li>TypeScript strict mode is not negotiable; <code>noUncheckedIndexedAccess</code> is on
+for a reason — keypad users&#39; safety depends on never emitting a screen a
+channel would truncate.</li>
+</ul>
+<h2 id="contributing-a-translation">Contributing a translation<a class="anchor" href="#contributing-a-translation" aria-label="Link to this section">#</a></h2>
+<p>Translating Kalangu&#39;s fixed strings needs no code: see the
+<a href="/docs/guides/translating/">translation guide</a>, which covers the checker, what USSD
+and SMS do to each language&#39;s letters, review by native speakers, and starting
+from a machine draft.</p>
+<h2 id="house-rules">House rules<a class="anchor" href="#house-rules" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong>Never commit secrets</strong> (API keys, phone numbers of real users).
+Phone numbers are personal data; mask them in logs, tests, and fixtures.</li>
+<li>Fixed strings that face users go through locale files (<code>en</code>, <code>fr</code> ship
+first) — never hardcode user-facing English.</li>
+<li>Don&#39;t publish packages to npm or create remote repositories from PRs;
+release is maintained by the maintainer.</li>
+<li>No payment code until the 0.2 design is reviewed; money code should not be
+rushed.</li>
+</ul>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/CONTRIBUTING.md">Edit this page on GitHub</a>
+      <span>Generated from <code>CONTRIBUTING.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#reviewing-the-design">Reviewing the design</a></li><li><a href="#working-on-the-docs">Working on the docs</a></li><li><a href="#working-on-the-code">Working on the code</a></li><li><a href="#contributing-a-translation">Contributing a translation</a></li><li><a href="#house-rules">House rules</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

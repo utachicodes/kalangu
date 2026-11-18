@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running Kalangu on the Africa&amp;#39;s Talking sandbox · Kalangu</title>
+<meta name="description" content="A step-by-step guide to running the clinic example against Africa&amp;#39;s Talking&amp;#39;s real gateway, in their free sandbox, with their phone simulator instead of">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/" aria-current="page">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="running-kalangu-on-the-africa39s-talking-sandbox">Running Kalangu on the Africa&#39;s Talking sandbox</h1>
+<p>A step-by-step guide to running the clinic example against Africa&#39;s Talking&#39;s
+real gateway, in their free sandbox, with their phone simulator instead of a
+handset.</p>
+<p>Written 18 Nov 2026 from Africa&#39;s Talking&#39;s help article <em>How do I get started
+on the Africa&#39;s Talking sandbox?</em>, the gateway facts in
+<a href="/docs/design/">design.md</a> §2, and the example&#39;s own code. <strong>Nobody has run it end
+to end yet</strong>: the first run is the test of this guide too, so note anything
+that differs and fix the guide.</p>
+<hr>
+<h2 id="what-this-proves-and-what-it-does-not">What this proves, and what it does not<a class="anchor" href="#what-this-proves-and-what-it-does-not" aria-label="Link to this section">#</a></h2>
+<p><strong>Proves:</strong> Kalangu works with Africa&#39;s Talking&#39;s real gateway: the request
+fields, the <code>CON</code>/<code>END</code> replies, sending an SMS through their API, receiving
+an incoming SMS, delivery reports, and the &quot;we&#39;ll text you&quot; deferral from
+USSD to SMS end to end.</p>
+<p><strong>Does not prove:</strong> anything about real mobile operators. The sandbox is
+Africa&#39;s Talking&#39;s test environment. The questions the project depends on
+most (the real session timeout and screen length, whether operators
+intercept <code>98</code>, whether a USSD session and an SMS to the same number work
+together) still need a real short code on real networks. See the
+verify-first checklist in <a href="/docs/roadmap/">TODO.md</a>.</p>
+<hr>
+<h2 id="what-you-need">What you need<a class="anchor" href="#what-you-need" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>Node 20 or later and pnpm (the same as for <code>pnpm demo</code>).</li>
+<li>A free Africa&#39;s Talking account.</li>
+<li>A way to give your machine a public HTTPS address, such as ngrok or
+Cloudflare Tunnel. Africa&#39;s Talking cannot reach <code>localhost</code>.</li>
+</ul>
+<hr>
+<h2 id="1-sign-up-for-the-sandbox">1. Sign up for the sandbox<a class="anchor" href="#1-sign-up-for-the-sandbox" aria-label="Link to this section">#</a></h2>
+<p>Go to <a href="https://account.africastalking.com/apps/sandbox" rel="noopener">https://account.africastalking.com/apps/sandbox</a> and sign up. The
+sandbox is free.</p>
+<h2 id="2-get-the-sandbox-api-key">2. Get the sandbox API key<a class="anchor" href="#2-get-the-sandbox-api-key" aria-label="Link to this section">#</a></h2>
+<p>In the sandbox app&#39;s settings, generate an API key. (The help article does not
+describe this screen; the label may differ.) The sandbox username is
+<code>sandbox</code>, which the example and the official SDK both use.</p>
+<p><strong>Keep the key out of everything but your shell.</strong> Do not paste it into a
+chat, an issue, a commit or a file in this repository. To keep it out of your
+shell history too:</p>
+<pre><code class="language-sh">read -s AT_API_KEY &amp;&amp; export AT_API_KEY   # type or paste the key; nothing is shown
+</code></pre>
+<h2 id="3-build">3. Build<a class="anchor" href="#3-build" aria-label="Link to this section">#</a></h2>
+<p>From the repository root:</p>
+<pre><code class="language-sh">pnpm install
+pnpm build
+</code></pre>
+<h2 id="4-start-the-example-server">4. Start the example server<a class="anchor" href="#4-start-the-example-server" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-sh">AT_USERNAME=sandbox AT_SANDBOX=1 PORT=3000 \
+  pnpm --filter @kalangu/example-clinic start
+</code></pre>
+<p>It prints <code>Clinic agent listening on http://localhost:3000 (sandbox)</code>. It
+serves:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Path</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/ussd</code></td>
+<td>USSD callbacks</td>
+</tr>
+<tr>
+<td><code>/ussd/end</code></td>
+<td>USSD session-end notifications (optional)</td>
+</tr>
+<tr>
+<td><code>/sms</code></td>
+<td>incoming SMS</td>
+</tr>
+<tr>
+<td><code>/sms/delivery</code></td>
+<td>SMS delivery reports</td>
+</tr>
+</tbody></table></div>
+<p><code>AT_SANDBOX=1</code> makes the SMS adapter use <code>api.sandbox.africastalking.com</code>.
+Leave <code>AT_SENDER_ID</code> unset in the sandbox unless you create a short code for
+it (step 7).</p>
+<h2 id="5-expose-it">5. Expose it<a class="anchor" href="#5-expose-it" aria-label="Link to this section">#</a></h2>
+<p>Start a tunnel to port 3000 and note the HTTPS address it gives you, for
+example <code>https://&lt;something&gt;.ngrok-free.app</code>. (Commands differ between tools:
+for ngrok it is typically <code>ngrok http 3000</code>; check your tool&#39;s documentation.)
+On a free tunnel the address usually changes each time it restarts; when it
+does, update the callbacks in steps 6 and 7.</p>
+<p><strong>The tunnel makes your server public.</strong> Africa&#39;s Talking does not sign its
+callbacks, so anyone who finds the address can call it. Stop the tunnel when
+you are done.</p>
+<h2 id="6-create-a-ussd-channel">6. Create a USSD channel<a class="anchor" href="#6-create-a-ussd-channel" aria-label="Link to this section">#</a></h2>
+<p>Open <a href="https://account.africastalking.com/apps/sandbox/ussd/channel/create" rel="noopener">https://account.africastalking.com/apps/sandbox/ussd/channel/create</a>.</p>
+<ul>
+<li>Pick a service code, for example <code>*384*1234#</code>.</li>
+<li>Set the callback URL to <code>https://&lt;your tunnel&gt;/ussd</code>.</li>
+</ul>
+<p>Then restart the server with the same code, so it does not log &quot;unexpected
+service code&quot; warnings (it accepts other codes; it only warns):</p>
+<pre><code class="language-sh">USSD_CODE=&#39;*384*1234#&#39; AT_USERNAME=sandbox AT_SANDBOX=1 PORT=3000 \
+  pnpm --filter @kalangu/example-clinic start
+</code></pre>
+<p>If the dashboard offers a session-end notification URL, point it at
+<code>https://&lt;your tunnel&gt;/ussd/end</code>. It is optional; the example only logs it.</p>
+<h2 id="7-set-up-sms">7. Set up SMS<a class="anchor" href="#7-set-up-sms" aria-label="Link to this section">#</a></h2>
+<p>The &quot;we&#39;ll text you&quot; path sends the answer by SMS, so SMS matters even for a
+USSD test.</p>
+<ul>
+<li><strong>Incoming messages:</strong> set the callback at
+<a href="https://account.africastalking.com/apps/sandbox/sms/inbox/callback" rel="noopener">https://account.africastalking.com/apps/sandbox/sms/inbox/callback</a> to
+<code>https://&lt;your tunnel&gt;/sms</code>.</li>
+<li><strong>A short code</strong> (optional, for a sender ID or to receive messages on one):
+<a href="https://account.africastalking.com/apps/sandbox/sms/shortcodes/create" rel="noopener">https://account.africastalking.com/apps/sandbox/sms/shortcodes/create</a>.
+To send from it, restart the server with <code>AT_SENDER_ID=&lt;your short code&gt;</code>.</li>
+<li><strong>Delivery reports:</strong> if the dashboard lets you set a delivery-report
+callback, point it at <code>https://&lt;your tunnel&gt;/sms/delivery</code>. The help article
+does not describe where.</li>
+</ul>
+<h2 id="8-open-the-simulator-and-test">8. Open the simulator and test<a class="anchor" href="#8-open-the-simulator-and-test" aria-label="Link to this section">#</a></h2>
+<p>Open <a href="https://simulator.africastalking.com:1517/" rel="noopener">https://simulator.africastalking.com:1517/</a> and register a phone
+number. Africa&#39;s Talking&#39;s guidance is to use the simulator, not a handset,
+for all sandbox testing, and to register numbers in separate browser sessions
+if you want more than one.</p>
+<p>Then work through this, noting what actually happens:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Do</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dial your service code</td>
+<td><code>Clinic line</code>, then <code>1. Opening hours</code>, <code>2. Ask a nurse</code>, <code>3. Language</code></td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>Open Monday to Saturday, 8:00 to 18:00.</code> and the session ends</td>
+</tr>
+<tr>
+<td>Dial again, <code>2</code>, type a question</td>
+<td>After about 4 seconds: <code>We are working on your question. You will receive an SMS shortly.</code> and the session ends</td>
+</tr>
+<tr>
+<td>Wait a few more seconds</td>
+<td>An SMS to the simulator&#39;s number with the nurse&#39;s answer. The example&#39;s fake nurse takes 6 seconds and the deadline is 4, so this is the deferral path</td>
+</tr>
+<tr>
+<td>Dial again, <code>3</code>, then <code>2</code></td>
+<td>French: the menu comes back as <code>Ligne de la clinique</code> (accents shown as plain letters on USSD)</td>
+</tr>
+<tr>
+<td>Dial again, <code>3</code>, type <code>francais</code></td>
+<td>French again: a typed name works without its accent</td>
+</tr>
+<tr>
+<td>Send an SMS from the simulator to your short code (if you set up step 7)</td>
+<td>A reply SMS with the menu, numbered</td>
+</tr>
+</tbody></table></div>
+<p><strong>Also look at:</strong></p>
+<ul>
+<li><strong>The server&#39;s console:</strong> one line per turn; phone numbers are masked.</li>
+<li><strong>The dashboard:</strong> the USSD session logs and the SMS inbox and outbox. Did
+the deferred answer show as sent, and did a delivery report arrive?</li>
+<li><strong>Timing:</strong> how long from the deferral screen to the SMS arriving.</li>
+</ul>
+<h2 id="9-report-back">9. Report back<a class="anchor" href="#9-report-back" aria-label="Link to this section">#</a></h2>
+<p>What would be most useful to record, in an issue or a note:</p>
+<ol>
+<li>Which steps worked as written and which did not (and what the screens
+actually said). This guide should be corrected from it.</li>
+<li>Whether the deferred answer arrived by SMS, and how long it took.</li>
+<li>Any request the server rejected or logged a warning for.</li>
+<li>The exact USSD request fields the gateway sent, from the server log or
+the dashboard, compared with <a href="/docs/design/">design.md</a> §2.1.</li>
+</ol>
+<p>Do not include the API key, and mask phone numbers if they are real.</p>
+<hr>
+<h2 id="troubleshooting">Troubleshooting<a class="anchor" href="#troubleshooting" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong><code>Set AT_USERNAME to run the server</code>:</strong> an environment variable is
+missing; see steps 2 and 4.</li>
+<li><strong>The simulator shows an error or nothing:</strong> check that the tunnel is
+running, that the callback URL ends in <code>/ussd</code>, and that the tunnel address
+has not changed since you set it.</li>
+<li><strong>No SMS arrives:</strong> check that <code>AT_SANDBOX=1</code> is set (otherwise the adapter
+calls the live API with sandbox credentials), and the dashboard&#39;s SMS
+outbox for an error.</li>
+<li><strong>&quot;unexpected service code&quot; in the log:</strong> <code>USSD_CODE</code> does not match the
+channel&#39;s code; see step 6.</li>
+</ul>
+<hr>
+<h2 id="after-the-sandbox">After the sandbox<a class="anchor" href="#after-the-sandbox" aria-label="Link to this section">#</a></h2>
+<p>Real operators need a USSD short code per country, usually with business
+registration and operator approval, and the costs are still an open item in
+<a href="/docs/roadmap/">TODO.md</a>. The sandbox run makes that step worth taking, by
+showing that everything on Kalangu&#39;s side works.</p>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/sandbox-guide.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/sandbox-guide.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#what-this-proves-and-what-it-does-not">What this proves, and what it does not</a></li><li><a href="#what-you-need">What you need</a></li><li><a href="#1-sign-up-for-the-sandbox">1. Sign up for the sandbox</a></li><li><a href="#2-get-the-sandbox-api-key">2. Get the sandbox API key</a></li><li><a href="#3-build">3. Build</a></li><li><a href="#4-start-the-example-server">4. Start the example server</a></li><li><a href="#5-expose-it">5. Expose it</a></li><li><a href="#6-create-a-ussd-channel">6. Create a USSD channel</a></li><li><a href="#7-set-up-sms">7. Set up SMS</a></li><li><a href="#8-open-the-simulator-and-test">8. Open the simulator and test</a></li><li><a href="#9-report-back">9. Report back</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#after-the-sandbox">After the sandbox</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog · Kalangu</title>
+<meta name="description" content="All notable changes to this project will be documented in this file.">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/" aria-current="page">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="changelog">Changelog</h1>
+<p>All notable changes to this project will be documented in this file.</p>
+<p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/" rel="noopener">Keep a Changelog</a>,
+and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="noopener">Semantic Versioning</a>.</p>
+<h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
+<h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Documentation on the website (kalangu.utachi.website/docs/): a quick start,
+a guide to building agents, guides (the Africa&#39;s Talking sandbox,
+translating, releasing), the design documents, contributing, the roadmap
+and the changelog. The pages are generated from the repository&#39;s markdown
+by <code>scripts/build-site.mjs</code> (<code>pnpm site:build</code>), and CI fails if they are
+out of date or have a broken link (<code>pnpm site:check</code>). The landing page
+links to them. The translation instructions moved from CONTRIBUTING.md to
+<code>docs/translating.md</code>.</li>
+</ul>
+<h2 id="010-alpha3---2026-11-17">[0.1.0-alpha.3] - 2026-11-17<a class="anchor" href="#010-alpha3---2026-11-17" aria-label="Link to this section">#</a></h2>
+<h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
+<p>From an independent review of everything merged in #21 and #26 to #30:</p>
+<ul>
+<li>A pending language suggestion could answer a later question: after a
+dropped call, a redial whose shortcut reached a confirm or a <code>pay</code> step had
+its Yes taken as the answer to the old suggestion. Any new question now
+clears a pending suggestion.</li>
+<li>Language detection ran on <code>number</code> answers and on text with no letters, so
+amounts and account numbers went to the detector. It no longer does.</li>
+<li>After accepting a language switch, a later answer could be offered another
+switch straight away. Detection now offers at most one switch per
+conversation; a No is still kept for good, deliberately.</li>
+<li>The first-contact language menu&#39;s stored id depended on how many extra
+steps the agent had, so changing them could send a user waiting at the menu
+to another step. It now has the fixed id <code>language</code>.</li>
+<li>Confirm labels that differ only by accents: typing the exact No label could
+read as Yes. An exact match now wins, and a folded match that fits both
+Yes and No is refused.</li>
+<li><code>kalangu locale check</code> crashed on a key such as <code>toString</code>. It now reports
+it as an unknown key. The command sets its exit status instead of calling
+<code>process.exit</code>, so piped output is no longer cut off, and an unexpected
+error is reported in one line.</li>
+<li><code>scripts/translate-locale.mjs</code> reports a network failure or an unreadable
+saved response in words, with an exit status, instead of crashing.</li>
+</ul>
+<h2 id="010-alpha2---2026-11-17">[0.1.0-alpha.2] - 2026-11-17<a class="anchor" href="#010-alpha2---2026-11-17" aria-label="Link to this section">#</a></h2>
+<h3 id="added-1">Added<a class="anchor" href="#added-1" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Language detection as a hint (docs/languages-design.md §9.5):
+<code>languages.detection: { detector, threshold, minChars, timeoutMs? }</code> with
+the <code>LanguageDetector</code> port. On a typed <code>ask</code> answer that a detector
+confidently places in another of the agent&#39;s languages, the user is asked
+in that language whether to continue in it; the answer is held and then
+handled in whichever language they choose. A &quot;No&quot; is remembered for the
+session. No detector ships; <code>threshold</code> and <code>minChars</code> have no default.</li>
+<li><code>models: { default, [locale]: model }</code>: a model per language, resolved as
+<code>ctx.model</code> for the user&#39;s current language.</li>
+<li><code>docs/prior-art.md</code> refreshed (17 Nov 2026): nothing new since 16 Nov, and
+<code>@omoyolab/ussdkit</code> recorded as the closest prior art.</li>
+<li><code>scripts/translate-locale.mjs</code>: drafts Kalangu&#39;s fixed strings in another
+language with Gemini (<code>gemini-3.5-flash-lite</code> by default), writes
+<code>locales/&lt;code&gt;.draft.json</code> marked as an unreviewed machine draft, and runs
+the locale checker on it. The key is read from <code>GEMINI_API_KEY</code> and sent
+only in the request header. Its tests run in CI (<code>node --test &quot;scripts/**/*.test.mjs&quot;</code>).</li>
+<li><code>kalangu locale check</code> takes the language code from the file name up to its
+first dot, so <code>wo.draft.json</code> is checked as <code>wo</code>.</li>
+<li><code>docs/normalization-design.md</code>: the text normalization design (folding,
+USSD spelling, canonicalizing; Gemini offline only; its own repository
+later).</li>
+</ul>
+<h3 id="fixed-1">Fixed<a class="anchor" href="#fixed-1" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>A typed answer that names an option without its accents was refused: on
+USSD the language menu shows &quot;Français&quot; as &quot;Francais&quot;, and typing that back
+gave &quot;Invalid choice&quot;. <code>interpret</code> now matches typed text to labels and to
+the yes and no words ignoring accents, case, spacing and apostrophe style
+(<code>foldForMatch</code>), and against the label as a USSD screen shows it, so Hausa
+&quot;Ɗan&quot; shown as &quot;Dan&quot; can be typed back too. An exact match still wins; a
+folded match that fits more than one label is refused.</li>
+</ul>
+<h2 id="010-alpha1---2026-11-17">[0.1.0-alpha.1] - 2026-11-17<a class="anchor" href="#010-alpha1---2026-11-17" aria-label="Link to this section">#</a></h2>
+<h3 id="fixed-2">Fixed<a class="anchor" href="#fixed-2" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>The installed <code>kalangu</code> command did nothing. npm installs a package&#39;s
+command as a symlink, and the check for &quot;started as a command&quot; compared
+the symlink&#39;s path with the real file&#39;s, so it never ran. Both paths are
+now resolved first (<code>isEntryPoint</code>), with a test that runs through a
+symlink.</li>
+<li><code>RELEASING.md</code> told people to install with <code>@alpha</code>, a tag that does not
+exist: npm&#39;s staged-publishing approval set <code>latest</code> on the first release.
+It now says to install without a tag and to check the tags after approving.</li>
+</ul>
+<h2 id="010-alpha0---2026-11-17">[0.1.0-alpha.0] - 2026-11-17<a class="anchor" href="#010-alpha0---2026-11-17" aria-label="Link to this section">#</a></h2>
+<p>First publish of <code>@kalangu/core</code>, <code>@kalangu/ussd</code>, <code>@kalangu/sms</code> and
+<code>@kalangu/sim</code>. Everything below was in it.</p>
+<h3 id="added-2">Added<a class="anchor" href="#added-2" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><p>Payments in <code>@kalangu/core</code> (prep, no real provider yet): the <code>pay</code> step,
+<code>createAgent({ payments })</code> with a mandatory policy, the confirm screen
+that ends the USSD session before the deposit is initiated, background
+initiation, status polling with backoff and a 72-hour give-up
+(<code>UNRESOLVED</code>), <code>agent.payments.settle(id)</code> for callback routes (re-checks
+the provider, never trusts the body), and the outcome and receipt by SMS.
+The <code>pay</code> turn amount is now a decimal string.</p>
+</li>
+<li><p><code>agent.payments.reconcile()</code>: a sweep for a cron job or scheduler that
+settles non-final payments, re-initiates fresh never-initiated ones,
+fails old never-started ones, and marks payments past the give-up window
+<code>UNRESOLVED</code>. It reports what it did and survives a failing payment.</p>
+</li>
+<li><p><code>PaymentStore</code> gains three atomic operations a durable store must
+implement: <code>transition</code> (a final status stays final), <code>claimNotification</code>
+(each outcome is announced once) and <code>withPhoneLock</code> (limits cannot be
+raced past). Fixes a bug where two processes could both notify the user.</p>
+</li>
+<li><p><code>SessionStore.save</code> takes <code>{ ifVersion }</code> for compare-and-set and the
+store declares <code>atomic: true</code> when it honours it; <code>SessionRecord.version</code>
+is bumped on every save. An agent with <code>payments</code> requires an atomic store,
+and a double-tapped &quot;Yes&quot; now starts exactly one payment.</p>
+</li>
+<li><p>Review fixes in payments: payments still in flight count toward the pending
+limit however old; an outcome that failed to send is released and retried
+by <code>reconcile</code> (<code>unnotified</code>, <code>releaseNotification</code>, <code>notifyAttempts</code>,
+report field <code>redelivered</code>); outcome delivery waits for the turn&#39;s session
+save; <code>reconcile</code> marks a payment unresolved when its status check keeps
+failing; a refused root <code>pay</code> step ends with a message instead of looping;
+looking up the operator on a live channel honours the USSD deadline;
+<code>PaymentRecord.providerPhone</code>; <code>pollRepeatMs</code>; exact decimal sums; the
+provider minimum amount; <code>&quot;100.0&quot;</code> accepted for providers without decimals;
+amounts too large to hold exactly refused; payment ids cannot change.</p>
+</li>
+<li><p>A payment is failed as &quot;not found&quot; only if it is still in the status that
+justified that conclusion, and an outcome is only ever announced for a
+final payment: another process seeing the payment in the meantime can no
+longer cause a &quot;not completed&quot; message for a payment still in progress.</p>
+</li>
+<li><p>Stale-tap protection for channels with tappable history: a random per-turn
+token, <code>turnId</code>, on sessions, <code>InboundEvent.turnId</code> and
+<code>RenderContext.turnId</code>. A tap carrying any token but the current one (an
+earlier turn, a cleared or restarted session, a concurrent request that
+rendered a different turn) shows the current turn again with &quot;That choice
+has expired.&quot; and runs nothing, so an old Yes can never confirm a later
+question or start a payment, and a Yes on one confirmation cannot pay the
+amount of another. USSD and SMS are unaffected.</p>
+</li>
+<li><p>Languages (first slice of docs/languages-design.md, no model needed):
+<code>createAgent({ languages })</code> asks the user to choose a language on first
+contact and remembers it per phone number, with a menu that names each
+language in itself and lists the likely ones for the caller&#39;s country
+first (<code>DEFAULT_LANGUAGE_PRIORS</code>, <code>orderLanguages</code>, <code>callingCodeOf</code>); and
+<code>languageMenu()</code> for a Language entry in the tree. New message
+<code>common.language</code>.</p>
+</li>
+<li><p><code>kalangu locale check &lt;file&gt;</code> and <code>checkLocale</code>: checks a translation for
+missing, unknown and empty keys, lost or invented <code>{placeholders}</code>, and how
+each string fits USSD (letters removed or shown differently, screen length)
+and SMS (UCS-2, segments). The <code>kalangu</code> command is the new <code>bin</code> of
+<code>@kalangu/core</code>.</p>
+</li>
+<li><p>Payment refusals (policy rules and provider reasons) are localized in <code>en</code>
+and <code>fr</code> through <code>payments.refusal.*</code> messages, which can be overridden.</p>
+</li>
+<li><p><code>@kalangu/core</code> package with the turn types (<code>say</code>, <code>choose</code>, <code>ask</code>,
+<code>confirm</code>, and <code>pay</code> reserved for 0.2), <code>parseTurn</code>/<code>isTurn</code> for
+validating turns from untyped sources, <code>assertNever</code> for exhaustive
+switches, and tests. TypeScript and vitest added as root dev dependencies.</p>
+</li>
+<li><p>Budgeter in <code>@kalangu/core</code>: encoding-aware SMS length (<code>smsLength</code>,
+exact <code>splitSegments</code>, <code>budgetSms</code> with a 4-segment cap that throws
+instead of truncating), and USSD screen helpers (<code>toUssdSafe</code> safe
+character set with transliteration, <code>optionNumbers</code> skipping reserved
+<code>98</code>/<code>00</code>, <code>paginateText</code> and <code>paginateMenu</code> with a <code>98. More</code> line).</p>
+</li>
+<li><p>Engine in <code>@kalangu/core</code>: step builders (<code>menu</code>, <code>choose</code>, <code>ask</code>,
+<code>say</code>, <code>confirm</code>), <code>createAgent</code> with <code>handle()</code> and a standard
+<code>Request</code>/<code>Response</code> <code>requestHandler</code>, USSD and SMS renderers with a
+matching input interpreter, channel helpers (<code>ussdChannel</code>,
+<code>smsChannel</code>), an in-memory session store keyed by phone number with
+resume-on-redial, <code>en</code>/<code>fr</code> messages with per-step localized text, and a
+logger that masks phone numbers by default.</p>
+</li>
+<li><p><code>@kalangu/ussd</code>: Africa&#39;s Talking USSD adapter. Parses the callback
+form, answers <code>200 text/plain</code> with <code>CON </code>/<code>END </code> on every path including
+errors, optional <code>at-ussd-hop-metadata</code> header, configurable screen size,
+and a session-end notification route. Tested against form fixtures built
+from the documented fields.</p>
+</li>
+<li><p>Engine: a new gateway session id counts as a fresh dial, and a dial
+string with choices in it (<code>*384*1*2#</code>) is replayed from the start menu.</p>
+</li>
+<li><p><code>@kalangu/sim</code>: terminal keypad-phone simulator. <code>SimPhone</code> drives an
+agent directly (dial, press, hang up, text, inbox) for tests; <code>runTerminal</code>
+puts a boxed-screen UI on top with <code>x</code> to hang up, <code>sms &lt;text&gt;</code> and <code>q</code>.</p>
+</li>
+<li><p><code>@kalangu/sms</code>: Africa&#39;s Talking SMS adapter. Sends through the legacy
+<code>/version1/messaging</code> endpoint behind an <code>SmsTransport</code> seam (HTTP 201
+success, sandbox domain switch, <code>bulkSMSMode</code>, <code>enqueue</code> only when set),
+raises <code>SmsSendError</code> with the gateway&#39;s own codes (including the <code>409</code>
+DND rejection), answers incoming messages by SMS in the background, and
+logs delivery reports.</p>
+</li>
+<li><p>Deferral in <code>@kalangu/core</code>: handlers on a live channel run under a
+deadline (default 4000 ms; warns above 8000, refuses above 10000). A
+missed deadline ends the session with the localized notice and the
+answer is sent by SMS when it arrives; a late failure is logged and the
+user gets one apology SMS. Redialing while an answer is pending repeats
+the notice. Background work is pluggable (<code>BackgroundWork</code>) for
+serverless platforms; the default runs in-process.</p>
+</li>
+<li><p><code>examples/clinic</code>: the clinic agent (opening hours, ask a nurse,
+English/French) with a fake nurse model that takes 6 s against the 4 s
+deadline. <code>pnpm demo</code> builds the workspace and runs it on the simulated
+keypad phone; <code>src/server.ts</code> serves it on Africa&#39;s Talking with Node&#39;s
+<code>http</code> module.</p>
+</li>
+<li><p>CI on GitHub Actions: typecheck, tests and build on Node 22 and 24, and
+a smoke test of the compiled packages on Node 20 (<code>pnpm smoke</code>).</p>
+</li>
+<li><p>Payments design for 0.2 (<code>docs/payments-design.md</code>): pawaPay deposits,
+policy layer, idempotency, signed callbacks with polling fallback, and
+what the library does not guarantee. Draft; no payment code.</p>
+</li>
+<li><p>Publish preparation: npm metadata (repository, keywords, <code>alpha</code> tag,
+public access), a README and LICENSE in each package, a manual Release
+workflow (dry run by default, npm provenance), and <code>RELEASING.md</code>.
+Nothing is published yet.</p>
+</li>
+</ul>
+<h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>README: v0.1 status, package list, quick start, how to write an agent,
+and known limits. CONTRIBUTING updated for working on the code.</li>
+<li>Design document: corrected which French letters are in GSM-7, and added
+§14 listing where the implementation differs from the design.</li>
+<li>Design document <code>docs/design.md</code> for version 0.1: package layout, public
+API sketch, turn types (with <code>pay</code> reserved), engine and sessions keyed by
+phone number, deferral, the encoding-aware budgeter, Africa&#39;s Talking USSD
+and SMS adapters, a terminal keypad simulator, an example clinic agent, a
+test plan, and open questions.</li>
+<li>Verified gateway facts (checked 16 Nov 2026 against official
+documentation and the official Node SDK): USSD callback format and timing
+bounds, Kenya screen limits, telco auto-pagination with reserved <code>98</code>/<code>00</code>
+codes, session-end notifications, and the legacy vs new bulk SMS endpoints
+(<code>docs/design.md</code> §2).</li>
+<li>Repository setup: README, TODO, CHANGELOG, MIT license, contributing
+guide, pnpm workspace scaffolding (root <code>package.json</code>,
+<code>pnpm-workspace.yaml</code>, <code>tsconfig.base.json</code>), <code>.gitignore</code>,
+<code>.editorconfig</code>.</li>
+</ul>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/CHANGELOG.md">Edit this page on GitHub</a>
+      <span>Generated from <code>CHANGELOG.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#unreleased">[Unreleased]</a></li><li><a href="#010-alpha3---2026-11-17">[0.1.0-alpha.3] - 2026-11-17</a></li><li><a href="#010-alpha2---2026-11-17">[0.1.0-alpha.2] - 2026-11-17</a></li><li><a href="#010-alpha1---2026-11-17">[0.1.0-alpha.1] - 2026-11-17</a></li><li><a href="#010-alpha0---2026-11-17">[0.1.0-alpha.0] - 2026-11-17</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

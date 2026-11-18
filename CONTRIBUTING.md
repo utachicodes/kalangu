@@ -18,6 +18,16 @@ code contributions are welcome too.
    design are always welcome — the brief for this project explicitly asks
    for that over workarounds.
 
+## Working on the docs
+
+The documentation on the website (`/docs/` and `/contributing/`) is generated
+from the markdown in this repository: `docs/*.md`, `CONTRIBUTING.md`,
+`RELEASING.md`, `TODO.md` and `CHANGELOG.md`. Edit the markdown, never the
+generated HTML under `site/`, then run `pnpm site:build` and commit both. CI
+runs `pnpm site:check`, which fails if the pages are out of date or if a link
+points to a page or heading that does not exist. The list of pages and the
+sidebar are in `scripts/build-site.mjs`.
+
 ## Working on the code
 
 - `pnpm install`, then `pnpm test`, `pnpm typecheck` and `pnpm build` at the
@@ -35,54 +45,10 @@ code contributions are welcome too.
 
 ## Contributing a translation
 
-Fixed strings (the "Yes", "Invalid choice", payment messages and so on) can be
-translated by anyone who speaks the language, with no code. See
-[docs/languages-design.md](docs/languages-design.md) §8 and §9 for the why.
-
-1. Copy the English messages from `packages/core/src/locales.ts` (the `en`
-   object) into a JSON file named for the language, e.g. `wo.json`, and
-   translate the values. Keep the keys exactly. You may translate only some:
-   anything missing falls back to the default language.
-2. Keep every `{placeholder}` exactly as written: the program fills it in
-   (`{amount}`, `{yes}`). You can move it within the sentence.
-3. Run the checker from the repository root:
-
-   ```
-   pnpm build
-   node packages/core/dist/cli.js locale check wo.json --verbose
-   ```
-
-   It reports lost or invented placeholders (errors), strings that will take
-   more than one USSD screen or SMS segment, and the letters USSD shows
-   differently. `--complete` makes a missing message an error, and `--strict`
-   makes warnings fail.
-4. **Mind the channels.** USSD shows plain ASCII, so Wolof `ë`, `ŋ` and `ó`
-   and Hausa `ɓ`, `ɗ` and `ƙ` appear as `e`, `ng`, `o` and `b`, `d`, `k`. If
-   that makes a word ambiguous, choose a wording that survives it. On SMS one
-   such letter makes the whole message UCS-2, 70 characters per segment
-   instead of 160. The checker lists both, so you can judge.
-5. Open a pull request. A translation is marked **reviewed** only when a
-   speaker of that language other than the author has checked it, and the file
-   says who; until then it ships as **experimental**.
-
-**Starting from a machine draft.** If no speaker is at hand to write the first
-version, `scripts/translate-locale.mjs` asks Gemini for a draft and runs the
-checker on it:
-
-```
-pnpm build
-export GEMINI_API_KEY=...   # your own key; never paste it into a chat, issue or commit
-node scripts/translate-locale.mjs wo --name Wolof --reference fr
-```
-
-It writes `locales/wo.draft.json`, marked as an unreviewed machine draft, and
-sends Google only Kalangu's fixed strings. Models are much weaker in Wolof,
-Hausa and other African languages than their fluent output suggests, so a
-draft is a starting point for a native speaker, never a translation to ship
-as it is. `--dry-run` shows the request without sending anything.
-
-Agent content (menu titles, answers) is the developer's own and lives in the
-agent definition as `{ en: "...", wo: "..." }`, not in these files.
+Translating Kalangu's fixed strings needs no code: see the
+[translation guide](docs/translating.md), which covers the checker, what USSD
+and SMS do to each language's letters, review by native speakers, and starting
+from a machine draft.
 
 ## House rules
 

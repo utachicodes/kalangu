@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalangu — text normalization design · Kalangu</title>
+<meta name="description" content="Status: draft for review. No normalization code exists. Date: 2026-11-17. Scope: how Kalangu should handle the many ways people write African languages on a pho">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/" aria-current="page">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="kalangu--text-normalization-design">Kalangu — text normalization design</h1>
+<p>Status: <strong>draft for review. No normalization code exists.</strong>
+Date: 2026-11-17. Scope: how Kalangu should handle the many ways people
+write African languages on a phone, for Wolof, Hausa and Swahili first. It
+also settles whether this work belongs in its own repository (§9).</p>
+<hr>
+<h2 id="1-what-quotnormalizationquot-means-here">1. What &quot;normalization&quot; means here<a class="anchor" href="#1-what-quotnormalizationquot-means-here" aria-label="Link to this section">#</a></h2>
+<p>Turning the many ways a word is written into a form a program can rely on.
+Three jobs, kept apart because they have different rules:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>Input</th>
+<th>Output</th>
+<th>Used for</th>
+<th>Ever shown to a user?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Fold</strong></td>
+<td>what the user typed</td>
+<td>a comparison key</td>
+<td>matching a typed answer to a menu label, &quot;yes&quot;, a language name</td>
+<td>Never</td>
+</tr>
+<tr>
+<td><strong>Render for USSD</strong></td>
+<td>correct text</td>
+<td>plain ASCII</td>
+<td>USSD screens, which accept no other characters</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>Canonicalize</strong></td>
+<td>what the user typed</td>
+<td>the same text, tidied</td>
+<td>language detection and models</td>
+<td>Only to a model</td>
+</tr>
+</tbody></table></div>
+<p>Not in scope: translation, spelling correction of what people mean, speech,
+and the Arabic-script writing of these languages (Ajami, and Wolofal for
+Wolof). Those are separate problems.</p>
+<hr>
+<h2 id="2-why-now-two-problems-in-the-code-today">2. Why now: two problems in the code today<a class="anchor" href="#2-why-now-two-problems-in-the-code-today" aria-label="Link to this section">#</a></h2>
+<p>Measured on <code>main</code> on 17 Nov 2026, with the engine&#39;s own <code>interpret</code> and
+<code>toUssdSafe</code>.</p>
+<p><strong>A menu label the user cannot type back.</strong> The language menu offers
+&quot;Français&quot;. On USSD it is displayed as <strong>&quot;Francais&quot;</strong>, because USSD allows
+plain ASCII only. A user who types back what they see is refused:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Typed</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Français</code>, <code>français</code></td>
+<td>option 1</td>
+</tr>
+<tr>
+<td><code>francais</code>, <code>FRANCAIS</code>, <code>Francais </code> (trailing space)</td>
+<td><strong>&quot;Invalid choice&quot;</strong></td>
+</tr>
+<tr>
+<td><code>2</code>, <code>wolof</code></td>
+<td>option 2</td>
+</tr>
+</tbody></table></div>
+<p>Typing the number always works, but a keypad user typing the word cannot
+produce a cedilla. The comparison (<code>render.ts</code>, <code>interpret</code>) is lower-case
+only: it ignores neither accents nor spaces.</p>
+<p><strong>Hausa letters collapse on USSD.</strong> The generic table turns <code>ɓ</code>, <code>ɗ</code>, <code>ƙ</code>
+and <code>ƴ</code> into <code>b</code>, <code>d</code>, <code>k</code> and <code>y</code> (<code>ɓarna</code> becomes <code>barna</code>, <code>Ɗan</code> becomes
+<code>Dan</code>). Those are different sounds from plain <code>b</code>, <code>d</code>, <code>k</code> and <code>y</code>, so words
+can become ambiguous. Wolof loses less: <code>ñ</code> becomes <code>n</code>, <code>ë</code> becomes <code>e</code>, <code>ŋ</code>
+becomes <code>ng</code>.</p>
+<hr>
+<h2 id="3-facts-read-17-nov-2026">3. Facts (read 17 Nov 2026)<a class="anchor" href="#3-facts-read-17-nov-2026" aria-label="Link to this section">#</a></h2>
+<p>Secondary sources, mostly. Every rule in §5 still needs a native speaker
+(§10).</p>
+<h3 id="31-wolof">3.1 Wolof<a class="anchor" href="#31-wolof" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Wolof&#39;s Latin spelling in Senegal was set by government decrees between
+1971 and 1985. A 1971 decree adopted one alphabet for several national
+languages, Wolof among them. The Centre de linguistique appliquée de Dakar
+(CLAD) is the recognised authority on spelling.</li>
+<li>The letters include <code>à</code>, <code>é</code>, <code>ë</code>, <code>ñ</code>, <code>ŋ</code> and <code>ó</code> besides the basic
+Latin ones. Sources count the alphabet differently (27 or 29 letters),
+probably depending on whether accented vowels count separately; I did not
+confirm this against a primary text.</li>
+<li>Teaching material notes that the accent on a long vowel is written on the
+first vowel only in the CLAD standard, and that some writers put it on both.
+So even careful writers vary.</li>
+<li>In everyday typing many people use French-influenced spellings rather than
+the official ones. I have no source measuring how common each is; that is
+exactly the data §8 asks for.</li>
+</ul>
+<p>Sources: the Wikipedia articles on the Wolof language and the Wolofal
+alphabet, the text of the Senegalese decree hosted by Université Laval
+(axl.cefan.ulaval.ca), and Polyglot Club&#39;s Wolof alphabet lesson.</p>
+<h3 id="32-hausa">3.2 Hausa<a class="anchor" href="#32-hausa" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Standard Hausa in Latin script (boko) uses the hooked letters <code>ɓ</code>, <code>ɗ</code>,
+<code>ƙ</code> and <code>ƴ</code>, and the glottal stop written with an apostrophe (<code>ʼy</code>).</li>
+<li>Where hooked letters are not available, writers use an apostrophe with the
+plain letter. Richard Ishida&#39;s Hausa script notes describe <code>ɓ</code> as <code>b</code> with a
+modifier apostrophe, and <code>ƴ</code> as <code>ʼy</code>, with the apostrophe <strong>before</strong> the
+<code>y</code>. They also note that the BBC, CRI and Wikipedia write the ordinary ASCII
+apostrophe (<code>&#39;</code>) instead of the modifier letter, and some texts a curly
+quote.</li>
+<li>Speakers do not treat plain <code>b</code>, <code>d</code> and <code>k</code> as acceptable: a Unicode
+mailing-list post argues the hooked letters are not optional, and a Hausa
+writer reports being corrected for using apostrophes instead of them.</li>
+<li>So the right ASCII form for USSD is a question for Hausa readers (§10),
+not one to settle from sources: <code>b&#39;</code>, <code>&#39;b</code>, or the plain letter.</li>
+</ul>
+<p>Sources: Richard Ishida&#39;s Hausa notes (r12a.github.io/scripts/latin/ha.html),
+a 2010 thread on the Unicode mailing list about the hooked characters, and
+Hausa keyboard guides (amsoshi.com, branah.com), as summarised by a web
+search; not read in full.</p>
+<h3 id="33-swahili">3.3 Swahili<a class="anchor" href="#33-swahili" aria-label="Link to this section">#</a></h3>
+<p>Standard Swahili spelling uses only basic Latin letters, so it fits USSD and
+GSM-7 SMS unchanged. Its normalization needs are about how people type
+(abbreviations, English mixed in), not about letters.</p>
+<hr>
+<h2 id="4-principles">4. Principles<a class="anchor" href="#4-principles" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>Deterministic and local at runtime.</strong> A rule table, tested, with no
+network call and no model. It runs on every typed answer, inside the
+10-second USSD bound, and must cost nothing.</li>
+<li><strong>Never alter what the user reads without a reason.</strong> Folding is for
+comparing only. Rendering for USSD changes text only because the channel
+forces it, and then the way readers of that language expect.</li>
+<li><strong>Per language, with a generic default.</strong> Today&#39;s single table stays the
+fallback. A language gets its own rules only when a speaker has reviewed
+them.</li>
+<li><strong>Provenance on every rule.</strong> Each table says who proposed it, who
+reviewed it and when. A rule nobody has reviewed is marked experimental.</li>
+<li><strong>No user text leaves the device to normalize it.</strong> Typed answers are
+personal data. A model may help write rules offline (§7); it does not see
+users&#39; messages.</li>
+</ol>
+<hr>
+<h2 id="5-the-three-operations">5. The three operations<a class="anchor" href="#5-the-three-operations" aria-label="Link to this section">#</a></h2>
+<h3 id="51-fold-for-comparison-only">5.1 Fold (for comparison only)<a class="anchor" href="#51-fold-for-comparison-only" aria-label="Link to this section">#</a></h3>
+<p><code>fold(text, locale) -&gt; key</code>. Two strings match when their keys are equal.</p>
+<p>Generic steps, for every language:</p>
+<ul>
+<li>Unicode compatibility decomposition, then drop combining accents
+(<code>Français</code> and <code>francais</code> both become <code>francais</code>). This already makes
+Wolof <code>ñ</code>, <code>ë</code>, <code>é</code> and <code>ó</code> match <code>n</code>, <code>e</code>, <code>e</code> and <code>o</code>, since those are
+accented letters. Letters that are not an accented form keep their own key
+(<code>ŋ</code>, <code>ɓ</code>, <code>ɗ</code>, <code>ƙ</code>, <code>ƴ</code>).</li>
+<li>Lower case, trimmed, inner whitespace collapsed to one space.</li>
+<li>All apostrophe-like characters (<code>&#39;</code>, <code>ʼ</code>, <code>’</code>, <code>‘</code>) made one.</li>
+</ul>
+<p>Per-language additions, once reviewed. Examples to confirm with speakers,
+not decisions:</p>
+<ul>
+<li><strong>Wolof:</strong> <code>ŋ</code> and <code>ng</code> equal (the generic step does not cover it, since
+<code>ŋ</code> is a letter of its own).</li>
+<li><strong>Hausa:</strong> <code>ɓ</code>, <code>b&#39;</code> and <code>&#39;b</code> equal, and similarly for <code>ɗ</code>, <code>ƙ</code> and <code>ƴ</code>.
+Whether plain <code>b</code> should also match <code>ɓ</code> is a real question: folding it in
+helps people typing on a keypad, but merges two different sounds.</li>
+</ul>
+<p>Where it is used: <code>interpret</code>&#39;s comparison of typed text with option labels,
+the yes and no words, and language names. This alone fixes the first
+problem in §2, and needs no language data for the accent part.</p>
+<h3 id="52-render-for-ussd">5.2 Render for USSD<a class="anchor" href="#52-render-for-ussd" aria-label="Link to this section">#</a></h3>
+<p><code>toAscii(text, locale) -&gt; text</code>, replacing the generic table in <code>toUssdSafe</code>
+for languages that have reviewed rules. The generic table stays the
+fallback.</p>
+<ul>
+<li>A per-language table can map a letter to more than one character (a
+possible Hausa rule, <code>ɗ</code> to <code>d&#39;</code>). Text then gets longer, so the screen
+budget must be measured <strong>after</strong> rendering, which the budgeter already
+does. <code>kalangu locale check</code> already shows what each letter becomes.</li>
+<li>The table is chosen by the turn&#39;s locale, which the engine knows.</li>
+</ul>
+<h3 id="53-canonicalize-for-detection-and-models">5.3 Canonicalize (for detection and models)<a class="anchor" href="#53-canonicalize-for-detection-and-models" aria-label="Link to this section">#</a></h3>
+<p><code>canonical(text, locale) -&gt; text</code>. Conservative by default: Unicode
+composition (NFC), one apostrophe, collapsed whitespace. Nothing that changes
+spelling.</p>
+<p>Spelling-variant maps (a French-influenced spelling to the official one) are
+<strong>data</strong>, reviewed per entry, and opt-in. A wrong variant entry silently
+changes what a model is told the user said, so the bar is higher than for
+folding.</p>
+<hr>
+<h2 id="6-data">6. Data<a class="anchor" href="#6-data" aria-label="Link to this section">#</a></h2>
+<p>Per language, one file, for example <code>normalize/data/ha.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;language&quot;: &quot;ha&quot;,
+  &quot;reviewed&quot;: false,
+  &quot;provenance&quot;: { &quot;proposedBy&quot;: &quot;…&quot;, &quot;reviewedBy&quot;: null, &quot;date&quot;: &quot;2026-11-17&quot; },
+  &quot;fold&quot;: { &quot;ɓ&quot;: [&quot;b&#39;&quot;, &quot;&#39;b&quot;], &quot;ɗ&quot;: [&quot;d&#39;&quot;, &quot;&#39;d&quot;] },
+  &quot;ascii&quot;: { &quot;ɓ&quot;: &quot;b&#39;&quot;, &quot;ɗ&quot;: &quot;d&#39;&quot; },
+  &quot;variants&quot;: []
+}
+</code></pre>
+<ul>
+<li><strong>Tests come with the data:</strong> pairs of what someone typed and what it
+should fold to, taken from real (consented, anonymised) messages where
+possible.</li>
+<li><strong>License:</strong> the data is the most reusable part of this work, so its
+license should be chosen on purpose (for example a Creative Commons
+license for data, alongside MIT for code), and contributors told which.</li>
+</ul>
+<hr>
+<h2 id="7-where-gemini-fits">7. Where Gemini fits<a class="anchor" href="#7-where-gemini-fits" aria-label="Link to this section">#</a></h2>
+<p><strong>Offline, to help write the data. Not at runtime by default.</strong></p>
+<ul>
+<li><strong>Good uses:</strong> proposing spelling variants for a word list, drafting
+folding and ASCII tables, and generating test pairs. The same pattern as
+<code>scripts/translate-locale.mjs</code>: a script that asks for a draft, marks it
+unreviewed, and checks its shape.</li>
+<li><strong>Then a speaker reviews.</strong> A model&#39;s spelling variants in Wolof or Hausa
+can be confidently wrong, and the data is only as good as its review.</li>
+<li><strong>Why not at runtime:</strong><ul>
+<li><strong>Privacy:</strong> it would send every user&#39;s message to Google.</li>
+<li><strong>Time:</strong> it adds latency inside the USSD bound.</li>
+<li><strong>Cost:</strong> every turn costs money.</li>
+<li><strong>Testing:</strong> the results are not reproducible. A future <code>Normalizer</code>
+interface could allow a model as an optional plug-in, as the language
+detector is, but the default stays rule-based.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="8-measuring-whether-it-helps">8. Measuring whether it helps<a class="anchor" href="#8-measuring-whether-it-helps" aria-label="Link to this section">#</a></h2>
+<p>Normalization is worth what it fixes, so measure that, not the elegance of
+the rules.</p>
+<ul>
+<li><strong>Menu matching:</strong> the share of typed (non-number) answers that match an
+option, before and after folding. It needs typed answers from real users,
+collected with consent and without phone numbers.</li>
+<li><strong>Detection:</strong> the accuracy of language detection on canonicalized versus
+raw text, with the evaluation harness in <code>docs/languages-design.md</code> §13.</li>
+<li><strong>Readability on USSD:</strong> whether readers of each language prefer the
+per-language ASCII forms over the generic ones, asked directly.</li>
+</ul>
+<hr>
+<h2 id="9-its-own-repository">9. Its own repository?<a class="anchor" href="#9-its-own-repository" aria-label="Link to this section">#</a></h2>
+<p><strong>Not yet. Start inside this repository and split it out later.</strong></p>
+<ul>
+<li><strong>Start here:</strong> a <code>packages/normalize</code> package with zero dependencies,
+holding the functions and the data tables, used by core. The data-drafting
+and evaluation scripts go in <code>scripts/normalize/</code>.</li>
+<li><strong>Why not now:</strong> there are no reviewed rules, no data and no reviewers yet.
+The first users are inside Kalangu (<code>interpret</code> and <code>toUssdSafe</code>), so early
+changes would touch two repositories at once. Splitting a folder into its
+own repository later keeps its history (<code>git subtree split</code>), so waiting
+costs nothing.</li>
+<li><strong>When to split, into <code>kalangu-normalization</code>:</strong><ul>
+<li>Native speakers contribute data regularly and need their own review flow.</li>
+<li>Someone outside Kalangu wants the data or the functions.</li>
+<li>The evaluation needs its own tooling (for example Python and published
+datasets) that does not belong next to a TypeScript library.</li>
+<li>The data needs a license different from the code&#39;s.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="10-questions-for-native-speakers-verify-first">10. Questions for native speakers (verify first)<a class="anchor" href="#10-questions-for-native-speakers-verify-first" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>Hausa on USSD:</strong> should <code>ɓ</code>, <code>ɗ</code>, <code>ƙ</code> and <code>ƴ</code> be shown as <code>b&#39;</code>, <code>d&#39;</code>,
+<code>k&#39;</code> and <code>&#39;y</code>, as <code>&#39;b</code> style, or as plain letters? Is the extra character
+worth it on a 160-character screen?</li>
+<li><strong>Hausa matching:</strong> when someone types plain <code>b</code> for <code>ɓ</code>, should it still
+match? It helps keypad users but merges two sounds.</li>
+<li><strong>Wolof on USSD:</strong> are <code>ë</code> to <code>e</code>, <code>ñ</code> to <code>n</code> and <code>ŋ</code> to <code>ng</code> acceptable,
+or does a reader expect something else?</li>
+<li><strong>Wolof typing:</strong> which French-influenced spellings are common enough to
+fold (for example in greetings and numbers)? This needs examples, not
+guesses.</li>
+<li><strong>Swahili:</strong> which abbreviations and English words are common in typed
+answers?</li>
+<li><strong>Collection:</strong> who can provide consented, anonymised typed samples per
+language, and under what terms?</li>
+</ol>
+<hr>
+<h2 id="11-build-order">11. Build order<a class="anchor" href="#11-build-order" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>Generic folding in <code>interpret</code></strong> (§5.1, generic steps only): ignore
+accents, case, extra spaces and apostrophe style when comparing typed text
+with labels and the yes and no words. It fixes the &quot;Francais&quot; problem,
+needs no language data, and is testable today.</li>
+<li><strong><code>packages/normalize</code></strong> with the three functions, the generic default,
+and the data format, used by core.</li>
+<li><strong>The Hausa USSD table</strong>, once question 1 is answered.</li>
+<li><strong>The drafting script</strong> for variant lists and test pairs, as described in
+§7.</li>
+<li><strong>Per-language folding and canonicalization data</strong>, reviewed, as
+speakers provide it.</li>
+<li><strong>The measurements</strong> in §8, once there are samples.</li>
+</ol>
+<hr>
+<h3 id="as-built-17-nov-2026-step-1">As built (17 Nov 2026): step 1<a class="anchor" href="#as-built-17-nov-2026-step-1" aria-label="Link to this section">#</a></h3>
+<p><code>interpret</code> now matches typed text to option labels and to the yes and no
+words with <code>foldForMatch</code> (exported from core): accents dropped, case,
+spacing and apostrophe style ignored. It also compares against the label <strong>as
+a USSD screen shows it</strong>, so letters USSD rewrites rather than strips (<code>ɗ</code> to
+<code>d</code>, <code>ŋ</code> to <code>ng</code>) can be typed back too: whatever a screen showed can be
+typed. An exact case-insensitive match still wins, and a folded match that
+fits more than one label is refused rather than guessed. Numbers are matched
+first, as before. No language data is involved.</p>
+<h2 id="12-open-questions">12. Open questions<a class="anchor" href="#12-open-questions" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>Generic folding first,</strong> shipped before any language data (recommended),
+since it fixes a bug users hit today?</li>
+<li><strong>A <code>packages/normalize</code> package now,</strong> or keep the generic folding in
+core until there is language data (recommended: in core first, since step
+1 is a few lines)?</li>
+<li><strong>The data license:</strong> Creative Commons for the data and MIT for the code
+(recommended), or MIT for everything?</li>
+<li><strong>A runtime <code>Normalizer</code> plug-in for models:</strong> later, and off by default
+(recommended), or never?</li>
+</ol>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/normalization-design.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/normalization-design.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-what-quotnormalizationquot-means-here">1. What &quot;normalization&quot; means here</a></li><li><a href="#2-why-now-two-problems-in-the-code-today">2. Why now: two problems in the code today</a></li><li><a href="#3-facts-read-17-nov-2026">3. Facts (read 17 Nov 2026)</a></li><li><a href="#4-principles">4. Principles</a></li><li><a href="#5-the-three-operations">5. The three operations</a></li><li><a href="#6-data">6. Data</a></li><li><a href="#7-where-gemini-fits">7. Where Gemini fits</a></li><li><a href="#8-measuring-whether-it-helps">8. Measuring whether it helps</a></li><li><a href="#9-its-own-repository">9. Its own repository?</a></li><li><a href="#10-questions-for-native-speakers-verify-first">10. Questions for native speakers (verify first)</a></li><li><a href="#11-build-order">11. Build order</a></li><li><a href="#12-open-questions">12. Open questions</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

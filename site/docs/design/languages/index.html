@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalangu — 0.3 languages design · Kalangu</title>
+<meta name="description" content="Status: draft for review. No language code exists, and none should be written until this document is reviewed. Date: 2026-11-17 (first draft 2026-11-16, revised">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/" aria-current="page">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="kalangu--03-languages-design">Kalangu — 0.3 languages design</h1>
+<p>Status: <strong>draft for review. No language code exists, and none should be
+written until this document is reviewed.</strong>
+Date: 2026-11-17 (first draft 2026-11-16, revised after reading CommonLingua&#39;s
+model card and checking the draft against the code). Scope: version 0.3 only:
+choosing the user&#39;s language, optional detection as a hint, per-language
+model routing, and community translations. Payments (0.2), WhatsApp (0.4) and
+voice are out of scope.</p>
+<hr>
+<h2 id="1-what-03-is">1. What 0.3 is<a class="anchor" href="#1-what-03-is" aria-label="Link to this section">#</a></h2>
+<p>An agent that speaks the user&#39;s language, with translations contributed by
+the community:</p>
+<blockquote>
+<p>A user dials the clinic line from a Senegalese number and sees a language
+menu in the languages they are likely to read. They pick Wolof once. From
+then on, on USSD, SMS and later WhatsApp, the fixed text is Wolof and, if
+the developer wants it, a Wolof-capable model answers. The same agent
+serves English, French, Hausa or Swahili without being rebuilt: each
+language is a locale and, optionally, a model.</p>
+</blockquote>
+<p>Four properties matter more than features:</p>
+<ol>
+<li><strong>Never guess silently.</strong> A wrong-language reply is worse than one extra
+question. Detection is a hint, never the only evidence.</li>
+<li><strong>Ask once, remember.</strong> On a keypad the cheapest reliable signal is the
+user&#39;s own choice, stored per phone number.</li>
+<li><strong>One model per language is optional.</strong> A single multilingual model is
+the default; routing per language is opt-in.</li>
+<li><strong>Community translations are first-class,</strong> and the toolkit checks them,
+because a translation that breaks a USSD screen or an SMS budget is a bug
+(§8).</li>
+</ol>
+<hr>
+<h2 id="2-facts-read-17-nov-2026">2. Facts (read 17 Nov 2026)<a class="anchor" href="#2-facts-read-17-nov-2026" aria-label="Link to this section">#</a></h2>
+<h3 id="21-commonlingua">2.1 CommonLingua<a class="anchor" href="#21-commonlingua" aria-label="Link to this section">#</a></h3>
+<p>Sources: the GSMA press release of 28 April 2026 (&quot;Pleias and GSMA launch
+CommonLingua…&quot;) and the model card at <code>huggingface.co/PleIAs/CommonLingua</code>.
+The accuracy figures are the developers&#39; own; I found no independent
+evaluation.</p>
+<ul>
+<li>A language identification model from Pleias and the GSMA: <strong>334 languages
+in all, 61 of them African</strong>, trained only on open-licensed and
+public-domain text from the Common Corpus project.</li>
+<li><strong>Size:</strong> the card gives 2.35 million parameters; the press release says
+&quot;2 million&quot; and an 8 MB checkpoint. It reads UTF-8 bytes rather than using
+a language-specific tokenizer.</li>
+<li><strong>License:</strong> the model card lists <strong>apache-2.0</strong> (the press release names
+none). The card does not include the license text.</li>
+<li><strong>Accuracy:</strong> on the CommonLID benchmark (376k held-out <strong>paragraphs</strong>):
+77.63% strict accuracy, 82.92% &quot;equivalence-class&quot; accuracy, macro F1
+0.7879. The press release rounds this to &quot;83% accuracy, F1 0.79&quot;.
+<strong>Per-language accuracy is not stated.</strong></li>
+<li><strong>Speed:</strong> about 20 texts per second on a CPU and up to 3,000 per second
+on one GPU (press release).</li>
+<li><strong>How it runs:</strong> PyTorch, through a <code>predict.py</code> script that prints a code
+and a score (for example <code>fra 0.99</code>). The card does not say whether the
+score is a calibrated probability. <strong>No ONNX or JavaScript build is
+mentioned.</strong></li>
+<li><strong>Its own warnings:</strong> it was &quot;not assessed on very short text segments and
+will likely perform less well than alternatives&quot;, and it is &quot;intended for
+paragraph-level corpus curation&quot;. Nothing is said about code-mixed text.</li>
+<li><strong>Coverage of our languages:</strong> French is shown working. <strong>Wolof, Hausa and
+Swahili are not named on either page</strong> (the press release mentions Swahili,
+Yoruba and Wolof only as examples of languages that need identifying). They
+are probably among the 61, but no source I read says so.</li>
+</ul>
+<h3 id="22-other-detectors">2.2 Other detectors<a class="anchor" href="#22-other-detectors" aria-label="Link to this section">#</a></h3>
+<p>No source I found benchmarks any detector on <strong>short keypad-typed text in
+Wolof, Hausa and Swahili</strong>. What exists:</p>
+<ul>
+<li>GlotLID&#39;s README warns that it was trained mainly on longer sentences and
+should not be used on very short ones.</li>
+<li>A third-party model card (self-reported, not a neutral benchmark) shows low
+accuracy for general-purpose detectors on 1–5 word inputs across 608
+languages: 21.8% and 48.6% for two of the models it compares. It does not
+separate out Wolof, Hausa or Swahili in what I read.</li>
+<li>Press coverage of CommonLingua says other detectors often label Swahili or
+Hausa as English or French. That is an announcement claim.</li>
+</ul>
+<h3 id="23-what-i-measured-in-this-repo">2.3 What I measured in this repo<a class="anchor" href="#23-what-i-measured-in-this-repo" aria-label="Link to this section">#</a></h3>
+<p>Using the core&#39;s own <code>gsmClass</code> and <code>toUssdSafe</code>:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Letter</th>
+<th>Language</th>
+<th>SMS</th>
+<th>USSD output</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ë</code>, <code>ŋ</code>, <code>ó</code></td>
+<td>Wolof</td>
+<td>outside GSM-7</td>
+<td><code>e</code>, <code>ng</code>, <code>o</code></td>
+</tr>
+<tr>
+<td><code>ñ</code>, <code>à</code>, <code>é</code></td>
+<td>Wolof</td>
+<td>GSM-7</td>
+<td><code>n</code>, <code>a</code>, <code>e</code></td>
+</tr>
+<tr>
+<td><code>ɓ</code>, <code>ɗ</code>, <code>ƙ</code></td>
+<td>Hausa</td>
+<td>outside GSM-7</td>
+<td><code>b</code>, <code>d</code>, <code>k</code></td>
+</tr>
+<tr>
+<td><code>ç</code>, <code>ê</code>, <code>ô</code></td>
+<td>French</td>
+<td>outside GSM-7</td>
+<td><code>c</code>, <code>e</code>, <code>o</code></td>
+</tr>
+<tr>
+<td>plain a–z</td>
+<td>Swahili</td>
+<td>GSM-7</td>
+<td>unchanged</td>
+</tr>
+</tbody></table></div>
+<p>One character outside GSM-7 makes the whole SMS UCS-2: <strong>70 characters per
+segment instead of 160</strong> (67 instead of 153 when joined), so the 4-segment
+cap is 268 characters instead of 612. Wolof and Hausa text will usually be
+UCS-2; Swahili will not. On USSD, everything is reduced to ASCII, so
+<strong>Hausa&#39;s <code>ɓ</code>/<code>b</code>, <code>ɗ</code>/<code>d</code> and <code>ƙ</code>/<code>k</code>, which are different sounds, become
+the same letter.</strong> That is a limit of the gateway&#39;s &quot;no special characters&quot;
+rule (<code>design.md</code> §2), not something Kalangu can fix; it needs saying to
+anyone translating for USSD.</p>
+<hr>
+<h2 id="3-what-this-changes-in-the-first-draft">3. What this changes in the first draft<a class="anchor" href="#3-what-this-changes-in-the-first-draft" aria-label="Link to this section">#</a></h2>
+<p>The first draft was written before these facts. It said, and this revision
+corrects:</p>
+<ol>
+<li><strong>&quot;CommonLingua is small enough to bundle and runs in the same
+process.&quot;</strong> Not for a TypeScript package. It is PyTorch with a Python
+script, and the core has zero runtime dependencies. A detector has to run
+as a separate service, or someone has to port and validate an ONNX build
+(§6).</li>
+<li><strong>Detection on the first input, with a 0.7 default threshold.</strong> The first
+input on a keypad is a menu number or a few words, which is exactly the
+case CommonLingua says it was not assessed on. A numeric default would
+have been a guess dressed as a setting. Detection becomes a hint (§5) and
+there is no default threshold until one is measured.</li>
+<li><strong>&quot;Covers the target languages.&quot;</strong> Unconfirmed for Wolof, Hausa and
+Swahili (§2.1).</li>
+<li><strong>Community locale files in <code>src/locales/&lt;code&gt;.ts</code>.</strong> That directory does
+not exist. Locales are objects in <code>packages/core/src/locales.ts</code>, and
+developers can already add one without touching the toolkit (§9).</li>
+<li><strong>Nine message keys.</strong> There are 30 now (payments, expired choice), and a
+few take <code>{placeholders}</code> that a translation must keep.</li>
+<li><strong>Invented Wolof strings.</strong> The first draft showed sample Wolof
+translations; I could not verify them and removed them. A Wolof speaker
+must supply real ones.</li>
+</ol>
+<hr>
+<h2 id="4-choosing-the-language">4. Choosing the language<a class="anchor" href="#4-choosing-the-language" aria-label="Link to this section">#</a></h2>
+<p><strong>Ask first, remember, and let the number help.</strong></p>
+<ul>
+<li><strong>A language menu on first contact,</strong> unless the session already has a
+locale. It is a normal <code>choose</code> step, so it renders on USSD, SMS and later
+WhatsApp with no new renderer. Each language is named <strong>in that language</strong>
+(&quot;Français&quot;, &quot;Wolof&quot;, &quot;Kiswahili&quot;, &quot;Hausa&quot;, &quot;English&quot;), because a user who
+cannot read the menu cannot choose from it.</li>
+<li><strong>The country prefix orders the menu and sets a default.</strong> E.164 numbers
+carry a reliable country code. A developer maps country to a short list of
+likely locales (<code>+221</code> to French, Wolof, English; <code>+234</code> to English, Hausa,
+and so on), and the menu lists those first. This is a prior, not a
+detection, and costs nothing at runtime.</li>
+<li><strong>The choice persists.</strong> Sessions are keyed by phone number and keep
+<code>locale</code> already, so one choice covers every channel and later dials.</li>
+<li><strong>Switching at any time</strong> is the existing pattern (the clinic example&#39;s
+Language menu sets <code>ctx.locale</code>). The core exposes a ready-made
+<code>languageMenu()</code> step so developers do not rebuild it.</li>
+<li><strong>USSD cost:</strong> one extra screen, once per phone number. That is the price
+of never answering in the wrong language, and it is paid once.</li>
+</ul>
+<hr>
+<h2 id="5-detection-as-a-hint">5. Detection, as a hint<a class="anchor" href="#5-detection-as-a-hint" aria-label="Link to this section">#</a></h2>
+<p>Detection is optional and never the only way a language gets set.</p>
+<pre><code class="language-ts">interface LanguageDetector {
+  detect(
+    text: string,
+    options: { candidates: readonly string[] },
+  ): Promise&lt;{ code: string; confidence: number } | null&gt;;
+}
+</code></pre>
+<ul>
+<li><strong><code>candidates</code> is the set of languages the agent supports,</strong> and the
+detector must answer from it or return <code>null</code>. Choosing among five is far
+easier than among 334, and it prevents the worst failure: confidently
+naming a language the agent cannot speak.</li>
+<li><strong>A minimum length.</strong> Below <code>minChars</code> (a developer setting, no default
+until measured) the engine does not call the detector. One or two words
+tell it nothing.</li>
+<li><strong>When it runs:</strong> on <strong>free text the user typed</strong>: <code>ask</code> answers, and the
+messages on SMS and WhatsApp, which are longer than keypad input. Never on
+a menu number.</li>
+<li><strong>What it does with a result:</strong> it never switches the language silently.
+It suggests: after a confident, long-enough result that differs from the
+stored locale, the agent offers the language menu once (&quot;Reply in
+Kiswahili? 1. Yes 2. No&quot;), and remembers a &quot;No&quot; for the session.</li>
+<li><strong>No default threshold.</strong> <code>confidence</code> means different things in different
+detectors, and CommonLingua&#39;s score is not documented as calibrated. The
+threshold is required configuration, and the project ships a way to
+measure one (§12) rather than a number to trust.</li>
+<li><strong>Per turn or once?</strong> Once per session is the proposal (§14, question 1):
+a user can switch by hand, and re-detecting every turn invites flip-flops
+on code-mixed text.</li>
+</ul>
+<hr>
+<h2 id="6-running-a-detector-from-typescript">6. Running a detector from TypeScript<a class="anchor" href="#6-running-a-detector-from-typescript" aria-label="Link to this section">#</a></h2>
+<p>The port is the stable part; where the model runs is a deployment choice.</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it takes</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>No detector</strong></td>
+<td>Nothing. The menu and country prior (§4) do the work</td>
+<td>Ships first. Correct, and costs no model</td>
+</tr>
+<tr>
+<td><strong>Sidecar service</strong></td>
+<td>A small HTTP service running CommonLingua&#39;s Python, called through the port</td>
+<td>Works today, adds an operational part and a network hop on the reply path</td>
+</tr>
+<tr>
+<td><strong>ONNX in Node</strong></td>
+<td>Someone exports CommonLingua to ONNX, proves it gives the same answers, and ships an optional <code>@kalangu/language-commonlingua</code> package with an ONNX runtime dependency</td>
+<td>Best for developers, but real work, and only worth doing if it passes §12</td>
+</tr>
+<tr>
+<td><strong>Heuristic</strong></td>
+<td>Per-language greeting and keyword lists</td>
+<td>Cheap and explainable, weak outside its word lists. Useful as a candidate-narrowing hint, not alone</td>
+</tr>
+</tbody></table></div>
+<p>Core defines only the port and keeps zero runtime dependencies. No detector
+ships with core.</p>
+<hr>
+<h2 id="7-per-language-model-routing">7. Per-language model routing<a class="anchor" href="#7-per-language-model-routing" aria-label="Link to this section">#</a></h2>
+<h3 id="71-default-one-model">7.1 Default: one model<a class="anchor" href="#71-default-one-model" aria-label="Link to this section">#</a></h3>
+<p>The developer&#39;s <code>model</code> handles every language. Nothing in core changes:
+<code>ctx.locale</code> is already on the handler&#39;s context, as in the clinic example.</p>
+<h3 id="72-opt-in-a-model-per-language">7.2 Opt-in: a model per language<a class="anchor" href="#72-opt-in-a-model-per-language" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-ts">createAgent({
+  model: { fr: frenchModel, wo: wolofModel, default: multilingualModel },
+  // ...
+});
+</code></pre>
+<p>The model handle becomes a map keyed by locale, with a <code>default</code>. The engine
+resolves <code>ctx.model</code> to the entry for <code>ctx.locale</code>, falling back to
+<code>default</code> and logging a warning when none matches. A missing entry never
+fails the turn. Keys must be languages the agent has locales for, checked at
+startup.</p>
+<h3 id="73-what-the-model-receives">7.3 What the model receives<a class="anchor" href="#73-what-the-model-receives" aria-label="Link to this section">#</a></h3>
+<p>The user&#39;s input as typed, plus <code>ctx.locale</code> and <code>ctx.t</code>. Core supplies the
+locale; it does not translate the model&#39;s output. Language consistency in
+the answer is the handler&#39;s job.</p>
+<hr>
+<h2 id="8-text-that-must-fit-the-channel">8. Text that must fit the channel<a class="anchor" href="#8-text-that-must-fit-the-channel" aria-label="Link to this section">#</a></h2>
+<p>A translation is not only words. The same string has to fit a USSD screen and
+an SMS budget (§2.3), and a few strings carry placeholders that must survive.</p>
+<p>A <strong><code>kalangu locale check</code></strong> command (the &quot;language test command&quot; on the
+roadmap), run in CI and by contributors, reports for any locale:</p>
+<ul>
+<li><strong>Missing keys,</strong> and keys that exist in no other locale (typos).</li>
+<li><strong>Placeholders:</strong> every <code>{name}</code> in the English string must appear in the
+translation, and no others (<code>{amount}</code>, <code>{yes}</code>, <code>{currency}</code>).</li>
+<li><strong>USSD:</strong> each string&#39;s length against the screen limit, with characters
+that will be transliterated or removed listed (so a Hausa translator sees
+that <code>ɗ</code> becomes <code>d</code>).</li>
+<li><strong>SMS:</strong> the encoding and segment count of each string, flagging any that
+push past one segment or fall into UCS-2 only because of one character.</li>
+<li><strong>Empty or unchanged strings</strong> (a copied English value).</li>
+</ul>
+<p>Fixed strings are short, so the budget rarely bites; the checker&#39;s real job
+is catching the placeholder that was translated away and the screen that no
+longer fits.</p>
+<hr>
+<h2 id="9-community-translations">9. Community translations<a class="anchor" href="#9-community-translations" aria-label="Link to this section">#</a></h2>
+<h3 id="91-how-it-works-today">9.1 How it works today<a class="anchor" href="#91-how-it-works-today" aria-label="Link to this section">#</a></h3>
+<p>A developer can already add a language with no change to the toolkit:</p>
+<pre><code class="language-ts">createAgent({
+  defaultLocale: &quot;wo&quot;,
+  messages: { wo: { &quot;common.yes&quot;: &quot;…&quot;, &quot;common.no&quot;: &quot;…&quot; /* … */ } },
+  // ...
+});
+</code></pre>
+<p><code>messages</code> accepts partial locales; a missing key falls back to the default
+locale, then English. So a half-finished translation cannot break rendering.
+The built-in locales are objects in <code>packages/core/src/locales.ts</code>.</p>
+<h3 id="92-what-03-adds">9.2 What 0.3 adds<a class="anchor" href="#92-what-03-adds" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>A home for contributed locales</strong> that can be reviewed and versioned
+without touching <code>locales.ts</code>: a <code>locales/&lt;code&gt;.ts</code> file per language
+(§14, question 3), exporting <code>Partial&lt;Messages&gt;</code> and a header with who
+wrote it and who reviewed it.</li>
+<li><strong>The checker (§8) in CI,</strong> so a locale cannot merge with a broken
+placeholder.</li>
+<li><strong>A contributor guide</strong> in <code>CONTRIBUTING.md</code>: copy the English file,
+translate, run the checker, open a pull request.</li>
+<li><strong>Native-speaker review.</strong> A maintainer cannot judge a Wolof translation
+by reading it. A locale is marked <strong>reviewed</strong> only when a speaker of that
+language, other than the author, signed off, and the file says who. An
+unreviewed locale ships as <strong>experimental</strong> and the README says so.</li>
+<li><strong>First languages: Wolof, Hausa, Swahili,</strong> in that order, then whatever
+contributors bring. English and French already ship.</li>
+</ul>
+<h3 id="93-what-a-translator-needs-to-know">9.3 What a translator needs to know<a class="anchor" href="#93-what-a-translator-needs-to-know" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Keep every <code>{placeholder}</code> exactly.</li>
+<li>On USSD the text reaches the user as ASCII (§2.3). Hausa hooked letters and
+Wolof <code>ë</code>, <code>ŋ</code> and <code>ó</code> are flattened. Where that makes a word ambiguous,
+prefer a wording that survives it.</li>
+<li>Keep strings short. A USSD screen is 160 characters including the menu.</li>
+<li>Fixed strings only. Agent content (menu titles, answers) is the
+developer&#39;s own and lives in <code>{ en: &quot;…&quot;, wo: &quot;…&quot; }</code> text.</li>
+</ul>
+<hr>
+<h2 id="94-as-built-17-nov-2026">9.4 As built (17 Nov 2026)<a class="anchor" href="#94-as-built-17-nov-2026" aria-label="Link to this section">#</a></h2>
+<p>The first slice of this design is in core, with no detector and no model, as
+recommended in §14, question 2.</p>
+<ul>
+<li><strong><code>createAgent({ languages: { supported, priors? } })</code>.</strong> Needs at least two
+languages, each with messages (built in, or in <code>messages</code>); a language
+without them, a repeated code or name, or fewer than two is a startup error.
+Until the user has chosen, a fresh start shows the menu, then goes to the
+start step. The choice sets <code>locale</code> and <code>languageChosen</code> on the session,
+so it is asked once per phone number across every channel. Any handler that
+sets <code>ctx.locale</code> counts as a choice too. A session stored before this
+exists is asked once.</li>
+<li><strong><code>languageMenu({ languages?, priors?, title?, then? })</code></strong> is the same step
+for a &quot;Language&quot; entry in the tree. Without <code>languages</code> it uses the
+agent&#39;s. With no <code>then</code> it goes back up, and <code>then</code> may be a step or a
+handler. It is indexed like any other step.</li>
+<li><strong>The menu</strong> names each language in itself, in the order the country prior
+gives, then the rest in the order declared: every language appears exactly
+once, so a prior can reorder the menu but never hide a choice. The title is
+every supported language&#39;s word for &quot;Language&quot; without repeats (&quot;Langue /
+Language&quot;). Typing a language&#39;s name also works. <strong>On USSD the names are
+shown in plain ASCII</strong> (Français is &quot;Francais&quot;), like everything else.</li>
+<li><strong><code>DEFAULT_LANGUAGE_PRIORS</code></strong> is a small table keyed by calling code
+(Gambia, Senegal, Mali, Guinea, Côte d&#39;Ivoire, Burkina Faso, Niger, Togo,
+Benin, Ghana, Nigeria, DR Congo, Kenya, Tanzania, Uganda). They are starting
+points for ordering a menu, easy to correct, and replaceable with <code>priors</code>.
+An id that is not a phone number, such as a business-scoped WhatsApp id, has
+no calling code and gets the declared order.</li>
+<li><strong>A dial-string shortcut</strong> (<code>*384*1*2#</code>) is dropped on a user&#39;s first
+contact, since its first input is not a language choice. They see the menu,
+and the shortcut works from the next dial.</li>
+<li><strong><code>kalangu locale check &lt;file&gt;</code></strong> (the checker of §8). <code>checkLocale</code> is a
+pure function exported from core; the command wraps it for <code>.json</code>, <code>.js</code> and
+<code>.mjs</code> files (<code>.ts</code> on Node 22.18 or later). It reports missing keys
+(a warning for a partial locale, an error with <code>--complete</code>), unknown keys,
+empty or non-string values, strings left identical to English, lost or
+invented placeholders, and for USSD and SMS the characters that are
+removed, shown differently, or push a string to UCS-2, and strings that
+span several screens or segments. Many untranslated messages collapse to
+one line, so real errors stay visible. Exit status 0 passes, 1 fails, 2 is a
+usage error. The command is a separate file, not exported from core&#39;s main
+entry, so the engine stays runtime-agnostic.</li>
+<li><strong>The shipped locales are tested with it.</strong> English is clean. French has no
+errors, and three payment strings fall back to UCS-2 on SMS because of <code>ê</code>
+and <code>ç</code>, which the test pins as the known cost.</li>
+<li><strong>Not built in that slice:</strong> the detector port and the model map (see
+§9.5), the <code>locales/</code> directory, and Wolof, Hausa and Swahili translations.</li>
+</ul>
+<h2 id="95-as-built-detection-and-the-model-map-17-nov-2026">9.5 As built: detection and the model map (17 Nov 2026)<a class="anchor" href="#95-as-built-detection-and-the-model-map-17-nov-2026" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong><code>languages.detection: { detector, threshold, minChars, timeoutMs? }</code>.</strong>
+<code>LanguageDetector.detect(text, { candidates })</code> returns
+<code>{ code, confidence }</code> or null. Kalangu ships no detector (§6).
+<code>threshold</code> (above 0, at most 1) and <code>minChars</code> (a whole number, at least 1)
+are <strong>required, with no default</strong>: nothing has been measured yet (§12).
+<code>timeoutMs</code> defaults to 1000 ms. At startup, <code>deadlineMs</code> plus <code>timeoutMs</code>
+must not exceed the 10 s USSD bound, so detection can never push a reply
+past what a gateway waits.</li>
+<li><strong>When it runs:</strong> only on the text of an <code>ask</code> answer, trimmed, at least
+<code>minChars</code> long, and containing at least one letter. Never on a menu
+choice, a confirm, or a <code>number</code> ask: an amount or an account number is
+not language, and is never sent to a detector. Not yet on the first SMS of
+a conversation (§5 proposed it; left for later).</li>
+<li><strong>What it does:</strong> it never switches silently. When the result is one of
+the agent&#39;s languages, at or above the threshold, and not the current one,
+the typed answer is <strong>held</strong> and the user is asked, <em>in the suggested
+language</em>, &quot;Continue in {language}?&quot; (<code>common.suggestLanguage</code>). Yes
+switches the language for good. Either way the held answer then runs
+through its handler, in the chosen language, so nothing the user typed is
+lost.</li>
+<li><strong>How often:</strong> at most <strong>one offer per conversation</strong>, accepted or not, so
+a code-mixed answer right after a switch cannot flip the language back. A
+<strong>No is kept for good</strong> for that phone number, deliberately: no nagging, and
+the language menu still lets the user switch. A pending offer is dropped as
+soon as any other question is shown, so it can never answer one.</li>
+<li>The first-contact language menu is stored under the fixed step id
+<code>language</code>, so adding or removing extra steps cannot send a user waiting at
+the menu somewhere else. (Revised 17 Nov 2026 after an independent review.)</li>
+<li><strong>Failure is never the user&#39;s problem:</strong> a detector that throws, returns a
+language the agent does not have, or takes longer than <code>timeoutMs</code> is
+logged as a warning and the answer is handled as if there were no detector.
+The timeout applies on every channel, not only USSD.</li>
+<li><strong><code>models: { default, [locale]: model }</code></strong> instead of <code>model</code>. <code>ctx.model</code>
+is the entry for the user&#39;s current language, read when the handler uses
+it, so a handler that changes <code>ctx.locale</code> gets the new language&#39;s model
+straight away. A language without an entry gets <code>default</code>, with one warning
+per language. Startup fails for both <code>model</code> and <code>models</code>, for no
+<code>default</code>, or for an entry whose language has no messages.</li>
+</ul>
+<h2 id="10-how-the-pieces-fit">10. How the pieces fit<a class="anchor" href="#10-how-the-pieces-fit" aria-label="Link to this section">#</a></h2>
+<pre><code>contact from +221…
+  → stored locale? yes → use it
+  → no → language menu ordered by country, store the choice
+  → run the handler with ctx.locale set
+  → model for ctx.locale (or the default model)
+  → render the turn, fixed text from the locale, for the channel
+
+free text typed later (optional)
+  → long enough? yes → detector(text, candidates)
+  → confident and different? → offer the language menu once
+</code></pre>
+<hr>
+<h2 id="11-packages-and-engine-changes">11. Packages and engine changes<a class="anchor" href="#11-packages-and-engine-changes" aria-label="Link to this section">#</a></h2>
+<pre><code>packages/core       languageMenu() step, country-to-locales prior,
+                    LanguageDetector port, model map resolution,
+                    `kalangu locale check`, locales/ directory
+optional package    @kalangu/language-commonlingua (only if §12 passes)
+</code></pre>
+<p>Core keeps zero runtime dependencies. Engine changes: resolving <code>ctx.model</code>
+from a map, the <code>candidates</code> and <code>minChars</code> plumbing for the port, and a
+suggest-once flag in the session record. Nothing about USSD or SMS rendering
+changes.</p>
+<hr>
+<h2 id="12-verify-first">12. Verify first<a class="anchor" href="#12-verify-first" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>Is Wolof, Hausa and Swahili in CommonLingua&#39;s 61?</strong> The card and press
+release do not say. Read the training data or run <code>predict.py</code> on known
+text in each.</li>
+<li><strong>Accuracy on short, keypad-typed, code-mixed input</strong> in the target
+markets, per language, for CommonLingua and at least one alternative, on
+a labelled set built from real or realistic messages (FLORES-style
+sentences cut to 1–5 words is a start, not the finish). The model card
+says it was not assessed here; assume it is weak until shown otherwise.</li>
+<li><strong>What the score means.</strong> Whether <code>0.99</code> is a probability, how it
+behaves on short text, and what threshold gives an acceptable
+false-switch rate on the labelled set.</li>
+<li><strong>Whether an ONNX export gives identical answers</strong> and runs from Node
+within the reply budget. Without it the options are a sidecar service or
+no detector (§6).</li>
+<li><strong>Whether the language menu alone is enough.</strong> If users choose a language
+and stay, detection may not be worth building. Ask the two or three teams
+already running USSD services (TODO) how often people switch.</li>
+<li><strong>Whether a single multilingual model is good enough</strong> for most
+developers, which would make routing rarely needed.</li>
+<li><strong>Real strings through <code>kalangu locale check</code>:</strong> a Wolof and a Hausa
+translator reading the §2.3 table and saying whether the flattening is
+tolerable.</li>
+</ol>
+<hr>
+<h2 id="13-testing-plan-priority-order">13. Testing plan (priority order)<a class="anchor" href="#13-testing-plan-priority-order" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>The checker:</strong> missing, extra, empty and unchanged keys; lost and extra
+placeholders; the USSD and SMS reports on strings with <code>ë</code>, <code>ŋ</code>, <code>ɗ</code>.</li>
+<li><strong>Language menu:</strong> ordered by country; each language in its own name;
+the choice persists across channels and redials; switching later works.</li>
+<li><strong>Detector port with a fake:</strong> <code>candidates</code> honoured (an answer outside
+them is treated as <code>null</code>), below <code>minChars</code> never called, never run on a
+menu number, a different confident answer offers the menu once and a &quot;No&quot;
+is remembered.</li>
+<li><strong>Routing:</strong> map resolution by locale, fallback to <code>default</code> with a
+warning, startup check that keys are known locales.</li>
+<li><strong>Locale fallback:</strong> a partial locale falls back to the default, then
+English, and never breaks rendering.</li>
+<li><strong>A detector evaluation harness</strong> that takes a labelled file and prints
+per-language accuracy and the confusion matrix, so §12 item 2 can be
+answered repeatably rather than once.</li>
+</ol>
+<hr>
+<h2 id="14-open-questions">14. Open questions<a class="anchor" href="#14-open-questions" aria-label="Link to this section">#</a></h2>
+<p>Each has a recommendation so they can be settled quickly.</p>
+<ol>
+<li><strong>Detect once per session</strong> (recommended), or re-evaluate when the input
+language clearly changes?</li>
+<li><strong>Menu first, detection as a hint,</strong> and no detector in the first slice
+(recommended), or build detection first?</li>
+<li><strong>Where contributed locales live:</strong> <code>locales/&lt;code&gt;.ts</code> in this repo with
+a review header (recommended), a separate <code>@kalangu/locales</code> package, or
+a community repository?</li>
+<li><strong><code>kalangu locale check</code> as a core CLI</strong> (recommended, small and
+dependency-free), or a script in the repository only?</li>
+<li><strong>Model map in core</strong> (recommended, opt-in) or leave routing entirely to
+the developer&#39;s handler, since <code>ctx.locale</code> is already there?</li>
+<li><strong>Country-to-locales prior:</strong> a built-in table for the first markets
+(recommended, small and easy to correct) or developer-supplied only?</li>
+<li><strong>Experimental versus reviewed locales:</strong> ship unreviewed translations
+marked experimental (recommended) or hold them until a speaker has signed
+off?</li>
+</ol>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/languages-design.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/languages-design.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-what-03-is">1. What 0.3 is</a></li><li><a href="#2-facts-read-17-nov-2026">2. Facts (read 17 Nov 2026)</a></li><li><a href="#3-what-this-changes-in-the-first-draft">3. What this changes in the first draft</a></li><li><a href="#4-choosing-the-language">4. Choosing the language</a></li><li><a href="#5-detection-as-a-hint">5. Detection, as a hint</a></li><li><a href="#6-running-a-detector-from-typescript">6. Running a detector from TypeScript</a></li><li><a href="#7-per-language-model-routing">7. Per-language model routing</a></li><li><a href="#8-text-that-must-fit-the-channel">8. Text that must fit the channel</a></li><li><a href="#9-community-translations">9. Community translations</a></li><li><a href="#94-as-built-17-nov-2026">9.4 As built (17 Nov 2026)</a></li><li><a href="#95-as-built-detection-and-the-model-map-17-nov-2026">9.5 As built: detection and the model map (17 Nov 2026)</a></li><li><a href="#10-how-the-pieces-fit">10. How the pieces fit</a></li><li><a href="#11-packages-and-engine-changes">11. Packages and engine changes</a></li><li><a href="#12-verify-first">12. Verify first</a></li><li><a href="#13-testing-plan-priority-order">13. Testing plan (priority order)</a></li><li><a href="#14-open-questions">14. Open questions</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

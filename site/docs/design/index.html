@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalangu — v0.1 design · Kalangu</title>
+<meta name="description" content="Status: draft for review. v0.1 is implemented in this repository; §14 lists where the code differs from this document. Date: 2026-11-16. Scope: version 0.1 only">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/" aria-current="page">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="kalangu--v01-design">Kalangu — v0.1 design</h1>
+<p>Status: <strong>draft for review</strong>. v0.1 is implemented in this repository;
+§14 lists where the code differs from this document.
+Date: 2026-11-16. Scope: version 0.1 only (core, ussd, sms, sim, one example).
+Payments, WhatsApp, voice and language detection are explicitly out of scope.</p>
+<hr>
+<h2 id="1-what-v01-is">1. What v0.1 is<a class="anchor" href="#1-what-v01-is" aria-label="Link to this section">#</a></h2>
+<p>A TypeScript toolkit for AI agents that work on any phone. A developer writes an
+agent once; it runs over USSD and SMS. The one deliverable that matters:</p>
+<blockquote>
+<p>Someone clones the repo, runs <code>pnpm install &amp;&amp; pnpm demo</code>, and within ten
+minutes has dialed a code on a simulated keypad phone, asked a question, seen
+the &quot;we&#39;ll text you&quot; screen, and received the answer as a simulated SMS.</p>
+</blockquote>
+<p>The demo proves the three ideas that make Kalangu more than a menu builder:
+typed turns rendered per channel, an encoding-aware budgeter, and deferral.</p>
+<hr>
+<h2 id="2-verified-gateway-facts-checked-16-nov-2026">2. Verified gateway facts (checked 16 Nov 2026)<a class="anchor" href="#2-verified-gateway-facts-checked-16-nov-2026" aria-label="Link to this section">#</a></h2>
+<p>Sources: official docs <code>developers.africastalking.com/docs/*</code> (fetched full
+text), official help centre <code>help.africastalking.com</code> (articles 1284071 and
+1284096), and the official Node SDK source
+<code>github.com/AfricasTalkingLtd/africastalking-node.js</code> (<code>lib/ussd.js</code>,
+<code>lib/sms.js</code>, <code>lib/common.js</code>), which cites the legacy USSD spec.</p>
+<h3 id="21-ussd-inbound-callback">2.1 USSD inbound callback<a class="anchor" href="#21-ussd-inbound-callback" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>HTTP POST</strong>, <code>Content-Type: application/x-www-form-urlencoded</code>, to the
+callback URL registered for the service code. Fired on dial and on every
+menu response.</li>
+<li><strong>Form fields</strong>: <code>sessionId</code>, <code>phoneNumber</code>, <code>networkCode</code>, <code>serviceCode</code>,
+<code>text</code>.</li>
+<li><strong><code>text</code> semantics</strong>: empty string on the first request of a session;
+afterwards, all user input so far concatenated with <code>*</code> (e.g. <code>1*1*abc</code>).
+So the <em>new</em> input each turn is the last <code>*</code>-separated segment.</li>
+<li><strong>Response</strong>: plain text (<code>Content-Type: text/plain</code>), HTTP 200, starting
+with <code>CON</code> to continue or <code>END</code> to terminate. The official SDK emits
+<code>&quot;CON &quot;</code> / <code>&quot;END &quot;</code> — <strong>with a trailing space</strong> before the body.</li>
+<li>A malformed response (no <code>CON</code>/<code>END</code> prefix) or HTTP 4xx makes the gateway
+terminate the session gracefully. The adapter must therefore always answer
+200 with a valid <code>CON</code>/<code>END</code> body, even on internal errors.</li>
+<li><strong>Menus must not contain special characters</strong> — telcos cannot render them.
+The USSD renderer enforces a safe character set.</li>
+<li>Optional response header <code>at-ussd-hop-metadata</code> (≤ 99 chars, no <code>|</code>) labels
+the current step for journey tracking; it is echoed back on the next request
+and shown in the dashboard. We expose it, default off (no PII in it).</li>
+</ul>
+<h3 id="22-ussd-timing-and-screen-limits-kenya-official-help-centre">2.2 USSD timing and screen limits (Kenya, official help centre)<a class="anchor" href="#22-ussd-timing-and-screen-limits-kenya-official-help-centre" aria-label="Link to this section">#</a></h3>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Telco</th>
+<th>Total session</th>
+<th>Customer response timeout</th>
+<th>App response timeout</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Safaricom</td>
+<td>180 s</td>
+<td>30 s</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Airtel</td>
+<td>180 s</td>
+<td>60 s</td>
+<td>15 s (connection-to-app 10 s)</td>
+</tr>
+<tr>
+<td>Equitel</td>
+<td>180 s</td>
+<td>30 s</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<ul>
+<li><strong>The official USSD overview states: &quot;the expected response time from your
+application is at most 10 seconds.&quot;</strong> That is the binding constraint for the
+model deadline. Our default 4 s sits inside it; we warn at config time above
+8 s and hard-refuse above 10 s.</li>
+<li>Screen limits per menu: <strong>Safaricom KE 160 characters, Airtel KE 184</strong>;
+Nigeria is documented at 160. Third-party sources commonly quote &quot;182&quot;; we
+take <strong>160 as the conservative default</strong>, configurable per deployment.</li>
+<li><strong>Telco auto-pagination</strong>: when a menu is too long, Safaricom and Airtel
+break it up themselves and add <strong><code>98:More</code> and <code>00:Back</code></strong> reserved codes.
+Consequence for the budgeter: keep screens under the limit so auto-pagination
+never triggers, and treat 98/00 as reserved when numbering our own options.</li>
+<li>User input limits (what the customer may type): Safaricom KE 80 chars,
+Airtel KE 90 chars.</li>
+</ul>
+<h3 id="23-ussd-session-end-notifications">2.3 USSD session-end notifications<a class="anchor" href="#23-ussd-session-end-notifications" aria-label="Link to this section">#</a></h3>
+<p>A second callback URL (per service code) receives, at session end, a
+form-urlencoded POST with: <code>sessionId</code>, <code>phoneNumber</code>, <code>networkCode</code>,
+<code>serviceCode</code>, <code>date</code>, <code>status</code> (<code>Incomplete</code> | <code>Success</code> | <code>Failed</code>),
+<code>cost</code>, <code>durationInMillis</code>, <code>hopsCount</code>, <code>hopsMetadata</code> (pipe-delimited),
+<code>input</code> (full <code>*</code>-joined input), <code>lastAppResponse</code>, and <code>errorMessage</code> on
+failure. v0.1 exposes a handler for it but uses it only for logging/cleanup.</p>
+<h3 id="24-sms-api">2.4 SMS API<a class="anchor" href="#24-sms-api" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Auth</strong>: <code>apiKey</code> request header. <code>Accept: application/json</code> optional.
+Classic API requests are <code>application/x-www-form-urlencoded</code>.</li>
+<li><strong>Two send endpoints exist.</strong><ol>
+<li>Legacy (what the official SDK uses, and what the sandbox supports):
+<code>POST https://api.africastalking.com/version1/messaging</code>,
+form-urlencoded, fields <code>username</code>, <code>to</code> (comma-joined string),
+<code>message</code>, optional <code>from</code> (sender ID), <code>bulkSMSMode</code> (1 = bulk
+billing mode), <code>enqueue</code>. <strong>Success is HTTP 201</strong> with
+<code>SMSMessageData.Recipients[]</code> (<code>statusCode</code>, <code>number</code>, <code>cost</code>,
+<code>status</code>, <code>messageId</code>).</li>
+<li>New bulk: <code>POST /version1/messaging/bulk</code>, JSON, fields <code>username</code>,
+<code>phoneNumbers[]</code>, <code>message</code>, <code>senderId</code>, <code>enqueue</code> (default 1).
+Sandbox: &quot;coming soon&quot; as of the docs. → <strong>v0.1 uses the legacy
+endpoint</strong>, with a transport seam to switch later.</li>
+</ol>
+</li>
+<li>A recipient <code>status</code> of <code>Success</code> in the send response means <em>sent</em>, <strong>not
+delivered</strong>; delivery confirmation only arrives via delivery reports.</li>
+<li><strong>Delivery report callback</strong> (form-urlencoded POST): <code>id</code> (matches
+<code>messageId</code>), <code>phoneNumber</code>, <code>networkCode</code>, <code>status</code> (<code>Sent</code>/<code>Submitted</code>/
+<code>Buffered</code> are intermediate; <code>Success</code>/<code>Failed</code>/<code>Rejected</code> are final;
+<code>AbsentSubscriber</code>/<code>Expired</code> also occur), optional <code>failureReason</code>.</li>
+<li><strong>Incoming message callback</strong> (form-urlencoded POST): <code>date</code>, <code>from</code>, <code>id</code>,
+optional <code>linkId</code>, <code>text</code>, <code>to</code>, <code>cost</code>, <code>networkCode</code>.</li>
+<li>Nigeria DND: promotional sender IDs outside the allowed window return
+HTTP 409 / <code>statusCode 409</code> (<code>DoNotDisturbRejection</code>).</li>
+<li>Sandbox base domain: <code>api.sandbox.africastalking.com</code>; sandbox
+<code>networkCode</code> is <code>99999</code>.</li>
+</ul>
+<h3 id="25-what-differed-from-the-brief">2.5 What differed from the brief<a class="anchor" href="#25-what-differed-from-the-brief" aria-label="Link to this section">#</a></h3>
+<ol>
+<li>The brief said &quot;a model that thinks for 15 seconds loses the user&quot;. The
+official bound is stricter: <strong>10 s app response expectation</strong> (Airtel&#39;s own
+app-response timeout is 15 s). Design bound adopted: 10 s.</li>
+<li>Screen size: the brief said &quot;~182 characters&quot;. Official Kenya figures are
+<strong>160 (Safaricom) and 184 (Airtel)</strong>, Nigeria 160. Default: 160.</li>
+<li>The brief&#39;s USSD field list omitted <strong><code>networkCode</code></strong>; it is in the payload.</li>
+<li>The brief didn&#39;t mention: telco auto-pagination with reserved <code>98</code>/<code>00</code>
+codes; the &quot;no special characters&quot; rule; session-end notifications; the
+<code>at-ussd-hop-metadata</code> header; the <code>CON </code>/<code>END </code> trailing space; user input
+length limits; the legacy-vs-new SMS endpoint split and the HTTP 201 quirk.</li>
+<li>Not yet verified (needs a real account or hardware, per the checklist):
+real production truncation behaviour on other operators, whether USSD and
+SMS to the same number coexist on every operator (deferral depends on it),
+live session timings outside Kenya, and callback authenticity guarantees —
+<strong>no request signing is documented</strong> for callbacks; treat callbacks as
+unauthenticated input and document path-secret/IP-allowlist mitigations.</li>
+</ol>
+<hr>
+<h2 id="3-package-layout">3. Package layout<a class="anchor" href="#3-package-layout" aria-label="Link to this section">#</a></h2>
+<p>pnpm workspace, Node ≥ 20, TypeScript strict, ESM, vitest, MIT.</p>
+<pre><code>kalangu/
+  package.json            private root, scripts: test, demo, build
+  pnpm-workspace.yaml
+  tsconfig.base.json
+  docs/design.md
+  LICENSE                 MIT
+  packages/
+    core/                 @kalangu/core   (depends on nothing)
+    ussd/                 @kalangu/ussd   (→ core)
+    sms/                  @kalangu/sms    (→ core)
+    sim/                  @kalangu/sim    (→ core)
+  examples/
+    clinic/               example agent, wired to `pnpm demo`
+</code></pre>
+<p>Dependency rules:</p>
+<ul>
+<li><code>@kalangu/core</code> has <strong>zero runtime dependencies</strong> and never imports a model
+SDK, a gateway SDK, or an adapter.</li>
+<li>Adapters and the simulator depend only on core.</li>
+<li>The example depends on everything above.</li>
+</ul>
+<hr>
+<h2 id="4-core-concepts-and-types">4. Core concepts and types<a class="anchor" href="#4-core-concepts-and-types" aria-label="Link to this section">#</a></h2>
+<h3 id="41-turns">4.1 Turns<a class="anchor" href="#41-turns" aria-label="Link to this section">#</a></h3>
+<p>The agent never writes text to a phone. Steps return a typed turn; a
+per-channel renderer converts it into channel output.</p>
+<pre><code class="language-ts">export type Turn =
+  | { kind: &quot;say&quot;;     text: string }
+  | { kind: &quot;choose&quot;;  question?: string; options: readonly Option[] }
+  | { kind: &quot;ask&quot;;     question: string; input: &quot;text&quot; | &quot;number&quot; }
+  | { kind: &quot;confirm&quot;; question: string; yes?: string; no?: string }
+  // Reserved for 0.2. Parsed and type-checked now, rendered later:
+  | { kind: &quot;pay&quot;;     amount: number; currency: string; reason?: string };
+
+export interface Option { label: string; value?: string }
+</code></pre>
+<p>The union is deliberately closed-but-extensible: adding <code>pay</code> later is a
+single variant plus renderer cases, guarded by exhaustive <code>switch</code>.</p>
+<h3 id="42-steps-and-handlers">4.2 Steps and handlers<a class="anchor" href="#42-steps-and-handlers" aria-label="Link to this section">#</a></h3>
+<p>Steps are declared with builder functions and form a tree:</p>
+<pre><code class="language-ts">menu(title, { [label]: stepOrHandler })   // nested fixed menu
+ask(question, handler)                     // free text/number → handler
+say(text)                                  // terminal screen/message
+choose(question, { [label]: stepOrHandler })
+confirm(question, { onYes, onNo })
+</code></pre>
+<p>A handler is <code>(input: string, ctx: TurnContext) =&gt; Promise&lt;Turn | void&gt;</code>.
+<code>void</code> means &quot;stay here / continue default flow&quot;. <code>TurnContext</code> carries:</p>
+<pre><code class="language-ts">interface TurnContext {
+  input: string;                 // this turn&#39;s new input (last * segment on USSD)
+  session: SessionData;          // get/set arbitrary JSON-safe state
+  locale: Locale;                // writable; changing it persists
+  t: Translate;                  // locale lookup for fixed strings
+  model: ModelPort;              // the developer&#39;s injected model handle
+  logger: Logger;                // phone numbers masked by default
+  channel: ChannelId;            // &quot;ussd&quot; | &quot;sms&quot; | &quot;sim&quot;
+}
+</code></pre>
+<p><code>ModelPort</code> is the developer&#39;s own async function(s); core only awaits it.</p>
+<h3 id="43-engine-and-channels">4.3 Engine and channels<a class="anchor" href="#43-engine-and-channels" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-ts">export interface Channel {
+  id: ChannelId;
+  render(turn: Turn, ctx: RenderContext): RenderedTurn;   // pure
+  send?(out: RenderedOutbound): Promise&lt;void&gt;;            // outbound transport
+}
+
+export interface RenderedOutbound {
+  to: string;          // phone number
+  text: string;        // already budgeted
+  meta?: Record&lt;string, string&gt;;
+}
+</code></pre>
+<p><code>createAgent()</code> wires: channels, locales, start step, model port, session
+store, background worker, clock. It exposes:</p>
+<pre><code class="language-ts">agent.requestHandler(req: Request): Promise&lt;Response&gt;
+</code></pre>
+<p>which dispatches by URL pathname to the adapter registered with that <code>path</code>.
+Each adapter also exposes its own <code>.handler</code> for frameworks that prefer
+explicit mounting. Handlers are built on <strong>standard <code>Request</code>/<code>Response</code></strong>, so
+the same code runs on Hono, Bun, Deno, and behind small wrappers on Next.js
+and Express. Parsing the form body uses <code>await req.formData()</code>, which the
+Fetch spec defines for <code>application/x-www-form-urlencoded</code>.</p>
+<h3 id="44-background-work-pluggable">4.4 Background work (pluggable)<a class="anchor" href="#44-background-work-pluggable" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-ts">export interface BackgroundWork {
+  run(task: () =&gt; Promise&lt;void&gt;): void;
+}
+</code></pre>
+<p>Default: in-process fire-and-forget with a logged <code>catch</code> and a process-level
+<code>unhandledRejection</code> guard. Serverless users supply e.g. a <code>waitUntil</code>-based
+implementation (Cloudflare Workers) or a queue hand-off; the README documents
+what breaks without one (deferred answers never get sent).</p>
+<h3 id="45-sessions">4.5 Sessions<a class="anchor" href="#45-sessions" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-ts">interface SessionStore {
+  load(key: string): Promise&lt;SessionRecord | null&gt;;
+  save(record: SessionRecord, options?: { ifVersion?: number }): Promise&lt;void&gt;;
+  clear(key: string): Promise&lt;void&gt;;
+  readonly atomic?: boolean;   // save honours ifVersion atomically (0.2, payments)
+}
+</code></pre>
+<p><code>save</code> bumps <code>record.version</code>. With <code>ifVersion</code> it is a compare-and-set: it
+throws <code>SessionConflictError</code> if the stored version has moved on (a missing
+record counts as 0). Without it the last write wins, as before. A store that
+sets <code>atomic: true</code> promises the compare-and-set holds across every process
+sharing it (a conditional <code>UPDATE … WHERE version = $n</code>, or Redis
+<code>WATCH</code>/<code>MULTI</code>). Agents that take payments require it; see payments design
+§6.1.</p>
+<ul>
+<li><strong>Keyed by phone number</strong>, not gateway <code>sessionId</code>, so a dropped session
+resumes on redial. The gateway <code>sessionId</code> is stored for correlation only.</li>
+<li><code>SessionRecord</code>: <code>{ phone, locale, stepId, data, pendingAsk?, page?, deferred?: DeferredRef, updatedAt, gatewaySessionId? }</code>.</li>
+<li>In-memory <code>Map</code> implementation ships in core; a durable one is a drop-in.</li>
+<li>Policy notes:<ul>
+<li>USSD resumption: on a fresh dial (empty <code>text</code>) with an existing record,
+re-render the current step; a pending deferral re-replies with the
+deferred notice (<code>END</code>) rather than blocking.</li>
+<li>Inbound SMS while a USSD session is live continues the same conversation
+if a question is pending; otherwise it starts the menu flow over SMS
+(numbered list, reply with a number).</li>
+<li>New USSD session for a number with a live record supersedes it
+(last-write-wins). Documented limitation.</li>
+</ul>
+</li>
+</ul>
+<h3 id="46-deferral">4.6 Deferral<a class="anchor" href="#46-deferral" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Steps whose handler calls <code>ctx.model</code> run under a <strong>deadline</strong>: default
+<strong>4000 ms</strong>, configurable per agent. Hard ceiling 10 s (gateway
+expectation); config above 8 s logs a warning, above 10 s is refused.</li>
+<li>In time → the returned turn is rendered to the current channel.</li>
+<li>Too late → respond <strong><code>END</code></strong> with the localized deferred notice
+(&quot;We are working on your question. You will receive an SMS shortly.&quot;),
+keep the model promise running via <code>BackgroundWork.run</code>, and when it
+settles, render the result as a <code>say</code> turn for the <strong>SMS</strong> channel, budget
+it, and send through the SMS channel&#39;s <code>send()</code>.</li>
+<li>Fixed-menu steps never call the model and always take the fast path
+(no deadline, millisecond answers).</li>
+<li>Deadline timing uses an injectable clock (<code>Timer</code> interface with
+<code>setTimeout</code>-compatible methods); tests use a fake clock.</li>
+</ul>
+<h3 id="47-locales">4.7 Locales<a class="anchor" href="#47-locales" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Fixed strings live in JSON locale files shipped in core: <code>en</code>, <code>fr</code>.
+Keys include: <code>common.more</code>, <code>common.back</code>, <code>common.yes</code>, <code>common.no</code>,
+<code>common.deferredNotice</code>, <code>common.invalidChoice</code>, <code>common.typeAnswer</code>.</li>
+<li>The user&#39;s locale is chosen from a menu option or inferred later (0.3);
+it persists in the session record.</li>
+<li>Confirm on SMS matches localized yes/no words, case-insensitively.</li>
+</ul>
+<h3 id="48-logging-and-privacy">4.8 Logging and privacy<a class="anchor" href="#48-logging-and-privacy" aria-label="Link to this section">#</a></h3>
+<p>Phone numbers are personal data. The default logger masks to the last 4
+digits (<code>+254••••••1001</code>). Raw numbers never appear in logs, errors, or the
+optional hop-metadata header. Disabling masking is an explicit opt-in flag.</p>
+<hr>
+<h2 id="5-the-budgeter">5. The budgeter<a class="anchor" href="#5-the-budgeter" aria-label="Link to this section">#</a></h2>
+<p>Every outgoing screen or message passes through the budgeter. It never emits
+something a channel would truncate or render wrongly.</p>
+<h3 id="51-channel-profiles">5.1 Channel profiles<a class="anchor" href="#51-channel-profiles" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-ts">interface ChannelProfile {
+  id: ChannelId;
+  // USSD: per-operator screen limit, reserved nav numbers, safe charset
+  // SMS: encoding-aware segment math
+}
+
+interface ScreenBudget {
+  maxChars: number;               // USSD default: 160
+  nav: { more: string; back: string | null };  // defaults &quot;98&quot;, null (no Back in v0.1)
+  reservedNumbers: readonly string[];          // [&quot;98&quot;, &quot;00&quot;]
+}
+</code></pre>
+<h3 id="52-ussd-rules">5.2 USSD rules<a class="anchor" href="#52-ussd-rules" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Count characters after joining pages; never exceed <code>maxChars</code>.</li>
+<li>Long <code>say</code>/<code>choose</code> content paginates: page N ends with
+<code>\n98. More</code> (localized label, configurable number); the user&#39;s <code>98</code>
+advances; pagination state (<code>page</code>) lives in the session.</li>
+<li>Option numbering skips reserved <code>98</code> and <code>00</code>.</li>
+<li>The renderer restricts output to a <strong>safe charset</strong> (printable ASCII plus
+<code>\n</code>; accented characters are transliterated or stripped with a warning).
+This follows the official &quot;no special characters&quot; rule.</li>
+</ul>
+<h3 id="53-sms-rules-encoding-aware">5.3 SMS rules (encoding-aware)<a class="anchor" href="#53-sms-rules-encoding-aware" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Classify every character: GSM-7 basic alphabet, GSM-7 extension table
+(counts as <strong>two</strong> chars: <code>^ { } \ [ ] ~ | €</code>), or outside GSM-7 entirely.</li>
+<li>If any char is outside GSM-7 → the whole message is UCS-2:
+<strong>70 chars per segment</strong> (67 when concatenated).</li>
+<li>GSM-7: <strong>160 per segment</strong> (153 when concatenated).</li>
+<li><code>smsLength(text)</code> returns <code>{ encoding, segments, charsPerSegment }</code>.</li>
+<li>Policy: never silently truncate. Default behaviour is <strong>split</strong> into
+separate messages, capped at 4 segments total (configurable); exceeding the
+cap is an error surfaced to the developer, not silent loss.</li>
+</ul>
+<h3 id="54-why-this-belongs-in-core">5.4 Why this belongs in core<a class="anchor" href="#54-why-this-belongs-in-core" aria-label="Link to this section">#</a></h3>
+<p>The simulator, the SMS adapter, and future channels all share the segment
+math, and the demo&#39;s French content must not blow past 70 chars unnoticed.</p>
+<hr>
+<h2 id="6-renderers">6. Renderers<a class="anchor" href="#6-renderers" aria-label="Link to this section">#</a></h2>
+<h3 id="61-ussd">6.1 USSD<a class="anchor" href="#61-ussd" aria-label="Link to this section">#</a></h3>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Turn</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>say</code></td>
+<td>final screen (<code>END</code>), paginated with <code>98. More</code> if over budget</td>
+</tr>
+<tr>
+<td><code>choose</code></td>
+<td>numbered menu (<code>CON</code>), <code>1. …\n2. …</code>, overflow pages via More</td>
+</tr>
+<tr>
+<td><code>ask</code></td>
+<td><code>CON</code> question screen; next request&#39;s last segment is the answer</td>
+</tr>
+<tr>
+<td><code>confirm</code></td>
+<td><code>CON</code> &quot;1. Yes\n2. No&quot; (localized labels)</td>
+</tr>
+<tr>
+<td><code>pay</code></td>
+<td>reserved; throws <code>NotSupportedError</code> in v0.1</td>
+</tr>
+</tbody></table></div>
+<h3 id="62-sms">6.2 SMS<a class="anchor" href="#62-sms" aria-label="Link to this section">#</a></h3>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Turn</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>say</code></td>
+<td>one or more budgeted messages</td>
+</tr>
+<tr>
+<td><code>choose</code></td>
+<td>numbered list; user replies with a number</td>
+</tr>
+<tr>
+<td><code>ask</code></td>
+<td>the question; the reply is the answer</td>
+</tr>
+<tr>
+<td><code>confirm</code></td>
+<td>question + &quot;Reply YES or NO&quot; (localized)</td>
+</tr>
+<tr>
+<td><code>pay</code></td>
+<td>reserved</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2 id="7-adapters">7. Adapters<a class="anchor" href="#7-adapters" aria-label="Link to this section">#</a></h2>
+<h3 id="71-kalanguussd--africa39s-talking">7.1 <code>@kalangu/ussd</code> — Africa&#39;s Talking<a class="anchor" href="#71-kalanguussd--africa39s-talking" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-ts">africasTalkingUssd({
+  code: &quot;*384*1#&quot;,
+  path: &quot;/ussd&quot;,            // for agent.requestHandler dispatch
+  maxScreenChars: 160,      // per-operator override
+  sandbox: false,           // switches base domain
+  hopMetadata: false,       // optional journey header
+})
+</code></pre>
+<ul>
+<li>Handler: parse form fields (<code>sessionId</code>, <code>phoneNumber</code>, <code>networkCode</code>,
+<code>serviceCode</code>, <code>text</code>) → <code>InboundEvent</code> → engine.</li>
+<li>Input parsing: new input = last <code>*</code>-separated segment (empty string on
+first request). Known limitation: a literal <code>*</code> typed inside free text
+splits the segment; documented, numeric input unaffected.</li>
+<li>Always answers <code>200 text/plain</code> with <code>CON </code>/<code>END </code> prefix — internal
+errors produce a localized <code>END apology</code> screen, never a malformed body.</li>
+<li>Exposes an optional second handler for <strong>session-end notifications</strong>
+(<code>path</code> configurable, default <code>/ussd/end</code>) used for logging/cleanup.</li>
+<li>Adapter tests run against recorded request fixtures (form-encoded bodies
+captured from the docs&#39; examples and the official SDK&#39;s middleware shape).</li>
+</ul>
+<h3 id="72-kalangusms--africa39s-talking">7.2 <code>@kalangu/sms</code> — Africa&#39;s Talking<a class="anchor" href="#72-kalangusms--africa39s-talking" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-ts">africasTalkingSms({
+  senderId: &quot;CLINIC&quot;,       // registered sender ID or short code
+  path: &quot;/sms&quot;,             // inbound messages callback
+  deliveryPath: &quot;/sms/delivery&quot;,  // delivery reports callback
+  sandbox: false,
+  bulkSmsMode: 1,           // matches official SDK default
+  enqueue: undefined,       // pass through only when set
+})
+</code></pre>
+<ul>
+<li><strong>Send</strong> (legacy endpoint): <code>POST {api}/version1/messaging</code>,
+form-urlencoded: <code>username</code>, <code>to</code> (comma-joined), <code>message</code>, <code>from</code>
+(senderId), <code>bulkSMSMode</code>, <code>apiKey</code> header, <code>Accept: application/json</code>.
+Accepts HTTP <strong>201</strong> as success; surfaces <code>statusCode</code> errors verbatim
+(including Nigeria&#39;s <code>409</code> DND case) and sandbox flag switches to
+<code>api.sandbox.africastalking.com</code>.</li>
+<li><strong>Inbound</strong> handler maps <code>from</code> → phone, <code>text</code> → message, into the engine.</li>
+<li><strong>Delivery report</strong> handler is exposed and logged in v0.1; receipts that
+act on delivery confirmations arrive with payments (0.2).</li>
+<li>A transport seam (<code>SmsTransport</code> interface) isolates the HTTP call so the
+new JSON bulk endpoint can replace the legacy one without touching core.</li>
+</ul>
+<hr>
+<h2 id="8-simulator-kalangusim">8. Simulator (<code>@kalangu/sim</code>)<a class="anchor" href="#8-simulator-kalangusim" aria-label="Link to this section">#</a></h2>
+<p>Terminal keypad phone. No account, no gateway, no network:</p>
+<pre><code>$ pnpm demo
+│ Simulated phone: +254 700 000 001 (Safaricom KE)
+Dial&gt; *384*1#
+┌────────────────────────────────────┐
+│ Clinic line                        │
+│ 1. Opening hours                   │
+│ 2. Ask a nurse                     │
+│ 3. Language                        │
+└────────────────────────────────────┘
+Choice&gt; 2
+┌────────────────────────────────────┐
+│ Type your question:                │
+└────────────────────────────────────┘
+Input&gt; Is the clinic open on Sunday?
+┌────────────────────────────────────┐
+│ END We are working on your         │
+│ question. You will get an SMS      │
+│ shortly.                           │
+└────────────────────────────────────┘
+… (≈6 s later)
+✉ SMS from CLINIC: The clinic is closed on Sundays…
+</code></pre>
+<ul>
+<li>Calls the engine directly (no HTTP); uses the USSD renderer for screens and
+the SMS renderer/sender for the deferred answer.</li>
+<li>Commands: dial a code, <code>x</code> = hang up mid-session (demonstrates resume on
+redial), <code>q</code> = quit.</li>
+<li>The example&#39;s model is a <strong>fake that sleeps 6 s</strong> against the 4 s deadline,
+so the demo shows deferral deterministically with no API key.</li>
+</ul>
+<hr>
+<h2 id="9-example-agent-examplesclinic">9. Example agent (<code>examples/clinic</code>)<a class="anchor" href="#9-example-agent-examplesclinic" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-ts">import { createAgent, menu, say, ask, choose } from &quot;@kalangu/core&quot;;
+import { africasTalkingUssd } from &quot;@kalangu/ussd&quot;;
+import { africasTalkingSms } from &quot;@kalangu/sms&quot;;
+
+export const clinic = createAgent({
+  locales: [&quot;fr&quot;, &quot;en&quot;],
+  defaultLocale: &quot;en&quot;,
+  model: fakeNurseModel,          // (input, ctx) =&gt; Promise&lt;string&gt;, sleeps 6 s
+  sessionStore: memoryStore(),    // default; shown for clarity
+  channels: [
+    africasTalkingUssd({ code: &quot;*384*1#&quot;, path: &quot;/ussd&quot; }),
+    africasTalkingSms({ senderId: &quot;CLINIC&quot;, path: &quot;/sms&quot; }),
+  ],
+  start: menu(&quot;Clinic line&quot;, {
+    &quot;Opening hours&quot;: say(&quot;Open Monday to Saturday, 8:00 to 18:00.&quot;),
+    &quot;Ask a nurse&quot;: ask(&quot;Type your question&quot;, (q, ctx) =&gt; ctx.model.answer(q)),
+    &quot;Language&quot;: choose(&quot;Language&quot;, {
+      &quot;English&quot;: (ctx) =&gt; { ctx.session.locale = &quot;en&quot;; },
+      &quot;Français&quot;: (ctx) =&gt; { ctx.session.locale = &quot;fr&quot;; },
+    }),
+  }),
+});
+
+export default clinic.requestHandler;   // standard Request → Response
+</code></pre>
+<p>A French option is in the menu on purpose: it shows locale switching and
+exercises the budgeter&#39;s UCS-2 path. Only some French letters are in the
+GSM-7 basic set (é, è, à, ù, É, Ç); others (ç, â, ê, î, ô, û, ë, ï, œ) are
+not, so many French answers are sent as UCS-2 at 70 characters per SMS.
+(An earlier draft said most French accents were GSM-7; that was wrong.)</p>
+<hr>
+<h2 id="10-testing-plan-priority-order">10. Testing plan (priority order)<a class="anchor" href="#10-testing-plan-priority-order" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>Budgeter</strong> — GSM-7 vs UCS-2 classification (French é/à ok; œ, Wolof
+ɲ/ŋ, Hausa ɓ/ɗ, Arabic/Devanagari force UCS-2), extension-table double
+counting, segment math (160/153, 70/67), never exceeding a limit, USSD
+pagination with reserved numbers, unsafe-character policy.</li>
+<li><strong>Engine deadline behaviour</strong> — fake clock; fast path never calls the
+model; deadline hit → deferred notice <code>END</code>, background completion sends
+exactly one SMS; late model error → logged, user already notified.</li>
+<li><strong>Adapters against recorded fixtures</strong> — USSD inbound (first request,
+<code>1*1</code> cumulative input, resumption), always-valid responses (error path
+still <code>END …</code>), SMS inbound and delivery-report parsing, HTTP 201 send
+success, DND 409 mapping.</li>
+<li><strong>Sessions</strong> — resume after drop keyed by phone; locale persistence;
+last-write-wins policy.</li>
+<li><strong>Renderer/consumer contract</strong> — every turn kind renders on every channel;
+exhaustive switch guards future <code>pay</code>.</li>
+</ol>
+<hr>
+<h2 id="11-out-of-scope-for-v01">11. Out of scope for v0.1<a class="anchor" href="#11-out-of-scope-for-v01" aria-label="Link to this section">#</a></h2>
+<p>Payments (0.2), language detection/model routing (0.3), WhatsApp (0.4),
+voice, durable session stores, callback signature verification (none exists
+to implement), npm publishing, and remote repositories.</p>
+<hr>
+<h2 id="12-open-questions">12. Open questions<a class="anchor" href="#12-open-questions" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><strong>Navigation numbers.</strong> Telcos reserve <code>98</code> (More) / <code>00</code> (Back) for their
+own auto-pagination. Proposed default: our More item is <code>98</code>, configurable,
+and we keep screens ≤ 160 so auto-pagination should never trigger. Do any
+operators you care about use a different convention?</li>
+<li><strong>Unsafe-character policy on USSD.</strong> Proposed: strip + warn by default;
+optional strict mode that throws in development. Silently altering user
+text is the trade-off; is stripping acceptable?</li>
+<li><strong>Legacy vs new SMS endpoint.</strong> Proposed: legacy <code>/version1/messaging</code>
+(form-urlencoded, sandbox-supported, HTTP 201) with a transport seam.
+Switch when the new JSON endpoint&#39;s sandbox ships.</li>
+<li><strong>SMS split cap.</strong> Proposed: max 4 segments/messages per outbound turn;
+exceed → developer-visible error, never silent truncation.</li>
+<li><strong>Callback authenticity.</strong> No signing is documented. Proposed: document
+path-secret and IP-allowlisting mitigations; no crypto verification.</li>
+<li><strong>Deferral re-notice.</strong> If the user dials again while a deferral is still
+pending, they get the deferred notice again. Acceptable, or should the
+second dial block-freeze on a &quot;please wait&quot; <code>CON</code> (risky against the
+10 s bound)? Proposed: re-notice.</li>
+<li><strong><code>enqueue</code> default on send.</strong> Proposed: omit unless configured (legacy
+endpoint default), matching the official SDK.</li>
+</ol>
+<h3 id="decisions-17-nov-2026">Decisions (17 Nov 2026)<a class="anchor" href="#decisions-17-nov-2026" aria-label="Link to this section">#</a></h3>
+<p>Settled for v0.1. Each matches what is already built and tested, so nothing
+here changes code. Items marked <em>unverified</em> depend on how real operators
+behave and are covered by the verify-first list in <code>TODO.md</code>.</p>
+<ol>
+<li><strong>Navigation numbers: our own <code>98</code> (More), configurable</strong>, with
+<code>00</code> also reserved so no option is ever numbered <code>98</code> or <code>00</code>. Screens
+stay within the limit, so operator auto-pagination should not trigger.
+<em>Unverified:</em> whether any operator intercepts <code>98</code> before it reaches us.
+The number is configurable (<code>budget.more</code>) for exactly that case.</li>
+<li><strong>Unsafe characters: strip and warn by default, strict mode opt-in.</strong>
+Accents are transliterated first (<code>é</code> → <code>e</code>), so ordinary French text
+survives; only what has no mapping (an emoji) is removed, with a logged
+warning. <code>unsafeChars: &quot;throw&quot;</code> raises a <code>BudgetError</code> instead, for
+development.</li>
+<li><strong>Legacy <code>/version1/messaging</code> endpoint behind a transport seam.</strong> It is
+form-encoded, works in the sandbox and returns 201. The JSON bulk
+endpoint replaces it by passing a different <code>transport</code>, with no change to
+the adapter. Switch once that endpoint&#39;s sandbox ships.</li>
+<li><strong>SMS split cap of 4 segments, never silent truncation.</strong> Over the cap
+throws a <code>BudgetError</code> the developer sees; <code>maxSegments</code> raises or lowers
+it.</li>
+<li><strong>Callback authenticity: document mitigations, no crypto.</strong> The gateway
+signs nothing, so there is nothing to verify. The README tells developers
+to use hard-to-guess callback paths and to allow only the gateway&#39;s IP
+addresses where they can.</li>
+<li><strong>Deferral re-notice, not a block screen.</strong> A redial while an answer is
+pending repeats the &quot;SMS shortly&quot; notice. A &quot;please wait&quot; <code>CON</code> screen
+would risk the 10-second bound. Listed under Known limits in the README.</li>
+<li><strong><code>enqueue</code> omitted unless configured</strong>, matching the official SDK and
+the legacy endpoint&#39;s default. <code>bulkSmsMode</code> defaults to 1, also as the
+SDK does.</li>
+</ol>
+<hr>
+<h2 id="13-build-order-each-piece-independently-testable">13. Build order (each piece independently testable)<a class="anchor" href="#13-build-order-each-piece-independently-testable" aria-label="Link to this section">#</a></h2>
+<p>turn types → budgeter → engine + in-memory sessions → USSD adapter →
+terminal simulator → SMS adapter → deferral → clinic example → README.</p>
+<p><code>pnpm demo</code> target: <code>examples/clinic</code> runs the simulator against the
+clinic agent. Nothing needs a gateway account or an API key.</p>
+<hr>
+<h2 id="14-where-v01-differs-from-this-document">14. Where v0.1 differs from this document<a class="anchor" href="#14-where-v01-differs-from-this-document" aria-label="Link to this section">#</a></h2>
+<p>Decided while building; each is open to review like the rest.</p>
+<ol>
+<li><strong>Every handler on a live channel runs under the deadline</strong>, not only
+handlers that call <code>ctx.model</code>. Any slow handler (a database, an API)
+threatens the 10 s bound the same way. Menus with no handler still never
+wait.</li>
+<li><strong>A late failure sends one apology SMS</strong> (<code>common.error</code>) besides being
+logged. The user was told to expect an SMS; silence would leave them
+waiting.</li>
+<li><strong>No process-level <code>unhandledRejection</code> handler.</strong> A library changing
+process-wide behaviour surprises its host; every background task has its
+own logged <code>catch</code> instead.</li>
+<li><strong>Resume window.</strong> A dropped session resumes on redial within 5 minutes
+(<code>resumeWindowMs</code>); after that the user starts at the top, keeping their
+data and locale. A pending deferral is forgotten after 15 minutes.</li>
+<li><strong>Dial strings are replayed.</strong> A new gateway session id counts as a
+fresh dial, and <code>*384*1*2#</code> (whose first request already has <code>text=1*2</code>)
+is replayed from the start menu.</li>
+<li><strong>Handler signature</strong> is <code>(input, ctx)</code> everywhere, including menu
+entries; the §9 sketch&#39;s <code>(ctx) =&gt; …</code> entries become <code>(_input, ctx) =&gt; …</code>.
+Locale changes go through <code>ctx.locale</code>, not <code>ctx.session.locale</code>.
+A handler that returns nothing goes back to the menu above.</li>
+<li><strong>Localized step text.</strong> Titles, labels and messages accept
+<code>{ en: &quot;...&quot;, fr: &quot;...&quot; }</code> as well as plain strings.</li>
+<li><strong>An SMS turn is one message</strong> that the network concatenates, capped at
+4 segments, rather than separate messages: concatenated parts arrive in
+order.</li>
+<li><strong>Locale strings are TypeScript modules</strong>, not JSON files, so they ship
+with the compiled package without a copy step.</li>
+<li><strong>The simulator</strong> dials, prints boxed screens, and also has
+<code>sms &lt;text&gt;</code> to text the agent; <code>SimPhone</code> is exported for tests.</li>
+</ol>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/design.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/design.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-what-v01-is">1. What v0.1 is</a></li><li><a href="#2-verified-gateway-facts-checked-16-nov-2026">2. Verified gateway facts (checked 16 Nov 2026)</a></li><li><a href="#3-package-layout">3. Package layout</a></li><li><a href="#4-core-concepts-and-types">4. Core concepts and types</a></li><li><a href="#5-the-budgeter">5. The budgeter</a></li><li><a href="#6-renderers">6. Renderers</a></li><li><a href="#7-adapters">7. Adapters</a></li><li><a href="#8-simulator-kalangusim">8. Simulator (@kalangu/sim)</a></li><li><a href="#9-example-agent-examplesclinic">9. Example agent (examples/clinic)</a></li><li><a href="#10-testing-plan-priority-order">10. Testing plan (priority order)</a></li><li><a href="#11-out-of-scope-for-v01">11. Out of scope for v0.1</a></li><li><a href="#12-open-questions">12. Open questions</a></li><li><a href="#13-build-order-each-piece-independently-testable">13. Build order (each piece independently testable)</a></li><li><a href="#14-where-v01-differs-from-this-document">14. Where v0.1 differs from this document</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>
