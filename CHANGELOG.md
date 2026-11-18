@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Language detection now also reads the SMS that starts a conversation
+  (languages design §5). A number with no language yet gets the language
+  menu with the language its message looks like listed first; nothing is
+  chosen for it. A number with a language is offered to continue in the one
+  it wrote in, under the same rules as for typed answers: at most once per
+  conversation, and never again after a No.
 - The clinic example can answer with a local Ollama model:
   `OLLAMA_MODEL=llama3.2 pnpm demo` (and the same for the server), with
   `OLLAMA_HOST` for another machine. Answers are shortened to fit the SMS

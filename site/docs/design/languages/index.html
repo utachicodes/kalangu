@@ -409,11 +409,17 @@ are <strong>required, with no default</strong>: nothing has been measured yet (ย
 <code>timeoutMs</code> defaults to 1000 ms. At startup, <code>deadlineMs</code> plus <code>timeoutMs</code>
 must not exceed the 10 s USSD bound, so detection can never push a reply
 past what a gateway waits.</li>
-<li><strong>When it runs:</strong> only on the text of an <code>ask</code> answer, trimmed, at least
-<code>minChars</code> long, and containing at least one letter. Never on a menu
-choice, a confirm, or a <code>number</code> ask: an amount or an account number is
-not language, and is never sent to a detector. Not yet on the first SMS of
-a conversation (ยง5 proposed it; left for later).</li>
+<li><strong>When it runs:</strong> on the text of an <code>ask</code> answer, and on the SMS that
+starts a conversation; trimmed, at least <code>minChars</code> long, and containing
+at least one letter. Never on a menu choice, a confirm, a USSD dial, or a
+<code>number</code> ask: an amount or an account number is not language, and is never
+sent to a detector.</li>
+<li><strong>On a conversation&#39;s first SMS</strong> (added 18 Nov 2026): a number that has
+not chosen a language gets the language menu as before, with the language
+its message looks like <strong>listed first</strong>, a hint and never a choice. A number
+that has one gets the same &quot;Continue in {language}?&quot; offer as below, under
+the same once-per-conversation and No-for-good rules; the message answers
+nothing, so nothing is held, and either answer starts the conversation.</li>
 <li><strong>What it does:</strong> it never switches silently. When the result is one of
 the agent&#39;s languages, at or above the threshold, and not the current one,
 the typed answer is <strong>held</strong> and the user is asked, <em>in the suggested

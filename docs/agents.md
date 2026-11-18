@@ -161,7 +161,9 @@ createAgent({
 - **Detection, as a hint:** `languages.detection: { detector, threshold,
   minChars }` takes a detector you supply. When a typed answer looks like
   another of your languages, the user is asked, in that language, whether to
-  continue in it, and their answer is held until they reply. It never
+  continue in it, and their answer is held until they reply. The SMS that
+  starts a conversation is checked too: a new number sees its language
+  first in the language menu, and a known one is offered the switch. It never
   switches silently, offers at most once per conversation, never sees number
   answers, and has no default threshold until one is measured. Kalangu
   ships no detector.

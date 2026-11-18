@@ -373,11 +373,17 @@ recommended in §14, question 2.
   `timeoutMs` defaults to 1000 ms. At startup, `deadlineMs` plus `timeoutMs`
   must not exceed the 10 s USSD bound, so detection can never push a reply
   past what a gateway waits.
-- **When it runs:** only on the text of an `ask` answer, trimmed, at least
-  `minChars` long, and containing at least one letter. Never on a menu
-  choice, a confirm, or a `number` ask: an amount or an account number is
-  not language, and is never sent to a detector. Not yet on the first SMS of
-  a conversation (§5 proposed it; left for later).
+- **When it runs:** on the text of an `ask` answer, and on the SMS that
+  starts a conversation; trimmed, at least `minChars` long, and containing
+  at least one letter. Never on a menu choice, a confirm, a USSD dial, or a
+  `number` ask: an amount or an account number is not language, and is never
+  sent to a detector.
+- **On a conversation's first SMS** (added 18 Nov 2026): a number that has
+  not chosen a language gets the language menu as before, with the language
+  its message looks like **listed first**, a hint and never a choice. A number
+  that has one gets the same "Continue in {language}?" offer as below, under
+  the same once-per-conversation and No-for-good rules; the message answers
+  nothing, so nothing is held, and either answer starts the conversation.
 - **What it does:** it never switches silently. When the result is one of
   the agent's languages, at or above the threshold, and not the current one,
   the typed answer is **held** and the user is asked, *in the suggested

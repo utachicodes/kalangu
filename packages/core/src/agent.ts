@@ -514,12 +514,17 @@ class TurnRun<M> {
     }
   }
 
-  /** A newer turn got there first: show what it left on screen, and save nothing. */
-  private async yieldToNewer(reason: string): Promise<Outcome> {
+  /**
+   * A newer turn got there first: save nothing, and show what it left on
+   * screen, or what `then` makes of the session it saved.
+   */
+  private async yieldToNewer(reason: string, then?: () => Promise<Outcome>): Promise<Outcome> {
     this.superseded = true;
     this.deps.logger.info(reason, { channel: this.channel.id, phone: this.deps.mask(this.event.phone) });
     const current = await this.deps.store.load(this.event.phone);
     if (current) Object.assign(this.record, current);
+    this.t = this.deps.catalog.translator(this.record.locale);
+    if (then) return then();
     const shown = this.record.turn;
     return shown ? this.display(shown) : this.showStep(this.entry());
   }
@@ -556,11 +561,11 @@ class TurnRun<M> {
       }
       return outcome;
     }
-    if (!shown) return this.showStep(this.entry());
-    if (channel.kind === "sms" && shown.kind === "say") {
+    if (channel.kind === "sms" && (!shown || shown.kind === "say")) {
       // Nothing is waiting for an answer: an SMS starts the flow from the top.
-      return this.showStep(this.entry());
+      return this.startFromMessage(event.input);
     }
+    if (!shown) return this.showStep(this.entry());
     return this.answer(shown, event.input);
   }
 
@@ -759,17 +764,18 @@ class TurnRun<M> {
    * agent's languages: hold it, and ask whether to continue in that language.
    * Returns null to carry on as normal, which is every other case.
    */
-  private async suggestLanguage(input: string, step: Step): Promise<Outcome | null> {
-    const languages = this.deps.languages;
-    const detection = languages?.detection;
-    if (!languages || !detection) return null;
-    // One offer per conversation, and none ever again after a No.
-    if (this.record.languageSuggestionDeclined || this.record.languageOffered) return null;
-    // Numbers are not language: never send an account number or an amount to a detector.
-    if (step.type === "ask" && step.input === "number") return null;
+  /**
+   * The language `input` is written in, if a detector is configured and says
+   * so confidently, and it is one of `among`. Null in every other case: too
+   * short, no letters, a slow or failing detector, a language not offered, or
+   * a score under the threshold. Never decides anything by itself.
+   */
+  private async detectLanguage(input: string, among: readonly Language[]): Promise<Language | null> {
+    const detection = this.deps.languages?.detection;
+    if (!detection || among.length === 0) return null;
     const text = input.trim();
     if (text.length < detection.minChars || !/\p{L}/u.test(text)) return null;
-    const candidates = languages.supported.map((l) => l.code);
+    const candidates = among.map((l) => l.code);
 
     let result: DetectedLanguage | null;
     const work = Promise.resolve().then(() => detection.detector.detect(text, { candidates }));
@@ -786,13 +792,51 @@ class TurnRun<M> {
       this.deps.logger.warn("Language detection failed; carrying on without it", { error: describeError(err) });
       return null;
     }
+    if (!result || !(result.confidence >= detection.threshold)) return null;
+    return among.find((l) => l.code === result.code) ?? null;
+  }
 
+  /**
+   * An SMS that starts a conversation (languages design §5). A new number gets
+   * the language menu with the language its message looks like listed first;
+   * nothing is chosen for it. A number with a language gets the start step,
+   * or first an offer to continue in the language it wrote in, under the same
+   * rules as for typed answers. The message itself answers nothing.
+   */
+  private async startFromMessage(input: string): Promise<Outcome> {
+    const entry = this.entry();
+    if (entry.type === "language") {
+      const hint = await this.detectLanguage(input, entry.languages ?? this.deps.languages?.supported ?? []);
+      return this.showLanguage(entry, hint?.code);
+    }
+    if (this.record.languageSuggestionDeclined || this.record.languageOffered) return this.showStep(entry);
+    const language = await this.detectLanguage(input, this.deps.languages?.supported ?? []);
+    if (!language || language.code === this.record.locale) return this.showStep(entry);
+    return this.offerLanguage(language, null, { start: true });
+  }
+
+  private async suggestLanguage(input: string, step: Step): Promise<Outcome | null> {
+    if (!this.deps.languages?.detection) return null;
+    // One offer per conversation, and none ever again after a No.
+    if (this.record.languageSuggestionDeclined || this.record.languageOffered) return null;
+    // Numbers are not language: never send an account number or an amount to a detector.
+    if (step.type === "ask" && step.input === "number") return null;
     // Only one of the agent's own languages, confidently, and not the one already in use.
-    const language = result ? languages.supported.find((l) => l.code === result.code) : undefined;
-    if (!result || !language) return null;
-    if (!(result.confidence >= detection.threshold) || language.code === this.record.locale) return null;
+    const language = await this.detectLanguage(input, this.deps.languages.supported);
+    if (!language || language.code === this.record.locale) return null;
+    return this.offerLanguage(language, step, { input });
+  }
 
-    const stepId = this.deps.steps.id(step) ?? null;
+  /**
+   * Asks whether to continue in `language`. With a step, the typed `input` is
+   * held for it; with `start`, the conversation starts once the user answers.
+   */
+  private async offerLanguage(
+    language: Language,
+    step: Step | null,
+    held: { input: string } | { start: true },
+  ): Promise<Outcome> {
+    const stepId = step ? (this.deps.steps.id(step) ?? null) : null;
     // Asked in the suggested language, which is the point: the user reads it if it is theirs.
     const t = this.deps.catalog.translator(language.code);
     const outcome = this.showTurn(
@@ -805,7 +849,10 @@ class TurnRun<M> {
       stepId,
     );
     // Set after showTurn, which clears any earlier suggestion.
-    this.record.languageSuggestion = { code: language.code, input, stepId: stepId ?? "", question: questionKey(step) };
+    this.record.languageSuggestion =
+      "start" in held
+        ? { code: language.code, input: "", stepId: "", start: true }
+        : { code: language.code, input: held.input, stepId: stepId ?? "", question: step ? questionKey(step) : "" };
     this.record.languageOffered = true;
     // Detection took time: if a newer turn saved this session meanwhile, it wins.
     if (!(await this.claim())) return this.yieldToNewer("Language suggestion dropped: a newer turn came first");
@@ -817,6 +864,15 @@ class TurnRun<M> {
     const suggestion = this.record.languageSuggestion;
     this.record.languageSuggestion = null;
     if (!suggestion) return this.showStep(this.entry());
+    if (suggestion.start) {
+      // Offered on a conversation's first message: nothing is held, so answer and start.
+      this.settleSuggestion(suggestion.code, accept);
+      if (!(await this.claim())) {
+        // The first answer already settled it; show the same start, unsaved.
+        return this.yieldToNewer("Duplicate answer to a language suggestion ignored", () => this.showStep(this.entry()));
+      }
+      return this.showStep(this.entry());
+    }
     // Only the question the offer was made on: after a tree change the held
     // answer might reach a different handler, so the offer lapses, unanswered.
     const step = this.deps.steps.get(suggestion.stepId);
@@ -824,18 +880,23 @@ class TurnRun<M> {
       this.deps.logger.info("Language suggestion lapsed: its question has changed");
       return this.showStep(this.entry());
     }
-    if (accept && this.deps.catalog.has(suggestion.code)) {
-      this.record.locale = suggestion.code;
-      this.record.languageChosen = true;
-      this.t = this.deps.catalog.translator(suggestion.code);
-      this.deps.logger.info("Language switched on suggestion", { language: suggestion.code });
-    } else {
-      this.record.languageSuggestionDeclined = true;
-    }
+    this.settleSuggestion(suggestion.code, accept);
     // Claim the held answer before running it: of two answers read from the
     // same stored session, only the first runs the handler.
     if (!(await this.claim())) return this.yieldToNewer("Duplicate answer to a language suggestion ignored");
     return this.runHandler(step.handler, suggestion.input, step);
+  }
+
+  /** Yes switches to the suggested language for good; No is remembered for good. */
+  private settleSuggestion(code: string, accept: boolean): void {
+    if (accept && this.deps.catalog.has(code)) {
+      this.record.locale = code;
+      this.record.languageChosen = true;
+      this.t = this.deps.catalog.translator(code);
+      this.deps.logger.info("Language switched on suggestion", { language: code });
+    } else {
+      this.record.languageSuggestionDeclined = true;
+    }
   }
 
   /** Where a fresh start begins: the language menu until the user has chosen, then the start step. */
@@ -854,8 +915,11 @@ class TurnRun<M> {
     return orderLanguages(languages, this.event.phone, priors);
   }
 
-  private async showLanguage(step: LanguageStep): Promise<Outcome> {
+  /** The language menu. `first`, a detected language, is listed first: a hint, never a choice. */
+  private async showLanguage(step: LanguageStep, first?: string): Promise<Outcome> {
     const ordered = this.orderedLanguages(step);
+    const hinted = first ? ordered.findIndex((l) => l.code === first) : -1;
+    if (hinted > 0) ordered.unshift(...ordered.splice(hinted, 1));
     const title =
       step.title !== undefined
         ? this.deps.catalog.localize(step.title, this.record.locale)
