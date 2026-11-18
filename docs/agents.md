@@ -163,7 +163,9 @@ createAgent({
   another of your languages, the user is asked, in that language, whether to
   continue in it, and their answer is held until they reply. The SMS that
   starts a conversation is checked too: a new number sees its language
-  first in the language menu, and a known one is offered the switch. It never
+  first in the language menu, and a known one is offered the switch. To
+  choose `threshold` and `minChars`, [measure the
+  detector](measuring-a-detector.md) on your own samples. It never
   switches silently, offers at most once per conversation, never sees number
   answers, and has no default threshold until one is measured. Kalangu
   ships no detector.

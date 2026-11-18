@@ -29,6 +29,7 @@ export const PAGES = [
   { group: "Start here", label: "Providers", src: "docs/providers.md", url: "/docs/providers/" },
   { group: "Guides", label: "Africa's Talking sandbox", src: "docs/sandbox-guide.md", url: "/docs/guides/sandbox/" },
   { group: "Guides", label: "Translating", src: "docs/translating.md", url: "/docs/guides/translating/" },
+  { group: "Guides", label: "Measuring a detector", src: "docs/measuring-a-detector.md", url: "/docs/guides/detector/" },
   { group: "Guides", label: "Releasing", src: "RELEASING.md", url: "/docs/guides/releasing/" },
   { group: "Design", label: "Core design", src: "docs/design.md", url: "/docs/design/" },
   { group: "Design", label: "Payments", src: "docs/payments-design.md", url: "/docs/design/payments/" },

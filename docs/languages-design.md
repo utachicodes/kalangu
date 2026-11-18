@@ -396,6 +396,15 @@ recommended in §14, question 2.
   **No is kept for good** for that phone number, deliberately: no nagging, and
   the language menu still lets the user switch. A pending offer is dropped as
   soon as any other question is shown, so it can never answer one.
+- **Measuring a detector** (added 18 Nov 2026): `scripts/eval-detector.mjs`
+  is the harness of §13 item 6. It runs any detector module over a labelled
+  file and reports per-language accuracy, a confusion matrix, accuracy by
+  length, false offers and catches at each `threshold` and `minChars` under
+  the rule above, latency against `timeoutMs`, and contract violations; it
+  suggests a setting under a false-offer limit. See
+  [Measuring a detector](measuring-a-detector.md). It answers §12 items 2
+  and 3 once labelled samples exist; none ship, beyond an English and French
+  format example.
 - The first-contact language menu is stored under the fixed step id
   `language`, so adding or removing extra steps cannot send a user waiting at
   the menu somewhere else. (Revised 17 Nov 2026 after an independent review.)

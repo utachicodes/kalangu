@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measuring a language detector · Kalangu</title>
+<meta name="description" content="Kalangu&amp;#39;s language detection is a hint: when a typed answer looks like another of your languages, the user is asked whether to switch (see Agents). It needs">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/agents/">Agents</a>
+    <a href="/docs/providers/">Providers</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/" aria-current="page">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="measuring-a-language-detector">Measuring a language detector</h1>
+<p>Kalangu&#39;s language detection is a hint: when a typed answer looks like
+another of your languages, the user is asked whether to switch (see
+<a href="/docs/agents/#languages">Agents</a>). It needs a detector you supply and a
+<code>threshold</code> and <code>minChars</code> you choose, and Kalangu gives neither a default,
+because no detector has been measured on short, keypad-typed text in the
+languages that matter here (Wolof, Hausa, Swahili and others).
+<code>scripts/eval-detector.mjs</code> is how to measure one, so the numbers come from
+your samples instead of a guess.</p>
+<h2 id="run-it">Run it<a class="anchor" href="#run-it" aria-label="Link to this section">#</a></h2>
+<p>From the repository root, with the example files (English and French only,
+to show the format):</p>
+<pre><code class="language-sh">node scripts/eval-detector.mjs \
+  --detector scripts/detector-eval/example-detector.mjs \
+  --data scripts/detector-eval/example.tsv
+</code></pre>
+<h2 id="what-it-needs">What it needs<a class="anchor" href="#what-it-needs" aria-label="Link to this section">#</a></h2>
+<p><strong>A detector</strong>: an ES module exporting an object with
+<code>detect(text, { candidates })</code>, as a default export, as <code>detector</code>, or as a
+function (which may be async) that returns one. It must resolve to
+<code>{ code, confidence }</code>, with <code>code</code> one of <code>candidates</code> and <code>confidence</code> from
+0 to 1, or <code>null</code>. That is the same shape <code>languages.detection.detector</code>
+takes, so the module you measure is the one you deploy. A model that only
+runs in Python, such as CommonLingua, can be measured through a small
+module that calls it as a service.</p>
+<p><strong>Labelled samples</strong>: one per line, <code>&lt;code&gt;&lt;TAB&gt;&lt;text&gt;</code>, or a <code>.jsonl</code> file of
+<code>{&quot;code&quot;: &quot;wo&quot;, &quot;text&quot;: &quot;...&quot;}</code>. Lines starting with <code>#</code> are comments.</p>
+<ul>
+<li>Use <strong>real or realistic messages</strong>, typed the way people type on a keypad:
+short, often without accents, sometimes mixing languages. Sentences cut to
+one to five words are a start, not the finish.</li>
+<li>Have each sample <strong>labelled by someone who speaks the language</strong>.</li>
+<li>Aim for <strong>at least 100 per language</strong>; the report warns below that.</li>
+<li>Include text in <strong>none of your languages</strong> under any other code (for
+example <code>xx</code>). A confident answer to it is a false offer, which is what
+you most want to avoid.</li>
+</ul>
+<h2 id="what-it-reports">What it reports<a class="anchor" href="#what-it-reports" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong>Per language:</strong> how often the top answer is right, ignoring the
+threshold, and how often there is no answer. A <strong>confusion matrix</strong> shows
+which languages are mistaken for which.</li>
+<li><strong>Accuracy by length</strong>, in words. Short input is the open question.</li>
+<li><strong>Kalangu&#39;s rule at each setting.</strong> For every <code>threshold</code> and <code>minChars</code>,
+each sample is read as typed by someone whose language is its label:<ul>
+<li>a <strong>false offer</strong> is a confident answer naming another language, which
+would interrupt a user who is fine where they are;</li>
+<li><strong>caught</strong> is a confident answer naming the right one, which is what
+helps a user who is in the wrong language.</li>
+</ul>
+</li>
+<li><strong>A suggestion:</strong> the setting that catches the most while keeping false
+offers at or under <code>--max-false</code> (2% by default), choosing the more
+cautious setting on a tie, or a warning that no setting is safe enough.</li>
+<li><strong>Latency</strong> against the detection timeout (<code>--timeout-ms</code>, default 1000):
+an answer later than that is ignored by Kalangu, so it is not counted.</li>
+<li><strong>The contract:</strong> answers outside the candidates, scores outside 0 to 1,
+and calls that threw.</li>
+</ul>
+<h2 id="options">Options<a class="anchor" href="#options" aria-label="Link to this section">#</a></h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>--candidates wo,fr,en</code></td>
+<td>Your agent&#39;s languages (default: every code in the data)</td>
+</tr>
+<tr>
+<td><code>--thresholds 0.6,0.8,0.9</code></td>
+<td>Thresholds to try</td>
+</tr>
+<tr>
+<td><code>--min-chars 10,20</code></td>
+<td><code>minChars</code> values to try</td>
+</tr>
+<tr>
+<td><code>--max-false 0.01</code></td>
+<td>The false-offer rate you can accept</td>
+</tr>
+<tr>
+<td><code>--ascii</code></td>
+<td>Fold the text to plain ASCII first, as typed on a keypad and shown on USSD (needs <code>pnpm build</code>)</td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>The report as JSON, to compare detectors or keep a record</td>
+</tr>
+</tbody></table></div>
+<p>Run it with and without <code>--ascii</code>: keypad users often type without accents,
+and a detector that relies on them will do worse than it looks.</p>
+<h2 id="using-the-result">Using the result<a class="anchor" href="#using-the-result" aria-label="Link to this section">#</a></h2>
+<p>Set <code>languages.detection</code> with the suggested <code>threshold</code> and <code>minChars</code>, or
+leave detection off if no setting is safe enough: the language menu works
+without it. Keep the samples and the command, and run them again when the
+detector or the languages change. The results are only as good as the
+samples.</p>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/measuring-a-detector.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/measuring-a-detector.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#run-it">Run it</a></li><li><a href="#what-it-needs">What it needs</a></li><li><a href="#what-it-reports">What it reports</a></li><li><a href="#options">Options</a></li><li><a href="#using-the-result">Using the result</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

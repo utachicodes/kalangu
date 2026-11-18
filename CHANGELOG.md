@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/eval-detector.mjs`: measures a language detector on labelled
+  samples the way Kalangu uses it: per-language accuracy, a confusion
+  matrix, accuracy by length, false offers and catches at each threshold and
+  `minChars`, latency against the timeout, and contract checks, with a
+  suggested setting under a false-offer limit. `--ascii` folds the text as
+  typed on a keypad. A guide on the website, and an English and French
+  example to show the format.
+
 ## [0.1.0-alpha.5] - 2026-11-18
 
 ### Added

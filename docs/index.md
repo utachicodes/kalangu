@@ -19,6 +19,8 @@ npm as alpha releases: the API may change before 1.0.
   with their phone simulator.
 - [Translate Kalangu](translating.md): a new language for the fixed strings,
   checked for USSD and SMS.
+- [Measure a language detector](measuring-a-detector.md): accuracy on short
+  text, and the threshold to use, from your own samples.
 - [Release the packages](../RELEASING.md): for maintainers.
 
 ## Design

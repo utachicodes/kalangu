@@ -119,8 +119,11 @@ above).
   card; 2.35M parameters; PyTorch only, no ONNX or JS build; 77.6% strict
   accuracy on paragraphs; "not assessed on very short text"; Wolof, Hausa and
   Swahili not named as covered
+- [x] Detector evaluation harness (`scripts/eval-detector.mjs`, languages
+  design §13 item 6): accuracy, confusion, length, threshold sweep, latency
 - [ ] Hands-on detector evaluation on short keypad-typed text in Wolof, Hausa
-  and Swahili (languages design §12): coverage, accuracy, what the score means
+  and Swahili (languages design §12): needs labelled samples from speakers,
+  then one run of the harness per candidate detector
 - [ ] Review the languages design, especially §4 (ask first, detection as a
   hint) and the seven open questions in §14
 - [x] Per-language model routing design (languages design §7)

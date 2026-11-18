@@ -22,7 +22,7 @@
 <div class="layout">
   <details class="side" open>
     <summary>Menu</summary>
-    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/" aria-current="page">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/" aria-current="page">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
   </details>
   <main id="content">
     <article class="doc">
@@ -432,6 +432,15 @@ a code-mixed answer right after a switch cannot flip the language back. A
 <strong>No is kept for good</strong> for that phone number, deliberately: no nagging, and
 the language menu still lets the user switch. A pending offer is dropped as
 soon as any other question is shown, so it can never answer one.</li>
+<li><strong>Measuring a detector</strong> (added 18 Nov 2026): <code>scripts/eval-detector.mjs</code>
+is the harness of §13 item 6. It runs any detector module over a labelled
+file and reports per-language accuracy, a confusion matrix, accuracy by
+length, false offers and catches at each <code>threshold</code> and <code>minChars</code> under
+the rule above, latency against <code>timeoutMs</code>, and contract violations; it
+suggests a setting under a false-offer limit. See
+<a href="/docs/guides/detector/">Measuring a detector</a>. It answers §12 items 2
+and 3 once labelled samples exist; none ship, beyond an English and French
+format example.</li>
 <li>The first-contact language menu is stored under the fixed step id
 <code>language</code>, so adding or removing extra steps cannot send a user waiting at
 the menu somewhere else. (Revised 17 Nov 2026 after an independent review.)</li>
