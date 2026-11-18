@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0-alpha.4] - 2026-11-18
-
 ### Added
 
 - Website: a Providers page (models: Ollama, Claude, Gemini, any API in
@@ -16,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   several channels at once, writing a channel for another gateway). The
   header links to Agents and Providers, and Quick start opens a popup with
   one paste that builds and runs an agent from npm.
+
+## [0.1.0-alpha.4] - 2026-11-18
 
 ### Added
 
