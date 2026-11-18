@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kalangu — agents for every phone</title>
+<title>Kalangu: agents for every phone</title>
 <meta name="description" content="Kalangu is an open-source TypeScript toolkit for building AI agents that work on any phone, including basic keypad phones, over USSD and SMS.">
 <link rel="preload" href="assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -48,25 +48,25 @@ a { color: inherit; text-decoration: none; }
   transform: scale(1.08);
   will-change: opacity, transform;
 }
-.layer[data-i="0"] { /* Text — lemon cream */
+.layer[data-i="0"] { /* Text: lemon cream */
   background:
     radial-gradient(60% 75% at 86% 76%, rgba(246,222,104,.85), rgba(246,222,104,0) 70%),
     radial-gradient(45% 55% at 32% 105%, rgba(246,222,104,.45), rgba(246,222,104,0) 70%),
     linear-gradient(180deg, #F2ECDF, #F4EBC6);
 }
-.layer[data-i="1"] { /* Ask — peach / apricot */
+.layer[data-i="1"] { /* Ask: peach / apricot */
   background:
     radial-gradient(60% 75% at 86% 76%, rgba(249,150,84,.80), rgba(249,150,84,0) 70%),
     radial-gradient(45% 55% at 32% 105%, rgba(249,150,84,.42), rgba(249,150,84,0) 70%),
     linear-gradient(180deg, #F8DCC7, #F9CBA9);
 }
-.layer[data-i="2"] { /* Pay — warm sage mint */
+.layer[data-i="2"] { /* Pay: warm sage mint */
   background:
     radial-gradient(60% 75% at 86% 76%, rgba(150,206,150,.85), rgba(150,206,150,0) 70%),
     radial-gradient(45% 55% at 32% 105%, rgba(150,206,150,.45), rgba(150,206,150,0) 70%),
     linear-gradient(180deg, #E9EBE0, #DFE9D4);
 }
-.layer[data-i="3"] { /* Speak — rose lilac */
+.layer[data-i="3"] { /* Speak: rose lilac */
   background:
     radial-gradient(60% 75% at 86% 76%, rgba(222,150,200,.82), rgba(222,150,200,0) 70%),
     radial-gradient(45% 55% at 32% 105%, rgba(222,150,200,.42), rgba(222,150,200,0) 70%),
@@ -254,8 +254,8 @@ a { color: inherit; text-decoration: none; }
 (() => {
   const SLOT = 1750, N = 4;
   const ENTER = 500, ICON_DELAY = 60, LEAVE = 420, XFADE = 770;
-  const FLASH_SLOT = 3;           // "Speak" — the design button flashes black
-  const STILL_SLOT = 1;           // "Ask" — shown under reduced motion
+  const FLASH_SLOT = 3;           // "Speak": the design button flashes black
+  const STILL_SLOT = 1;           // "Ask": shown under reduced motion
 
   const items = [...document.querySelectorAll('.item')];
   const words = items.map(el => el.querySelector('.word'));

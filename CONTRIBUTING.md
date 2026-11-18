@@ -10,12 +10,12 @@ code contributions are welcome too.
 1. Read [docs/design.md](docs/design.md) end to end. It is deliberately
    honest about what was verified against official documentation (§2) and
    what still rests on secondary sources (§2.5).
-2. Answer or challenge the open questions in §12 — they decide defaults.
+2. Answer or challenge the open questions in §12: they decide defaults.
 3. If you run USSD services in production, say so; operator-specific reality
    (timeouts, screen limits, auto-pagination behaviour) beats published
    figures.
 4. Open an issue, or comment inline on the document. Arguments for a better
-   design are always welcome — the brief for this project explicitly asks
+   design are always welcome: the brief for this project explicitly asks
    for that over workarounds.
 
 ## Working on the docs
@@ -40,7 +40,7 @@ sidebar are in `scripts/build-site.mjs`.
 - Tests: the budgeter and the engine's deadline behaviour (fake clock) are
   the two suites that matter most.
 - TypeScript strict mode is not negotiable; `noUncheckedIndexedAccess` is on
-  for a reason — keypad users' safety depends on never emitting a screen a
+  for a reason: keypad users' safety depends on never emitting a screen a
   channel would truncate.
 
 ## Contributing a translation
@@ -55,7 +55,7 @@ from a machine draft.
 - **Never commit secrets** (API keys, phone numbers of real users).
   Phone numbers are personal data; mask them in logs, tests, and fixtures.
 - Fixed strings that face users go through locale files (`en`, `fr` ship
-  first) — never hardcode user-facing English.
+  first): never hardcode user-facing English.
 - Don't publish packages to npm or create remote repositories from PRs;
   release is maintained by the maintainer.
 - No payment code until the 0.2 design is reviewed; money code should not be

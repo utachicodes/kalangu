@@ -1,4 +1,4 @@
-# Kalangu — v0.1 design
+# Kalangu: v0.1 design
 
 Status: **draft for review**. v0.1 is implemented in this repository;
 §14 lists where the code differs from this document.
@@ -41,11 +41,11 @@ text), official help centre `help.africastalking.com` (articles 1284071 and
   So the *new* input each turn is the last `*`-separated segment.
 - **Response**: plain text (`Content-Type: text/plain`), HTTP 200, starting
   with `CON` to continue or `END` to terminate. The official SDK emits
-  `"CON "` / `"END "` — **with a trailing space** before the body.
+  `"CON "` / `"END "`, **with a trailing space** before the body.
 - A malformed response (no `CON`/`END` prefix) or HTTP 4xx makes the gateway
   terminate the session gracefully. The adapter must therefore always answer
   200 with a valid `CON`/`END` body, even on internal errors.
-- **Menus must not contain special characters** — telcos cannot render them.
+- **Menus must not contain special characters**: telcos cannot render them.
   The USSD renderer enforces a safe character set.
 - Optional response header `at-ussd-hop-metadata` (≤ 99 chars, no `|`) labels
   the current step for journey tracking; it is echoed back on the next request
@@ -55,9 +55,9 @@ text), official help centre `help.africastalking.com` (articles 1284071 and
 
 | Telco | Total session | Customer response timeout | App response timeout |
 |---|---|---|---|
-| Safaricom | 180 s | 30 s | — |
+| Safaricom | 180 s | 30 s | not published |
 | Airtel | 180 s | 60 s | 15 s (connection-to-app 10 s) |
-| Equitel | 180 s | 30 s | — |
+| Equitel | 180 s | 30 s | not published |
 
 - **The official USSD overview states: "the expected response time from your
   application is at most 10 seconds."** That is the binding constraint for the
@@ -126,7 +126,7 @@ failure. v0.1 exposes a handler for it but uses it only for logging/cleanup.
 5. Not yet verified (needs a real account or hardware, per the checklist):
    real production truncation behaviour on other operators, whether USSD and
    SMS to the same number coexist on every operator (deferral depends on it),
-   live session timings outside Kenya, and callback authenticity guarantees —
+   live session timings outside Kenya, and callback authenticity guarantees:
    **no request signing is documented** for callbacks; treat callbacks as
    unauthenticated input and document path-secret/IP-allowlist mitigations.
 
@@ -399,7 +399,7 @@ math, and the demo's French content must not blow past 70 chars unnoticed.
 
 ## 7. Adapters
 
-### 7.1 `@kalangu/ussd` — Africa's Talking
+### 7.1 `@kalangu/ussd`: Africa's Talking
 
 ```ts
 africasTalkingUssd({
@@ -416,14 +416,14 @@ africasTalkingUssd({
 - Input parsing: new input = last `*`-separated segment (empty string on
   first request). Known limitation: a literal `*` typed inside free text
   splits the segment; documented, numeric input unaffected.
-- Always answers `200 text/plain` with `CON `/`END ` prefix — internal
+- Always answers `200 text/plain` with `CON `/`END ` prefix. Internal
   errors produce a localized `END apology` screen, never a malformed body.
 - Exposes an optional second handler for **session-end notifications**
   (`path` configurable, default `/ussd/end`) used for logging/cleanup.
 - Adapter tests run against recorded request fixtures (form-encoded bodies
   captured from the docs' examples and the official SDK's middleware shape).
 
-### 7.2 `@kalangu/sms` — Africa's Talking
+### 7.2 `@kalangu/sms`: Africa's Talking
 
 ```ts
 africasTalkingSms({
@@ -526,20 +526,20 @@ not, so many French answers are sent as UCS-2 at 70 characters per SMS.
 
 ## 10. Testing plan (priority order)
 
-1. **Budgeter** — GSM-7 vs UCS-2 classification (French é/à ok; œ, Wolof
+1. **Budgeter**: GSM-7 vs UCS-2 classification (French é/à ok; œ, Wolof
    ɲ/ŋ, Hausa ɓ/ɗ, Arabic/Devanagari force UCS-2), extension-table double
    counting, segment math (160/153, 70/67), never exceeding a limit, USSD
    pagination with reserved numbers, unsafe-character policy.
-2. **Engine deadline behaviour** — fake clock; fast path never calls the
+2. **Engine deadline behaviour**: fake clock; fast path never calls the
    model; deadline hit → deferred notice `END`, background completion sends
    exactly one SMS; late model error → logged, user already notified.
-3. **Adapters against recorded fixtures** — USSD inbound (first request,
+3. **Adapters against recorded fixtures**: USSD inbound (first request,
    `1*1` cumulative input, resumption), always-valid responses (error path
    still `END …`), SMS inbound and delivery-report parsing, HTTP 201 send
    success, DND 409 mapping.
-4. **Sessions** — resume after drop keyed by phone; locale persistence;
+4. **Sessions**: resume after drop keyed by phone; locale persistence;
    last-write-wins policy.
-5. **Renderer/consumer contract** — every turn kind renders on every channel;
+5. **Renderer/consumer contract**: every turn kind renders on every channel;
    exhaustive switch guards future `pay`.
 
 ---

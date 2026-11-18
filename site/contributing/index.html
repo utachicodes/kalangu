@@ -35,12 +35,12 @@ code contributions are welcome too.</p>
 <li>Read <a href="/docs/design/">docs/design.md</a> end to end. It is deliberately
 honest about what was verified against official documentation (§2) and
 what still rests on secondary sources (§2.5).</li>
-<li>Answer or challenge the open questions in §12 — they decide defaults.</li>
+<li>Answer or challenge the open questions in §12: they decide defaults.</li>
 <li>If you run USSD services in production, say so; operator-specific reality
 (timeouts, screen limits, auto-pagination behaviour) beats published
 figures.</li>
 <li>Open an issue, or comment inline on the document. Arguments for a better
-design are always welcome — the brief for this project explicitly asks
+design are always welcome: the brief for this project explicitly asks
 for that over workarounds.</li>
 </ol>
 <h2 id="working-on-the-docs">Working on the docs<a class="anchor" href="#working-on-the-docs" aria-label="Link to this section">#</a></h2>
@@ -63,7 +63,7 @@ runtimes; don&#39;t tie them to one framework.</li>
 <li>Tests: the budgeter and the engine&#39;s deadline behaviour (fake clock) are
 the two suites that matter most.</li>
 <li>TypeScript strict mode is not negotiable; <code>noUncheckedIndexedAccess</code> is on
-for a reason — keypad users&#39; safety depends on never emitting a screen a
+for a reason: keypad users&#39; safety depends on never emitting a screen a
 channel would truncate.</li>
 </ul>
 <h2 id="contributing-a-translation">Contributing a translation<a class="anchor" href="#contributing-a-translation" aria-label="Link to this section">#</a></h2>
@@ -76,7 +76,7 @@ from a machine draft.</p>
 <li><strong>Never commit secrets</strong> (API keys, phone numbers of real users).
 Phone numbers are personal data; mask them in logs, tests, and fixtures.</li>
 <li>Fixed strings that face users go through locale files (<code>en</code>, <code>fr</code> ship
-first) — never hardcode user-facing English.</li>
+first): never hardcode user-facing English.</li>
 <li>Don&#39;t publish packages to npm or create remote repositories from PRs;
 release is maintained by the maintainer.</li>
 <li>No payment code until the 0.2 design is reviewed; money code should not be

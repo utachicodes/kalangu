@@ -4,7 +4,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 
 ## Verify-first checklist (before announcing anything)
 
-- [x] Read the official Africa's Talking USSD and SMS docs — done; findings in
+- [x] Read the official Africa's Talking USSD and SMS docs: done; findings in
   design doc §2, corrections in §2.5
 - [x] Claim the `@kalangu` npm scope: claimed, and `0.1.0-alpha.0`,
   `0.1.0-alpha.1` and `0.1.0-alpha.2` published on 17 Nov 2026 (see
@@ -13,7 +13,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   npm login, which this repo's tooling does not have)
 - [ ] Claim the GitHub organisation / repo name
 - [ ] Domain
-- [ ] Trademark search (a Hausa word — check local usage in target markets)
+- [ ] Trademark search (a Hausa word: check local usage in target markets)
 - [ ] Run the clinic example on the Africa's Talking sandbox end to end
   ([docs/sandbox-guide.md](docs/sandbox-guide.md)): proves the gateway
   integration and the deferral to SMS, not operator behaviour. Needs a free
@@ -23,7 +23,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [ ] Check that no operator you can reach intercepts `98` (our "More")
   before it reaches the gateway; if one does, change `budget.more`
 - [ ] Confirm that a USSD session and an SMS to the same number work together
-  on your operators — deferral depends on it
+  on your operators: deferral depends on it
 - [ ] Check what a USSD short code and an SMS sender ID cost and require, per
   country (sandbox is free; production is not)
 - [x] Search npm and the Chat SDK adapter directory for a USSD adapter
@@ -55,7 +55,7 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [x] README how-to and docs polish
 - [x] CI: typecheck + vitest on push (Node 22/24), runtime smoke test on Node 20
 
-## Design review — open questions (design doc §12), settled 17 Nov 2026
+## Design review: open questions (design doc §12), settled 17 Nov 2026
 
 Decisions are recorded under "Decisions" in §12. Question 1 stays unverified
 until a real operator confirms `98` is not intercepted (see the checklist
@@ -73,7 +73,7 @@ above).
   deferral
 - [x] 7. `enqueue` default on SMS send (proposed: omit unless configured)
 
-## Version 0.2 — payments (do not rush; money code needs care)
+## Version 0.2: payments (do not rush; money code needs care)
 
 - [x] Draft the design: [docs/payments-design.md](docs/payments-design.md)
   - [x] Policy layer: per-payment, per-day per-user and pending limits,
@@ -113,7 +113,7 @@ above).
 - [ ] Sandbox account; work through the verify-first list in §12
 - [ ] Then, and only then, payment code
 
-## Version 0.3 — languages
+## Version 0.3: languages
 
 - [x] Desk-check CommonLingua (read 17 Nov 2026): Apache-2.0 per its model
   card; 2.35M parameters; PyTorch only, no ONNX or JS build; 77.6% strict
@@ -149,7 +149,7 @@ above).
 - [ ] Native speakers to supply and review the Wolof and Hausa translations
   (the first draft's sample Wolof strings were removed: unverified)
 
-## Version 0.4 — channels
+## Version 0.4: channels
 
 - [x] Draft the WhatsApp Cloud API adapter design:
   [docs/whatsapp-design.md](docs/whatsapp-design.md)

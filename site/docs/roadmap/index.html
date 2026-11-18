@@ -29,7 +29,7 @@
 <p>State as of 16 Nov 2026. Design reference: <a href="/docs/design/">docs/design.md</a>.</p>
 <h2 id="verify-first-checklist-before-announcing-anything">Verify-first checklist (before announcing anything)<a class="anchor" href="#verify-first-checklist-before-announcing-anything" aria-label="Link to this section">#</a></h2>
 <ul>
-<li><input checked="" disabled="" type="checkbox"> Read the official Africa&#39;s Talking USSD and SMS docs — done; findings in
+<li><input checked="" disabled="" type="checkbox"> Read the official Africa&#39;s Talking USSD and SMS docs: done; findings in
 design doc §2, corrections in §2.5</li>
 <li><input checked="" disabled="" type="checkbox"> Claim the <code>@kalangu</code> npm scope: claimed, and <code>0.1.0-alpha.0</code>,
 <code>0.1.0-alpha.1</code> and <code>0.1.0-alpha.2</code> published on 17 Nov 2026 (see
@@ -38,7 +38,7 @@ RELEASING.md)
 npm login, which this repo&#39;s tooling does not have)</li>
 <li><input disabled="" type="checkbox"> Claim the GitHub organisation / repo name</li>
 <li><input disabled="" type="checkbox"> Domain</li>
-<li><input disabled="" type="checkbox"> Trademark search (a Hausa word — check local usage in target markets)</li>
+<li><input disabled="" type="checkbox"> Trademark search (a Hausa word: check local usage in target markets)</li>
 <li><input disabled="" type="checkbox"> Run the clinic example on the Africa&#39;s Talking sandbox end to end
 (<a href="/docs/guides/sandbox/">docs/sandbox-guide.md</a>): proves the gateway
 integration and the deferral to SMS, not operator behaviour. Needs a free
@@ -48,7 +48,7 @@ reach; published figures vary and Kenya-only numbers are verified so far</li>
 <li><input disabled="" type="checkbox"> Check that no operator you can reach intercepts <code>98</code> (our &quot;More&quot;)
 before it reaches the gateway; if one does, change <code>budget.more</code></li>
 <li><input disabled="" type="checkbox"> Confirm that a USSD session and an SMS to the same number work together
-on your operators — deferral depends on it</li>
+on your operators: deferral depends on it</li>
 <li><input disabled="" type="checkbox"> Check what a USSD short code and an SMS sender ID cost and require, per
 country (sandbox is free; production is not)</li>
 <li><input checked="" disabled="" type="checkbox"> Search npm and the Chat SDK adapter directory for a USSD adapter
@@ -80,7 +80,7 @@ extension-table chars count double), pagination, reserved nav numbers</li>
 <li><input checked="" disabled="" type="checkbox"> README how-to and docs polish</li>
 <li><input checked="" disabled="" type="checkbox"> CI: typecheck + vitest on push (Node 22/24), runtime smoke test on Node 20</li>
 </ul>
-<h2 id="design-review--open-questions-design-doc-12-settled-17-nov-2026">Design review — open questions (design doc §12), settled 17 Nov 2026<a class="anchor" href="#design-review--open-questions-design-doc-12-settled-17-nov-2026" aria-label="Link to this section">#</a></h2>
+<h2 id="design-review-open-questions-design-doc-12-settled-17-nov-2026">Design review: open questions (design doc §12), settled 17 Nov 2026<a class="anchor" href="#design-review-open-questions-design-doc-12-settled-17-nov-2026" aria-label="Link to this section">#</a></h2>
 <p>Decisions are recorded under &quot;Decisions&quot; in §12. Question 1 stays unverified
 until a real operator confirms <code>98</code> is not intercepted (see the checklist
 above).</p>
@@ -97,7 +97,7 @@ ships)</li>
 deferral</li>
 <li><input checked="" disabled="" type="checkbox"> 7. <code>enqueue</code> default on SMS send (proposed: omit unless configured)</li>
 </ul>
-<h2 id="version-02--payments-do-not-rush-money-code-needs-care">Version 0.2 — payments (do not rush; money code needs care)<a class="anchor" href="#version-02--payments-do-not-rush-money-code-needs-care" aria-label="Link to this section">#</a></h2>
+<h2 id="version-02-payments-do-not-rush-money-code-needs-care">Version 0.2: payments (do not rush; money code needs care)<a class="anchor" href="#version-02-payments-do-not-rush-money-code-needs-care" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><input checked="" disabled="" type="checkbox"> Draft the design: <a href="/docs/design/payments/">docs/payments-design.md</a><ul>
 <li><input checked="" disabled="" type="checkbox"> Policy layer: per-payment, per-day per-user and pending limits,
@@ -141,7 +141,7 @@ payments when <code>maxPendingPerPhone</code> is above 1</li>
 <li><input disabled="" type="checkbox"> Sandbox account; work through the verify-first list in §12</li>
 <li><input disabled="" type="checkbox"> Then, and only then, payment code</li>
 </ul>
-<h2 id="version-03--languages">Version 0.3 — languages<a class="anchor" href="#version-03--languages" aria-label="Link to this section">#</a></h2>
+<h2 id="version-03-languages">Version 0.3: languages<a class="anchor" href="#version-03-languages" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><input checked="" disabled="" type="checkbox"> Desk-check CommonLingua (read 17 Nov 2026): Apache-2.0 per its model
 card; 2.35M parameters; PyTorch only, no ONNX or JS build; 77.6% strict
@@ -177,7 +177,7 @@ the label (normalization design §11 step 1)</li>
 <li><input disabled="" type="checkbox"> Native speakers to supply and review the Wolof and Hausa translations
 (the first draft&#39;s sample Wolof strings were removed: unverified)</li>
 </ul>
-<h2 id="version-04--channels">Version 0.4 — channels<a class="anchor" href="#version-04--channels" aria-label="Link to this section">#</a></h2>
+<h2 id="version-04-channels">Version 0.4: channels<a class="anchor" href="#version-04-channels" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><input checked="" disabled="" type="checkbox"> Draft the WhatsApp Cloud API adapter design:
 <a href="/docs/design/whatsapp/">docs/whatsapp-design.md</a><ul>
@@ -206,7 +206,7 @@ none as of 17 Nov 2026 (docs/prior-art.md §6)</li>
       <span>Generated from <code>TODO.md</code></span>
     </footer>
   </main>
-  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#verify-first-checklist-before-announcing-anything">Verify-first checklist (before announcing anything)</a></li><li><a href="#website">Website</a></li><li><a href="#v01-build-order-each-piece-independently-testable">v0.1 build order (each piece independently testable)</a></li><li><a href="#design-review--open-questions-design-doc-12-settled-17-nov-2026">Design review — open questions (design doc §12), settled 17 Nov 2026</a></li><li><a href="#version-02--payments-do-not-rush-money-code-needs-care">Version 0.2 — payments (do not rush; money code needs care)</a></li><li><a href="#version-03--languages">Version 0.3 — languages</a></li><li><a href="#version-04--channels">Version 0.4 — channels</a></li></ul></nav>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#verify-first-checklist-before-announcing-anything">Verify-first checklist (before announcing anything)</a></li><li><a href="#website">Website</a></li><li><a href="#v01-build-order-each-piece-independently-testable">v0.1 build order (each piece independently testable)</a></li><li><a href="#design-review-open-questions-design-doc-12-settled-17-nov-2026">Design review: open questions (design doc §12), settled 17 Nov 2026</a></li><li><a href="#version-02-payments-do-not-rush-money-code-needs-care">Version 0.2: payments (do not rush; money code needs care)</a></li><li><a href="#version-03-languages">Version 0.3: languages</a></li><li><a href="#version-04-channels">Version 0.4: channels</a></li></ul></nav>
 </div>
 <script>
 // On a phone the menu starts closed, so the page's content comes first. Without

@@ -1,4 +1,4 @@
-# Kalangu — 0.3 languages design
+# Kalangu: 0.3 languages design
 
 Status: **draft for review. No language code exists, and none should be
 written until this document is reviewed.**

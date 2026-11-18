@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prior art — USSD packages and the Chat SDK adapter directory · Kalangu</title>
+<title>Prior art: USSD packages and the Chat SDK adapter directory · Kalangu</title>
 <meta name="description" content="Survey date: 16 Nov 2026. This document feeds the verify-first checklist item &amp;quot;Search npm and the Chat SDK adapter directory for a USSD adapter published s">
 <link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/docs/docs.css">
@@ -25,7 +25,7 @@
   </details>
   <main id="content">
     <article class="doc">
-<h1 id="prior-art--ussd-packages-and-the-chat-sdk-adapter-directory">Prior art — USSD packages and the Chat SDK adapter directory</h1>
+<h1 id="prior-art-ussd-packages-and-the-chat-sdk-adapter-directory">Prior art: USSD packages and the Chat SDK adapter directory</h1>
 <p>Survey date: 16 Nov 2026. This document feeds the verify-first checklist item
 <em>&quot;Search npm and the Chat SDK adapter directory for a USSD adapter published
 since 16 Nov 2026&quot;</em>. Bottom line: <strong>nothing on npm or in the Chat SDK adapter
@@ -35,7 +35,7 @@ existed on the registry. (That does not prove an organisation name is free:
 an organisation can exist with no packages. The scope has since been
 claimed and the packages published; see §6.)</p>
 <hr>
-<h2 id="1-npm--ussd-related-packages">1. npm — USSD-related packages<a class="anchor" href="#1-npm--ussd-related-packages" aria-label="Link to this section">#</a></h2>
+<h2 id="1-npm-ussd-related-packages">1. npm: USSD-related packages<a class="anchor" href="#1-npm-ussd-related-packages" aria-label="Link to this section">#</a></h2>
 <div class="table"><table>
 <thead>
 <tr>
@@ -65,9 +65,9 @@ claimed and the packages published; see §6.)</p>
 </tr>
 <tr>
 <td><code>ussd-at</code></td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
+<td>unknown</td>
+<td>unknown</td>
+<td>unknown</td>
 <td>Same state-machine menu-builder pattern as <code>ussd-builder</code>, Africastalking callback shape.</td>
 <td>Same gaps.</td>
 </tr>
@@ -97,9 +97,9 @@ claimed and the packages published; see §6.)</p>
 </tr>
 <tr>
 <td><code>@goonerlabs/ussd-router</code></td>
-<td>—</td>
-<td>—</td>
-<td>—</td>
+<td>unknown</td>
+<td>unknown</td>
+<td>unknown</td>
 <td>Tiny dependency-free state-machine router for Africastalking USSD; replays the <code>*</code>-joined input trail, <code>CON</code>/<code>END</code> replies, no session store by design.</td>
 <td>No engine, no SMS, no deferral, no budgeter.</td>
 </tr>
@@ -129,7 +129,7 @@ claimed and the packages published; see §6.)</p>
 <li><strong>Vendor-official</strong>: Resend (email), Sendblue (iMessage/SMS/RCS), Linq (iMessage/SMS), AgentPhone (SMS/MMS/iMessage/voice), Liveblocks, Lark/Feishu, Telnyx (SMS/MMS).</li>
 <li><strong>Community</strong>: signal-cli, Rocket.Chat, Zoom Team Chat, and others.</li>
 </ul>
-<p>The catalog is exposed statically via <code>@chat-adapter/catalog</code> (<code>listAdapters()</code>, <code>getFeatureSupport()</code>). <strong>There is no USSD adapter</strong> in any class — official, vendor-official, or community. SMS is covered (Twilio, Sendblue, AgentPhone, Linq), but no keypad/USSD channel exists in the directory.</p>
+<p>The catalog is exposed statically via <code>@chat-adapter/catalog</code> (<code>listAdapters()</code>, <code>getFeatureSupport()</code>). <strong>There is no USSD adapter</strong> in any class: official, vendor-official, or community. SMS is covered (Twilio, Sendblue, AgentPhone, Linq), but no keypad/USSD channel exists in the directory.</p>
 <hr>
 <h2 id="3-closest-concept-in-spirit">3. Closest concept in spirit<a class="anchor" href="#3-closest-concept-in-spirit" aria-label="Link to this section">#</a></h2>
 <p><code>ussd-platform</code> on the Hermes Marketplace is a Hermes plugin, not an npm package and not a Chat SDK adapter. It speaks the Africa&#39;s Talking USSD callback format (<code>sessionId</code>, <code>phoneNumber</code>, <code>serviceCode</code>, <code>text</code>; <code>CON</code>/<code>END</code> replies), pages agent output to 160-character screens with a <code>98.More</code> control, defers slow answers to an inbox or SMS (&quot;Text me the answer&quot;), resumes dropped calls on redial, and ships a localhost-only keypad simulator. It authenticates callbacks with a path-secret because USSD gateways do not sign requests.</p>
@@ -152,7 +152,7 @@ claimed and the packages published; see §6.)</p>
 </thead>
 <tbody><tr>
 <td>Search npm and the Chat SDK adapter directory for a USSD adapter published since 16 Nov 2026</td>
-<td>Done — none found; documented here. Refreshed 17 Nov 2026 (§6): still none</td>
+<td>Done: none found; documented here. Refreshed 17 Nov 2026 (§6): still none</td>
 </tr>
 </tbody></table></div>
 <hr>
@@ -192,7 +192,7 @@ Telegram 52 times, so the search itself works).</p>
 <tr>
 <td><code>baselineos</code></td>
 <td>1.7.1, 8 Aug 2026, Apache-2.0</td>
-<td>Its description says &quot;AI that runs where AI doesn&#39;t — offline, USSD, low-bandwidth&quot;.</td>
+<td>Its description pitches AI that runs offline, over USSD and on low bandwidth.</td>
 <td>Its README never mentions USSD or SMS; it describes a general AI operations runtime with an Anthropic SDK dependency. Not a USSD toolkit as far as its published docs show.</td>
 </tr>
 </tbody></table></div>
@@ -210,7 +210,7 @@ languages), not on menus, sessions or the simulator.</p>
       <span>Generated from <code>docs/prior-art.md</code></span>
     </footer>
   </main>
-  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-npm--ussd-related-packages">1. npm — USSD-related packages</a></li><li><a href="#2-chat-sdk-adapter-directory-chat-sdkdevadapters">2. Chat SDK adapter directory (chat-sdk.dev/adapters)</a></li><li><a href="#3-closest-concept-in-spirit">3. Closest concept in spirit</a></li><li><a href="#4-what-this-means-for-kalangu">4. What this means for Kalangu</a></li><li><a href="#5-verify-first-status">5. Verify-first status</a></li><li><a href="#6-refresh-17-nov-2026">6. Refresh, 17 Nov 2026</a></li></ul></nav>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-npm-ussd-related-packages">1. npm: USSD-related packages</a></li><li><a href="#2-chat-sdk-adapter-directory-chat-sdkdevadapters">2. Chat SDK adapter directory (chat-sdk.dev/adapters)</a></li><li><a href="#3-closest-concept-in-spirit">3. Closest concept in spirit</a></li><li><a href="#4-what-this-means-for-kalangu">4. What this means for Kalangu</a></li><li><a href="#5-verify-first-status">5. Verify-first status</a></li><li><a href="#6-refresh-17-nov-2026">6. Refresh, 17 Nov 2026</a></li></ul></nav>
 </div>
 <script>
 // On a phone the menu starts closed, so the page's content comes first. Without
