@@ -1,6 +1,6 @@
 {
   "name": "@kalangu/ussd",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "description": "Africa's Talking USSD adapter for Kalangu agents.",
   "keywords": [
     "ussd",
