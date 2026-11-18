@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   typed on a keypad. A guide on the website, and an English and French
   example to show the format.
 
+### Fixed
+
+- A deferred answer could undo changes saved while it was pending. When a
+  slow answer went out by SMS, the session was saved with the whole of the
+  handler's copy of the data and its language, so anything saved meanwhile
+  (a payment outcome's data, a language switch) was lost, and a user who had
+  moved on after the deferral expired lost their place. It now applies only
+  what the handler changed after the deadline, with a version check, and
+  keeps a newer turn's place.
+
 ## [0.1.0-alpha.5] - 2026-11-18
 
 ### Added

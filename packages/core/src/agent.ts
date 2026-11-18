@@ -531,6 +531,8 @@ class TurnRun<M> {
   private readonly waitUntil: number;
   /** Set when a newer turn saved this session first: this one must not be saved. */
   superseded = false;
+  /** The session as it was when this turn's answer was deferred, to tell what the late handler changed. */
+  private deferral?: { since: number; before: SessionRecord };
 
   constructor(
     private readonly record: SessionRecord,
@@ -731,6 +733,7 @@ class TurnRun<M> {
       throw new Error("A handler missed the deadline and no SMS channel can send the answer");
     }
     record.deferred = { since: deps.clock.now() };
+    this.deferral = { since: record.deferred.since, before: structuredClone(record) };
     deps.logger.info("Answer deferred to SMS", {
       channel: this.channel.id,
       phone: deps.mask(event.phone),
@@ -757,28 +760,56 @@ class TurnRun<M> {
       failure = err;
     }
     await deps.saved;
+    const deferral = this.deferral ?? { since: this.record.deferred?.since ?? 0, before: structuredClone(this.record) };
 
-    // Start from the stored record (other turns may have happened) but keep
-    // what the handler changed. Last write wins, as documented.
-    const latest = (await deps.store.load(event.phone)) ?? structuredClone(this.record);
-    latest.data = this.record.data;
-    latest.locale = this.record.locale;
-    latest.deferred = null;
+    // Start from the stored session, which other turns or a payment outcome may have
+    // changed meanwhile, and apply only what the handler changed after the deadline.
+    // Saved with a version check; on a conflict, reload and apply again. Rendering
+    // the reply again is safe: it never runs the handler a second time.
+    let text = "";
+    for (let tries = 0; ; tries++) {
+      const loaded = await deps.store.load(event.phone);
+      const target = structuredClone(loaded ?? this.record);
+      applyChanges(deferral.before, this.record, target);
+      // Still this answer's deferral, or has the session moved on without it?
+      const ours = loaded === null || loaded.deferred?.since === deferral.since;
+      if (ours) target.deferred = null;
 
-    const run = new TurnRun<M>(latest, sender, { channel: sender.id, phone: event.phone, input: "" }, {
-      ...deps,
-      saved: Promise.resolve(),
-    });
-    let text: string;
-    if (failure === undefined) {
-      try {
-        text = (await run.finish(reply, owner)).text;
-      } catch (err) {
-        failure = err;
-        text = "";
+      const run = new TurnRun<M>(target, sender, { channel: sender.id, phone: event.phone, input: "" }, {
+        ...deps,
+        saved: Promise.resolve(),
+      });
+      let failed = failure;
+      if (failed === undefined) {
+        try {
+          text = (await run.finish(reply, owner)).text;
+        } catch (err) {
+          failed = err;
+        }
       }
-    } else {
-      text = "";
+      if (failed !== undefined) {
+        if (ours) resetPosition(target);
+        text = deps.catalog.translator(target.locale)("common.error");
+      }
+      // A newer turn waiting for an answer keeps its place; the SMS still goes out.
+      if (loaded && !ours && isWaiting(loaded)) copyPosition(loaded, target);
+
+      target.channel = sender.id;
+      target.updatedAt = deps.clock.now();
+      try {
+        await deps.store.save(target, { ifVersion: loaded?.version ?? 0 });
+        failure = failed;
+        break;
+      } catch (err) {
+        if (!(err instanceof SessionConflictError)) throw err;
+        if (tries >= OUTCOME_SAVE_TRIES - 1) {
+          failure = failed;
+          deps.logger.error("Deferred answer: the session kept changing and was not updated; sending the answer anyway", {
+            phone: deps.mask(event.phone),
+          });
+          break;
+        }
+      }
     }
     if (failure !== undefined) {
       deps.logger.error("Deferred answer failed", {
@@ -786,13 +817,7 @@ class TurnRun<M> {
         step: deps.steps.id(owner),
         error: describeError(failure),
       });
-      resetPosition(latest);
-      text = deps.catalog.translator(latest.locale)("common.error");
     }
-
-    latest.channel = sender.id;
-    latest.updatedAt = deps.clock.now();
-    await deps.store.save(latest);
     await sender.send?.({ to: event.phone, text });
     deps.logger.info(failure === undefined ? "Deferred answer sent" : "Deferred apology sent", {
       channel: sender.id,
@@ -1292,22 +1317,35 @@ const POSITION_KEYS = ["stepId", "turn", "page", "turnId", "languageSuggestion",
  */
 function mergeOutcome(before: SessionRecord, after: SessionRecord, current: SessionRecord): SessionRecord {
   const merged = structuredClone(current);
-  const keys = new Set([...Object.keys(before.data), ...Object.keys(after.data)]);
-  for (const key of keys) {
-    const was = JSON.stringify(before.data[key]);
-    const now = JSON.stringify(after.data[key]);
-    if (was === now) continue;
-    if (after.data[key] === undefined) delete merged.data[key];
-    else merged.data[key] = structuredClone(after.data[key])!;
-  }
-  if (after.locale !== before.locale) merged.locale = after.locale;
-  if (after.languageChosen !== before.languageChosen) merged.languageChosen = after.languageChosen;
-  const waiting = current.deferred !== null || (current.turn !== null && current.turn.kind !== "say");
-  if (!waiting) {
-    for (const key of POSITION_KEYS) (merged as unknown as Record<string, unknown>)[key] = structuredClone(after[key]);
-  }
+  applyChanges(before, after, merged);
+  if (!isWaiting(current)) copyPosition(after, merged);
   merged.updatedAt = after.updatedAt;
   return merged;
+}
+
+/**
+ * Applies to `target` what changed from `before` to `after`: each data key
+ * set or removed, and the language. Keys nobody touched keep `target`'s value,
+ * so changes saved meanwhile by others survive.
+ */
+function applyChanges(before: SessionRecord, after: SessionRecord, target: SessionRecord): void {
+  const keys = new Set([...Object.keys(before.data), ...Object.keys(after.data)]);
+  for (const key of keys) {
+    if (JSON.stringify(before.data[key]) === JSON.stringify(after.data[key])) continue;
+    if (after.data[key] === undefined) delete target.data[key];
+    else target.data[key] = structuredClone(after.data[key])!;
+  }
+  if (after.locale !== before.locale) target.locale = after.locale;
+  if (after.languageChosen !== before.languageChosen) target.languageChosen = after.languageChosen;
+}
+
+/** Whether the session is waiting on something: a question on screen, or a deferred answer. */
+function isWaiting(record: SessionRecord): boolean {
+  return record.deferred !== null || (record.turn !== null && record.turn.kind !== "say");
+}
+
+function copyPosition(from: SessionRecord, to: SessionRecord): void {
+  for (const key of POSITION_KEYS) (to as unknown as Record<string, unknown>)[key] = structuredClone(from[key]);
 }
 
 function resetPosition(record: SessionRecord): void {

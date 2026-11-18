@@ -297,3 +297,59 @@ describe("deadline configuration", () => {
     expect(lines.some((l) => l.level === "warn" && l.message.includes("deadlineMs is 9000"))).toBe(true);
   });
 });
+
+describe("a late answer and what happened meanwhile", () => {
+  /** A handler that writes to the session only after the deadline, when its answer arrives. */
+  function lateWriter() {
+    const answer = controllable<string>();
+    const start = menu("Clinic line", {
+      "Ask a nurse": ask("Type your question", async (_q: string, ctx: TurnContext) => {
+        const text = await answer.promise;
+        ctx.session["answer"] = text;
+        return text;
+      }),
+    });
+    return { answer, start };
+  }
+
+  it("keeps what was saved meanwhile and applies only what the late handler changed", async () => {
+    const late = lateWriter();
+    const { dial, press, pressAndWait, background, store, sent } = setup({ start: late.start });
+    await dial();
+    await press("1");
+    expect((await pressAndWait("Open on Sunday?", 4000)).deferred).toBe(true);
+
+    // Something else saves the session while the answer is pending, as a payment outcome would.
+    const other = (await store.load(PHONE))!;
+    other.data["paid"] = "yes";
+    other.locale = "fr";
+    await store.save(other);
+
+    late.answer.resolve("Closed on Sundays.");
+    await background.settle();
+    expect(sent).toEqual([{ to: PHONE, text: "Closed on Sundays." }]);
+    const record = await store.load(PHONE);
+    expect(record?.data).toMatchObject({ paid: "yes", answer: "Closed on Sundays." });
+    expect(record?.locale).toBe("fr");
+    expect(record?.deferred).toBeNull();
+  });
+
+  it("keeps the place of a user who moved on after the deferral expired, and still sends the answer", async () => {
+    const late = lateWriter();
+    const { dial, press, pressAndWait, background, store, sent, clock } = setup({ start: late.start });
+    await dial();
+    await press("1");
+    await pressAndWait("Open on Sunday?", 4000);
+    clock.advance(16 * 60_000); // past the deferral's time-to-live
+    expect((await dial()).text).toMatch(/^Clinic line/); // a new session, at the menu
+
+    late.answer.resolve("Closed on Sundays.");
+    await background.settle();
+    expect(sent.map((m) => m.text)).toEqual(["Closed on Sundays."]);
+    const record = await store.load(PHONE);
+    expect(record?.turn).toMatchObject({ kind: "choose", question: "Clinic line" });
+    expect(record?.data["answer"]).toBe("Closed on Sundays.");
+    // The menu still answers.
+    expect((await press("1")).text).toBe("Type your question");
+  });
+});

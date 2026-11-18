@@ -281,6 +281,15 @@ sets <code>atomic: true</code> promises the compare-and-set holds across every p
 sharing it (a conditional <code>UPDATE … WHERE version = $n</code>, or Redis
 <code>WATCH</code>/<code>MULTI</code>). Agents that take payments require it; see payments design
 §6.1.</p>
+<p>The engine saves with <code>ifVersion</code> wherever a save could otherwise undo
+another one: a payment&#39;s &quot;Yes&quot;, the answer to a language suggestion, a
+payment outcome, and a <strong>deferred answer</strong>. A deferred answer applies only
+what its handler changed after the deadline (the data keys it set or
+removed, and the language) to the session as it is now, so changes saved in
+the meantime, by a payment outcome for example, are kept; and if the user
+has moved on to a new question, they keep their place while the answer is
+still sent. A turn&#39;s own final save is not versioned: the last turn wins, as
+before.</p>
 <ul>
 <li><strong>Keyed by phone number</strong>, not gateway <code>sessionId</code>, so a dropped session
 resumes on redial. The gateway <code>sessionId</code> is stored for correlation only.</li>

@@ -274,6 +274,16 @@ sharing it (a conditional `UPDATE … WHERE version = $n`, or Redis
 `WATCH`/`MULTI`). Agents that take payments require it; see payments design
 §6.1.
 
+The engine saves with `ifVersion` wherever a save could otherwise undo
+another one: a payment's "Yes", the answer to a language suggestion, a
+payment outcome, and a **deferred answer**. A deferred answer applies only
+what its handler changed after the deadline (the data keys it set or
+removed, and the language) to the session as it is now, so changes saved in
+the meantime, by a payment outcome for example, are kept; and if the user
+has moved on to a new question, they keep their place while the answer is
+still sent. A turn's own final save is not versioned: the last turn wins, as
+before.
+
 - **Keyed by phone number**, not gateway `sessionId`, so a dropped session
   resumes on redial. The gateway `sessionId` is stored for correlation only.
 - `SessionRecord`: `{ phone, locale, stepId, data, pendingAsk?, page?,

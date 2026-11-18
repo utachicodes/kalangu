@@ -41,6 +41,16 @@ suggested setting under a false-offer limit. <code>--ascii</code> folds the text
 typed on a keypad. A guide on the website, and an English and French
 example to show the format.</li>
 </ul>
+<h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>A deferred answer could undo changes saved while it was pending. When a
+slow answer went out by SMS, the session was saved with the whole of the
+handler&#39;s copy of the data and its language, so anything saved meanwhile
+(a payment outcome&#39;s data, a language switch) was lost, and a user who had
+moved on after the deferral expired lost their place. It now applies only
+what the handler changed after the deadline, with a version check, and
+keeps a newer turn&#39;s place.</li>
+</ul>
 <h2 id="010-alpha5---2026-11-18">[0.1.0-alpha.5] - 2026-11-18<a class="anchor" href="#010-alpha5---2026-11-18" aria-label="Link to this section">#</a></h2>
 <h3 id="added-1">Added<a class="anchor" href="#added-1" aria-label="Link to this section">#</a></h3>
 <ul>
@@ -62,7 +72,7 @@ several channels at once, writing a channel for another gateway). The
 header links to Agents and Providers, and Quick start opens a popup with
 one paste that builds and runs an agent from npm.</li>
 </ul>
-<h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-1">Fixed<a class="anchor" href="#fixed-1" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Payments: a retried outcome delivery ran <code>onPaid</code> or <code>onFailed</code> again. When
 the outcome SMS failed to send, the handler had already run and saved, and
@@ -87,7 +97,7 @@ out of date or have a broken link (<code>pnpm site:check</code>). The landing pa
 links to them. The translation instructions moved from CONTRIBUTING.md to
 <code>docs/translating.md</code>.</li>
 </ul>
-<h3 id="fixed-1">Fixed<a class="anchor" href="#fixed-1" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-2">Fixed<a class="anchor" href="#fixed-2" aria-label="Link to this section">#</a></h3>
 <p>From CodeRabbit&#39;s review of everything since #20 (#32):</p>
 <ul>
 <li>A live turn&#39;s time limit is now shared. Language detection, the handler
@@ -116,7 +126,7 @@ installs the exact new version. The translation guide says how to use a
 translation and where to send one.</li>
 </ul>
 <h2 id="010-alpha3---2026-11-17">[0.1.0-alpha.3] - 2026-11-17<a class="anchor" href="#010-alpha3---2026-11-17" aria-label="Link to this section">#</a></h2>
-<h3 id="fixed-2">Fixed<a class="anchor" href="#fixed-2" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-3">Fixed<a class="anchor" href="#fixed-3" aria-label="Link to this section">#</a></h3>
 <p>From an independent review of everything merged in #21 and #26 to #30:</p>
 <ul>
 <li>A pending language suggestion could answer a later question: after a
@@ -166,7 +176,7 @@ first dot, so <code>wo.draft.json</code> is checked as <code>wo</code>.</li>
 USSD spelling, canonicalizing; Gemini offline only; its own repository
 later).</li>
 </ul>
-<h3 id="fixed-3">Fixed<a class="anchor" href="#fixed-3" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-4">Fixed<a class="anchor" href="#fixed-4" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>A typed answer that names an option without its accents was refused: on
 USSD the language menu shows &quot;Français&quot; as &quot;Francais&quot;, and typing that back
@@ -177,7 +187,7 @@ the yes and no words ignoring accents, case, spacing and apostrophe style
 folded match that fits more than one label is refused.</li>
 </ul>
 <h2 id="010-alpha1---2026-11-17">[0.1.0-alpha.1] - 2026-11-17<a class="anchor" href="#010-alpha1---2026-11-17" aria-label="Link to this section">#</a></h2>
-<h3 id="fixed-4">Fixed<a class="anchor" href="#fixed-4" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-5">Fixed<a class="anchor" href="#fixed-5" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>The installed <code>kalangu</code> command did nothing. npm installs a package&#39;s
 command as a symlink, and the check for &quot;started as a command&quot; compared
