@@ -14,6 +14,10 @@ State as of 16 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [ ] Claim the GitHub organisation / repo name
 - [ ] Domain
 - [ ] Trademark search (a Hausa word — check local usage in target markets)
+- [ ] Run the clinic example on the Africa's Talking sandbox end to end
+  ([docs/sandbox-guide.md](docs/sandbox-guide.md)): proves the gateway
+  integration and the deferral to SMS, not operator behaviour. Needs a free
+  account; correct the guide from what the first run shows
 - [ ] Test the real session timeout and screen length on the operators you can
   reach; published figures vary and Kenya-only numbers are verified so far
 - [ ] Check that no operator you can reach intercepts `98` (our "More")
