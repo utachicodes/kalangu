@@ -129,8 +129,10 @@ gives up when a status check keeps failing, root pay step refusal no longer
 loops, operator lookup under the USSD deadline, provider phone stored,
 exact decimal totals, provider minimum, <code>&quot;100.0&quot;</code> accepted for NONE
 decimals, ids immutable</li>
-<li><input disabled="" type="checkbox"> Make outcome delivery and a concurrent turn safe together (known limit,
-payments design §9): needs a way to retry <code>onPaid</code> without running it twice</li>
+<li><input checked="" disabled="" type="checkbox"> Make outcome delivery and a concurrent turn safe together (payments
+design §9): the handler&#39;s changes and an &quot;applied&quot; record are saved in one
+versioned save, a retry resends without running <code>onPaid</code> again, and a
+concurrent turn keeps its place</li>
 <li><input checked="" disabled="" type="checkbox"> Atomic store primitives (<code>transition</code>, <code>claimNotification</code>,
 <code>withPhoneLock</code>) so two processes cannot notify or begin twice (§6.1)</li>
 <li><input checked="" disabled="" type="checkbox"> Session store compare-and-set, so a double-tapped Yes cannot start two

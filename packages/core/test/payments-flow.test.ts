@@ -102,6 +102,7 @@ function setup(
     /** While `on`, the SMS gateway fails every send. */
     failSends?: { on: boolean };
     onFailed?: PayTarget;
+    onPaid?: Extract<PayTarget, (...args: never[]) => unknown>;
     /** Share these with an earlier agent to simulate a restart. */
     shared?: { store: ReturnType<typeof memoryPaymentStore>; sessions: ReturnType<typeof memoryStore>; clock: Clock };
   } = {},
@@ -119,9 +120,9 @@ function setup(
   const consult = pay(
     { amount: options.amount ?? "500", currency: "KES", reason: { en: "Consultation", fr: "Consultation" } },
     {
-      onPaid: (payment) => {
+      onPaid: (payment, ctx) => {
         paid.push(payment);
-        return "Paid. See you on Monday.";
+        return options.onPaid ? options.onPaid(payment, ctx) : "Paid. See you on Monday.";
       },
       onFailed: options.onFailed ?? ((payment) => `Payment not completed: ${payment.failureMessage}`),
       onDeclined: say("No problem."),
@@ -161,7 +162,8 @@ function setup(
   });
   const dial = () => agent.handle({ channel: "ussd", phone: PHONE, input: "", newSession: true });
   const press = (input: string) => agent.handle({ channel: "ussd", phone: PHONE, input });
-  return { agent, dial, press, store, sessions, clock, sent, paid, advance, errors, fake };
+  const sms = (input: string) => agent.handle({ channel: "sms", phone: PHONE, input });
+  return { agent, dial, press, sms, store, sessions, clock, sent, paid, advance, errors, fake };
 }
 
 async function toConfirm(t: ReturnType<typeof setup>) {
@@ -763,6 +765,8 @@ describe("review fixes", () => {
         "Paid. See you on Monday.",
         "Receipt: 500.00 KES paid to CLINIC. Ref 00000000.",
       ]);
+      // onPaid ran once: the retry resent its message without running it again.
+      expect(t.paid).toHaveLength(1);
       // Delivered now: a second sweep sends nothing more.
       expect((await t.agent.payments!.reconcile({ minAgeMs: 0 })).redelivered).toBe(0);
       expect(t.sent).toHaveLength(2);
@@ -926,5 +930,66 @@ describe("review fixes", () => {
     await t.advance(60_000);
     release();
     expect((await pending).text).toContain("Pay 500 KES to CLINIC for Consultation?");
+  });
+});
+
+describe("an outcome delivered while the user is in another turn", () => {
+  /** A gate the test opens by hand, to hold onPaid while another turn runs. */
+  function gate() {
+    let open!: () => void;
+    const opened = new Promise<void>((resolve) => (open = resolve));
+    return { opened, open };
+  }
+
+  async function paidAndHeld(t: ReturnType<typeof setup>) {
+    await toConfirm(t);
+    await t.press("1");
+    await flush();
+    t.fake.set(t.fake.initiated[0]!.id, { found: true, status: "COMPLETED" });
+    await t.advance(1000); // the poll finds COMPLETED and onPaid starts, then waits
+    expect(t.paid).toHaveLength(1);
+  }
+
+  it("keeps the user's place and still saves what onPaid wrote, running it once", async () => {
+    const held = gate();
+    const t = setup({
+      onPaid: async (payment, ctx) => {
+        await held.opened;
+        ctx.session["paid"] = payment.id ?? null;
+        return "Paid. See you on Monday.";
+      },
+    });
+    await paidAndHeld(t);
+    expect((await t.sms("hi")).text).toContain("Clinic"); // a new conversation, waiting at the menu
+
+    held.open();
+    await flush();
+    const session = await t.sessions.load(PHONE);
+    expect(session?.data["paid"]).toBe(t.fake.initiated[0]!.id);
+    expect(session?.turn).toMatchObject({ kind: "choose", question: "Clinic" });
+    expect(t.sent.map((m) => m.text)).toContain("Paid. See you on Monday.");
+    expect(t.paid).toHaveLength(1);
+    // The menu still answers.
+    expect((await t.sms("2")).text).toBe("8 to 18");
+  });
+
+  it("takes the outcome's follow-up question when the other turn left nothing waiting", async () => {
+    const held = gate();
+    const followUp = menu("Book a follow-up?", { "Yes, Monday": say("Booked for Monday.") });
+    const t = setup({
+      agent: { steps: [followUp] },
+      onPaid: async () => {
+        await held.opened;
+        return followUp;
+      },
+    });
+    await paidAndHeld(t);
+    await t.sms("hi");
+    expect((await t.sms("2")).text).toBe("8 to 18"); // that conversation ended
+
+    held.open();
+    await flush();
+    expect(t.sent.some((m) => m.text.startsWith("Book a follow-up?"))).toBe(true);
+    expect((await t.sms("1")).text).toBe("Booked for Monday.");
   });
 });

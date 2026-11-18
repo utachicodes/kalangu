@@ -100,8 +100,10 @@ above).
   loops, operator lookup under the USSD deadline, provider phone stored,
   exact decimal totals, provider minimum, `"100.0"` accepted for NONE
   decimals, ids immutable
-- [ ] Make outcome delivery and a concurrent turn safe together (known limit,
-  payments design §9): needs a way to retry `onPaid` without running it twice
+- [x] Make outcome delivery and a concurrent turn safe together (payments
+  design §9): the handler's changes and an "applied" record are saved in one
+  versioned save, a retry resends without running `onPaid` again, and a
+  concurrent turn keeps its place
 - [x] Atomic store primitives (`transition`, `claimNotification`,
   `withPhoneLock`) so two processes cannot notify or begin twice (§6.1)
 - [x] Session store compare-and-set, so a double-tapped Yes cannot start two

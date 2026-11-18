@@ -63,6 +63,13 @@ export interface SessionRecord {
    * sessions stored before 0.2 still load.
    */
   payIntent?: PayIntent | null;
+  /**
+   * Payment outcomes already applied to this session, newest last, with the
+   * message each produced. Saved in the same versioned save as the changes
+   * `onPaid` or `onFailed` made, so a retried delivery resends the message
+   * and never runs the handler again. Only the most recent few are kept.
+   */
+  paymentOutcomes?: Array<{ id: string; text: string }>;
   /** Set while a deferred answer is still being produced. */
   deferred: { since: number } | null;
   updatedAt: number;
