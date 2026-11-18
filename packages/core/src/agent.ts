@@ -235,18 +235,27 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
       });
       return;
     }
-    const latest = (await store.load(payment.phone)) ?? freshRecord(payment.phone, payment.locale, clock.now());
+    const loaded = await store.load(payment.phone);
+    const latest = loaded ?? freshRecord(payment.phone, payment.locale, clock.now());
     const run = new TurnRun<M>(
       latest,
       sender,
       { channel: sender.id, phone: payment.phone, input: "" },
       { ...deps, saved: Promise.resolve() },
     );
-    const outcome = await run.paymentOutcome(step, payment);
-    latest.channel = sender.id;
-    latest.updatedAt = clock.now();
-    await store.save(latest);
-    await sendWithRetry(sender, { to: payment.phone, text: outcome.text });
+    // Already applied by an earlier attempt whose message failed to send: send it
+    // again, and never run onPaid or onFailed a second time.
+    let text = appliedOutcome(latest, payment.id);
+    if (text === undefined) {
+      const before = structuredClone(latest);
+      const outcome = await run.paymentOutcome(step, payment);
+      text = outcome.text;
+      latest.channel = sender.id;
+      latest.updatedAt = clock.now();
+      recordOutcome(latest, payment.id, text);
+      text = await saveOutcome(before, latest, payment.id, text, loaded !== null);
+    }
+    await sendWithRetry(sender, { to: payment.phone, text });
     logger.info("Payment outcome sent", { payment: payment.id, phone: mask(payment.phone), status: payment.status });
     if (payment.status === "COMPLETED") {
       // A failed receipt never changes the payment (design §14, decision 7).
@@ -255,6 +264,44 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
       } catch (err) {
         logger.error("Receipt could not be sent", { payment: payment.id, error: describeError(err) });
       }
+    }
+  }
+
+  /**
+   * Saves what a payment outcome did to the session, without overwriting a turn
+   * that saved it meanwhile and without running the handler again: on a
+   * conflict the handler's changes are applied to the newer session instead
+   * (payments design §9). Returns the message to send.
+   */
+  async function saveOutcome(
+    before: SessionRecord,
+    after: SessionRecord,
+    paymentId: string,
+    text: string,
+    existed: boolean,
+  ): Promise<string> {
+    let attempt = after;
+    let basedOn = existed ? (before.version ?? 0) : 0;
+    for (let tries = 0; ; tries++) {
+      try {
+        await store.save(attempt, { ifVersion: basedOn });
+        return text;
+      } catch (err) {
+        if (!(err instanceof SessionConflictError) || tries >= OUTCOME_SAVE_TRIES - 1) throw err;
+      }
+      const current = await store.load(after.phone);
+      if (!current) {
+        // Cleared meanwhile: start from what the outcome made of it.
+        attempt = after;
+        basedOn = 0;
+        continue;
+      }
+      const applied = appliedOutcome(current, paymentId);
+      if (applied !== undefined) return applied;
+      attempt = mergeOutcome(before, after, current);
+      recordOutcome(attempt, paymentId, text);
+      basedOn = current.version ?? 0;
+      logger.info("Payment outcome merged into a newer session", { payment: paymentId, phone: mask(after.phone) });
     }
   }
 
@@ -1218,6 +1265,49 @@ function newTurnId(previous: number | undefined): number {
     const id = globalThis.crypto.getRandomValues(new Uint32Array(1))[0]! >>> 1;
     if (id !== 0 && id !== previous) return id;
   }
+}
+
+/** Versioned attempts to save a payment outcome before giving up for reconcile to retry. */
+const OUTCOME_SAVE_TRIES = 5;
+/** Applied payment outcomes kept per session, enough to cover any retry. */
+const OUTCOMES_KEPT = 10;
+
+function appliedOutcome(record: SessionRecord, paymentId: string): string | undefined {
+  return record.paymentOutcomes?.find((o) => o.id === paymentId)?.text;
+}
+
+function recordOutcome(record: SessionRecord, paymentId: string, text: string): void {
+  const kept = (record.paymentOutcomes ?? []).filter((o) => o.id !== paymentId);
+  record.paymentOutcomes = [...kept, { id: paymentId, text }].slice(-OUTCOMES_KEPT);
+}
+
+/** Where a session is in its conversation: what an outcome may move only if nothing is waiting. */
+const POSITION_KEYS = ["stepId", "turn", "page", "turnId", "languageSuggestion", "languageCodes", "payIntent", "channel"] as const;
+
+/**
+ * `current`, a session another turn saved after the outcome's handler read
+ * `before`, with the handler's changes (`after`) applied to it: the data keys
+ * it set or removed, and its language. Its position too, but only when
+ * `current` is not waiting for an answer, so a user mid-question keeps it.
+ */
+function mergeOutcome(before: SessionRecord, after: SessionRecord, current: SessionRecord): SessionRecord {
+  const merged = structuredClone(current);
+  const keys = new Set([...Object.keys(before.data), ...Object.keys(after.data)]);
+  for (const key of keys) {
+    const was = JSON.stringify(before.data[key]);
+    const now = JSON.stringify(after.data[key]);
+    if (was === now) continue;
+    if (after.data[key] === undefined) delete merged.data[key];
+    else merged.data[key] = structuredClone(after.data[key])!;
+  }
+  if (after.locale !== before.locale) merged.locale = after.locale;
+  if (after.languageChosen !== before.languageChosen) merged.languageChosen = after.languageChosen;
+  const waiting = current.deferred !== null || (current.turn !== null && current.turn.kind !== "say");
+  if (!waiting) {
+    for (const key of POSITION_KEYS) (merged as unknown as Record<string, unknown>)[key] = structuredClone(after[key]);
+  }
+  merged.updatedAt = after.updatedAt;
+  return merged;
 }
 
 function resetPosition(record: SessionRecord): void {

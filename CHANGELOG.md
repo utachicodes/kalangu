@@ -27,6 +27,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   header links to Agents and Providers, and Quick start opens a popup with
   one paste that builds and runs an agent from npm.
 
+### Fixed
+
+- Payments: a retried outcome delivery ran `onPaid` or `onFailed` again. When
+  the outcome SMS failed to send, the handler had already run and saved, and
+  the retry from `reconcile` ran it a second time. The handler's changes and
+  a record of the applied outcome are now saved together, so a retry only
+  resends the message.
+- Payments: an outcome delivered while the user was in another turn could
+  overwrite that turn, or be overwritten by it. The delivery now saves with
+  a version check; on a conflict it applies the handler's session changes
+  to the newer session without running the handler again, and keeps the
+  user's place if they are answering a question (payments design §9).
+
 ## [0.1.0-alpha.4] - 2026-11-18
 
 ### Added

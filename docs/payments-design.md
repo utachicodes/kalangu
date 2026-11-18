@@ -425,14 +425,21 @@ Stated in the README and the package docs, not only here:
   the deployer's responsibility, per country.
 - Reliability with an in-memory payment store, or without
   `reconcile()` running somewhere.
-- **That the outcome message never overwrites a concurrent turn.** The SMS
-  that reports a payment's outcome loads the user's session, runs `onPaid` or
-  `onFailed`, and saves it. If the user is in the middle of another turn at
-  that moment, the later write wins, as for deferred answers. The payment's
-  own record is never affected, and nothing is charged twice; the cost is
-  that one conversation's position can be lost. Making this a retried
-  compare-and-set would mean re-running the developer's `onPaid` handler, so
-  it is left as a known limit rather than risking a handler running twice.
+- **That `onPaid` or `onFailed` runs once if the process dies at the wrong
+  moment.** Since 18 Nov 2026 the handler's changes and a record that the
+  outcome was applied (with the message it produced) are saved together, in
+  one versioned save. A delivery retried after a failed send finds that
+  record and resends the message without running the handler again. A turn
+  that saved the session while the handler ran is not overwritten: the
+  handler's changes are applied to the newer session instead (the data keys
+  it set or removed, and its language), and its position only if that
+  session was not waiting for an answer, so a user mid-question keeps their
+  place; the outcome message is still sent. Two narrow gaps remain: a
+  process that dies after the handler ran but before that save, or a session
+  that keeps changing through five attempts, leaves the outcome unapplied,
+  and the retry runs the handler again. Write `onPaid` so that running it
+  twice is harmless where you can (for example, key a booking on the payment
+  id).
 - **Fast operator lookup.** On a live channel the lookup before the confirm
   screen shares the USSD deadline. If it misses, the user is told payments
   are unavailable and to try again, nothing is started, and the late answer
