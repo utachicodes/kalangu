@@ -37,9 +37,17 @@ export interface SessionRecord {
   /**
    * A typed answer held back while the user is asked whether to continue in
    * the language a detector suggested. It is run through its handler once
-   * they answer, in whichever language they pick.
+   * they answer, in whichever language they pick. `question` is the ask's
+   * question as it was when the offer was made: the answer runs only if the
+   * step at `stepId` still asks it, so a changed tree cannot send it to a
+   * different handler. Offers stored without it are dropped.
    */
-  languageSuggestion?: { code: string; input: string; stepId: string } | null;
+  languageSuggestion?: { code: string; input: string; stepId: string; question?: string } | null;
+  /**
+   * The language codes in the order the language menu on screen listed them,
+   * so a choice means what the caller saw even if the order has changed since.
+   */
+  languageCodes?: string[] | null;
   /**
    * The user said No to a language suggestion. Kept for good, deliberately: no
    * nagging. They can still switch with the language menu.

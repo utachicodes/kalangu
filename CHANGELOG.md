@@ -18,6 +18,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   links to them. The translation instructions moved from CONTRIBUTING.md to
   `docs/translating.md`.
 
+### Fixed
+
+From CodeRabbit's review of everything since #20 (#32):
+
+- A live turn's time limit is now shared. Language detection, the handler
+  and a payment's preparation each had their own, so one turn could run past
+  the 10 seconds a USSD gateway waits. Together they now get `deadlineMs`
+  plus the detection timeout, and a dial string that runs several handlers
+  shares it too.
+- A slow language detector could overwrite a newer turn: if the user moved on
+  while it was answering, its suggestion replaced the newer screen. It is
+  now dropped when another turn has saved the session first.
+- Two Yes answers to a language suggestion arriving together could both run
+  the held answer's handler. The first one now claims it, the same way a
+  payment's Yes is claimed.
+- The language menu now resolves a number against the languages it showed,
+  not today's order: a deployment that reordered them could switch a caller
+  who chose `1. English` to French. A language no longer offered shows the
+  menu again.
+- A held answer runs only if its step still asks the same question; after a
+  change to the tree the offer lapses instead of reaching another handler.
+  Offers saved by earlier versions lapse too.
+- `@kalangu/sms`: a direct `send` now enforces `maxSegments`, as replies did.
+- The translation drafting script no longer overwrites a file created at its
+  output path while Gemini was answering, unless `--force` is given.
+- RELEASING.md: what to do when a release fails part-way, and the smoke test
+  installs the exact new version. The translation guide says how to use a
+  translation and where to send one.
+
 ## [0.1.0-alpha.3] - 2026-11-17
 
 ### Fixed

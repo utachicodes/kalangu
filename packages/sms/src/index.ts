@@ -6,7 +6,7 @@
  * guess path and, where you can, allow only the gateway's IP addresses.
  */
 
-import { smsChannel, type Channel, type Route, type RouteAgent } from "@kalangu/core";
+import { budgetSms, smsChannel, type Channel, type Route, type RouteAgent } from "@kalangu/core";
 import { legacyTransport, type SendResult, type SmsTransport } from "./transport.js";
 
 export * from "./transport.js";
@@ -85,6 +85,9 @@ export function africasTalkingSms(options: AfricasTalkingSmsOptions): AfricasTal
   const deliveryPath = options.deliveryPath === undefined ? "/sms/delivery" : options.deliveryPath;
 
   const send = async (out: { to: string; text: string }): Promise<void> => {
+    // The cap holds for direct sends too, not only for conversation replies:
+    // a message over it is an error here, never sent or cut.
+    budgetSms(out.text, options.maxSegments !== undefined ? { maxSegments: options.maxSegments } : {});
     await sendOne(transport, out, options.senderId);
   };
 

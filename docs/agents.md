@@ -85,8 +85,10 @@ what happens next:
 
 ## Slow answers
 
-On USSD the gateway waits only about 10 seconds for a reply. A handler gets
-`deadlineMs` (default 4000, at most 10000). If it is slower, the user sees
+On USSD the gateway waits only about 10 seconds for a reply. A turn gets
+`deadlineMs` (default 4000, at most 10000), shared by everything it waits for:
+the handler, a payment's checks, and any further handlers a dial string runs
+(language detection adds its own timeout on top). If it runs out, the user sees
 "We are working on your question. You will receive an SMS shortly.", the
 session ends, and the answer is sent by SMS when it is ready. This needs an
 SMS channel that can send. Menus and other fixed steps never wait.

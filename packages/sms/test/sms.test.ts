@@ -162,6 +162,13 @@ describe("channel", () => {
     expect(sent).toEqual([{ to: ["+254700000001"], message: "Hi", from: "CLINIC" }]);
   });
 
+  it("refuses a direct send over its segment cap, sending nothing", async () => {
+    const { transport, sent } = memoryTransport();
+    const channel = africasTalkingSms({ transport, maxSegments: 1 });
+    await expect(channel.send({ to: "+254700000001", text: "x".repeat(161) })).rejects.toThrow(/cap is 1/);
+    expect(sent).toEqual([]);
+  });
+
   it("uses its segment cap when rendering", () => {
     const channel = africasTalkingSms({ transport: memoryTransport().transport, maxSegments: 1 });
     const t = () => "";

@@ -40,6 +40,17 @@ the maintainer; nothing here runs on its own.
    (typecheck, tests, build, and what would be published); run it again with
    `dry_run` off. A dry run does **not** prove the token or the organisation
    work: only a real run does. Publishes carry npm provenance.
+
+   **If the run fails part-way** (say core was accepted and an adapter
+   refused), do not bump the version. Find out where each of the four
+   versions stands: `npm stage list` for staged ones, and
+   `npm view @kalangu/<name>@<version> version` for each package, which
+   prints the version only if it is live. Then, once the cause is fixed:
+   approve or reject what is staged, and run the workflow again for the
+   rest. `pnpm -r publish` skips versions already in the registry, but a
+   version that is staged and not yet approved is not in the registry, so
+   settle the staged ones first or the rerun may try to stage them twice
+   (this has not happened yet; check the run's log for what it published).
 5. **Approve the staged versions.** npm's staged publishing holds CI
    publishes until a maintainer approves them, so a successful run is not a
    release. The workflow log says "Published package" for each package, but
@@ -55,8 +66,10 @@ the maintainer; nothing here runs on its own.
    npm set that instead; set the one you want with
    `npm dist-tag add @kalangu/core@<version> <tag>`). `npm audit signatures`
    in an install should report verified attestations. Then, in an empty
-   folder, `npm install @kalangu/core @kalangu/ussd @kalangu/sms @kalangu/sim`,
-   import them, and run the **installed** command
+   folder, install **the exact new version** of all four, so a tag still
+   pointing at the previous release cannot make an old build pass:
+   `npm install @kalangu/core@<version> @kalangu/ussd@<version> @kalangu/sms@<version> @kalangu/sim@<version>`.
+   Import them, and run the **installed** command
    (`./node_modules/.bin/kalangu locale check <file>`), not the file in
    `dist/`: running the file directly hid a bug in `0.1.0-alpha.0` where the
    installed command did nothing.

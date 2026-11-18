@@ -18,7 +18,13 @@ function geminiResponse(messages, extra = {}) {
   return { candidates: [{ content: { parts: [{ text: JSON.stringify(messages) }] }, finishReason: "STOP" }], ...extra };
 }
 
-function stubIo({ response = geminiResponse(goodTranslation()), status = 200, env = { GEMINI_API_KEY: SECRET }, files = {} } = {}) {
+function stubIo({
+  response = geminiResponse(goodTranslation()),
+  status = 200,
+  env = { GEMINI_API_KEY: SECRET },
+  files = {},
+  appearsDuringRequest = {},
+} = {}) {
   const out = [];
   const err = [];
   const written = {};
@@ -38,7 +44,11 @@ function stubIo({ response = geminiResponse(goodTranslation()), status = 200, en
       },
       exists: (p) => p in files || p in written,
       readFile: async (p) => files[p],
-      writeFile: async (p, text) => void (written[p] = text),
+      writeFile: async (p, text, { overwrite = false } = {}) => {
+        // A file the translator saved while the request was in flight.
+        if (p in appearsDuringRequest && !overwrite) throw Object.assign(new Error(`EEXIST: ${p}`), { code: "EEXIST" });
+        written[p] = text;
+      },
       today: () => "2026-11-17",
       loadCore: async () => core,
     },
@@ -167,6 +177,18 @@ describe("main", () => {
     const t = stubIo({ files: { "locales/wo.draft.json": "{}" } });
     assert.equal(await main(["wo", "--name", "Wolof"], t.io), 2);
     assert.equal(await main(["fr", "--name", "French"], stubIo().io), 2);
+  });
+
+  it("leaves a file saved at the path during the request alone, without --force", async () => {
+    const late = { "locales/wo.draft.json": true };
+    const t = stubIo({ appearsDuringRequest: late });
+    assert.equal(await main(["wo", "--name", "Wolof"], t.io), 1);
+    assert.deepEqual(t.written, {});
+    assert.match(t.err.join("\n"), /was created while the draft was being made/);
+
+    const forced = stubIo({ appearsDuringRequest: late });
+    assert.equal(await main(["wo", "--name", "Wolof", "--force"], forced.io), 0);
+    assert.ok("locales/wo.draft.json" in forced.written);
   });
 
   it("checks its arguments", async () => {

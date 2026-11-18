@@ -332,7 +332,8 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
       record.channel = channel.id;
       record.updatedAt = clock.now();
       try {
-        await store.save(record);
+        // A turn that lost its session to a newer one must not overwrite it.
+        if (!turn.superseded) await store.save(record);
       } finally {
         markSaved();
       }
@@ -474,6 +475,15 @@ type Race<T> = { done: true; value: T } | { done: false };
 /** One inbound event's worth of work. Mutates `record`; the caller saves it. */
 class TurnRun<M> {
   private t: Translate;
+  /**
+   * When this turn's live waits must be over: the handler deadline plus, if
+   * detection is on, its timeout. Detection, a handler and a payment's
+   * preparation share it, so together they never pass what the config check
+   * allowed, however many of them one turn runs.
+   */
+  private readonly waitUntil: number;
+  /** Set when a newer turn saved this session first: this one must not be saved. */
+  superseded = false;
 
   constructor(
     private readonly record: SessionRecord,
@@ -482,6 +492,36 @@ class TurnRun<M> {
     private readonly deps: RunDeps<M>,
   ) {
     this.t = deps.catalog.translator(record.locale);
+    this.waitUntil = deps.clock.now() + deps.deadlineMs + (deps.languages?.detection?.timeoutMs ?? 0);
+  }
+
+  /** At most `cap` ms, and no more than this turn has left. */
+  private remaining(cap: number): number {
+    return Math.max(0, Math.min(cap, this.waitUntil - this.deps.clock.now()));
+  }
+
+  /**
+   * Saves the session now, only if no other turn has saved it since it was
+   * read. False when one has: that turn is newer, and this one must not act.
+   */
+  private async claim(): Promise<boolean> {
+    try {
+      await this.deps.store.save(this.record, { ifVersion: this.record.version ?? 0 });
+      return true;
+    } catch (err) {
+      if (!(err instanceof SessionConflictError)) throw err;
+      return false;
+    }
+  }
+
+  /** A newer turn got there first: show what it left on screen, and save nothing. */
+  private async yieldToNewer(reason: string): Promise<Outcome> {
+    this.superseded = true;
+    this.deps.logger.info(reason, { channel: this.channel.id, phone: this.deps.mask(this.event.phone) });
+    const current = await this.deps.store.load(this.event.phone);
+    if (current) Object.assign(this.record, current);
+    const shown = this.record.turn;
+    return shown ? this.display(shown) : this.showStep(this.entry());
   }
 
   async run(): Promise<Outcome> {
@@ -613,7 +653,7 @@ class TurnRun<M> {
   }
 
   /** Settles with the handler's reply, or `{ done: false }` at the deadline. */
-  private race<T>(work: Promise<T>, ms = this.deps.deadlineMs): Promise<Race<T>> {
+  private race<T>(work: Promise<T>, ms = this.remaining(this.deps.deadlineMs)): Promise<Race<T>> {
     const { clock } = this.deps;
     return new Promise((resolve, reject) => {
       const timer = clock.setTimeout(() => resolve({ done: false }), ms);
@@ -735,7 +775,7 @@ class TurnRun<M> {
     const work = Promise.resolve().then(() => detection.detector.detect(text, { candidates }));
     try {
       // On every channel: a hung detector must never hold up the answer.
-      const raced = await this.race(work, detection.timeoutMs);
+      const raced = await this.race(work, this.remaining(detection.timeoutMs));
       if (!raced.done) {
         work.catch(() => {});
         this.deps.logger.warn("Language detection timed out; carrying on without it", { timeoutMs: detection.timeoutMs });
@@ -765,8 +805,10 @@ class TurnRun<M> {
       stepId,
     );
     // Set after showTurn, which clears any earlier suggestion.
-    this.record.languageSuggestion = { code: language.code, input, stepId: stepId ?? "" };
+    this.record.languageSuggestion = { code: language.code, input, stepId: stepId ?? "", question: questionKey(step) };
     this.record.languageOffered = true;
+    // Detection took time: if a newer turn saved this session meanwhile, it wins.
+    if (!(await this.claim())) return this.yieldToNewer("Language suggestion dropped: a newer turn came first");
     return outcome;
   }
 
@@ -775,6 +817,13 @@ class TurnRun<M> {
     const suggestion = this.record.languageSuggestion;
     this.record.languageSuggestion = null;
     if (!suggestion) return this.showStep(this.entry());
+    // Only the question the offer was made on: after a tree change the held
+    // answer might reach a different handler, so the offer lapses, unanswered.
+    const step = this.deps.steps.get(suggestion.stepId);
+    if (step?.type !== "ask" || suggestion.question === undefined || suggestion.question !== questionKey(step)) {
+      this.deps.logger.info("Language suggestion lapsed: its question has changed");
+      return this.showStep(this.entry());
+    }
     if (accept && this.deps.catalog.has(suggestion.code)) {
       this.record.locale = suggestion.code;
       this.record.languageChosen = true;
@@ -783,8 +832,9 @@ class TurnRun<M> {
     } else {
       this.record.languageSuggestionDeclined = true;
     }
-    const step = this.deps.steps.get(suggestion.stepId);
-    if (step?.type !== "ask") return this.showStep(this.entry());
+    // Claim the held answer before running it: of two answers read from the
+    // same stored session, only the first runs the handler.
+    if (!(await this.claim())) return this.yieldToNewer("Duplicate answer to a language suggestion ignored");
     return this.runHandler(step.handler, suggestion.input, step);
   }
 
@@ -810,19 +860,28 @@ class TurnRun<M> {
       step.title !== undefined
         ? this.deps.catalog.localize(step.title, this.record.locale)
         : [...new Set(ordered.map((l) => this.deps.catalog.translator(l.code)("common.language")))].join(" / ");
-    return this.showTurn(
+    const outcome = this.showTurn(
       { kind: "choose", question: title, options: ordered.map((l) => ({ label: l.name })) },
       this.deps.steps.id(step) ?? null,
     );
+    // Set after showTurn, which clears it: a choice means what this menu listed.
+    this.record.languageCodes = ordered.map((l) => l.code);
+    return outcome;
   }
 
   /** The user picked a language: set it for good, then carry on. */
   private async chooseLanguage(step: LanguageStep, index: number): Promise<Outcome> {
-    const language = this.orderedLanguages(step)[index];
     const shown = this.record.turn;
-    if (!language) {
+    const codes = this.record.languageCodes;
+    // Resolve against the menu the caller saw. Sessions from before it was kept
+    // fall back to today's order.
+    const code = codes ? codes[index] : this.orderedLanguages(step)[index]?.code;
+    if (code === undefined) {
       return shown ? this.display(shown, this.t("common.invalidChoice")) : this.showStep(this.entry());
     }
+    const language = (step.languages ?? this.deps.languages?.supported ?? []).find((l) => l.code === code);
+    // No longer offered: show the menu as it is now.
+    if (!language) return this.showLanguage(step);
     this.record.locale = language.code;
     this.record.languageChosen = true;
     this.t = this.deps.catalog.translator(language.code);
@@ -982,6 +1041,7 @@ class TurnRun<M> {
   private showTurn(turn: Turn, stepId: string | null): Outcome {
     // A pending language suggestion only applies while its question is on screen.
     this.record.languageSuggestion = null;
+    this.record.languageCodes = null;
     this.record.stepId = stepId;
     this.record.page = 0;
     this.record.turnId = newTurnId(this.record.turnId);
@@ -1101,7 +1161,13 @@ function resetPosition(record: SessionRecord): void {
   record.turn = null;
   record.page = 0;
   record.languageSuggestion = null;
+  record.languageCodes = null;
   record.languageOffered = false;
+}
+
+/** What an ask step asks, as a string, to tell whether it is still the same question. */
+function questionKey(step: Step): string {
+  return step.type === "ask" ? JSON.stringify(step.question) : "";
 }
 
 function describeError(err: unknown): string {
