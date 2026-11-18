@@ -40,9 +40,11 @@ export interface SessionRecord {
    * they answer, in whichever language they pick. `question` is the ask's
    * question as it was when the offer was made: the answer runs only if the
    * step at `stepId` still asks it, so a changed tree cannot send it to a
-   * different handler. Offers stored without it are dropped.
+   * different handler. Offers stored without it are dropped. `start` marks an
+   * offer made on a conversation's first SMS, which holds nothing: answering
+   * it starts the conversation.
    */
-  languageSuggestion?: { code: string; input: string; stepId: string; question?: string } | null;
+  languageSuggestion?: { code: string; input: string; stepId: string; question?: string; start?: boolean } | null;
   /**
    * The language codes in the order the language menu on screen listed them,
    * so a choice means what the caller saw even if the order has changed since.

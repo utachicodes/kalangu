@@ -33,6 +33,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="n
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>Language detection now also reads the SMS that starts a conversation
+(languages design §5). A number with no language yet gets the language
+menu with the language its message looks like listed first; nothing is
+chosen for it. A number with a language is offered to continue in the one
+it wrote in, under the same rules as for typed answers: at most once per
+conversation, and never again after a No.</li>
 <li>The clinic example can answer with a local Ollama model:
 <code>OLLAMA_MODEL=llama3.2 pnpm demo</code> (and the same for the server), with
 <code>OLLAMA_HOST</code> for another machine. Answers are shortened to fit the SMS

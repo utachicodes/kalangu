@@ -124,8 +124,9 @@ above).
 - [x] Per-language model routing design (languages design §7)
 - [x] Detector port and model map built (languages design §9.5), tested with
   a fake detector; no real detector ships
-- [ ] Language detection on the first SMS of a conversation (§5 proposed it;
-  only `ask` answers are checked today)
+- [x] Language detection on the first SMS of a conversation (§5): a new
+  number sees its language first in the menu, a known one is offered the
+  switch (languages design §9.5)
 - [x] `kalangu locale check` (placeholders, USSD and SMS fit) and the
   contributor guide for community locales (CONTRIBUTING.md); designed in
   languages design §8 and §9
