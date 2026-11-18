@@ -117,5 +117,6 @@ follow the [sandbox guide](sandbox-guide.md).
 
 - [Agents](agents.md): steps, handlers, sessions, slow answers, languages,
   and what to set before production.
+- [Providers](providers.md): a real model, and more gateways.
 - [Guides](sandbox-guide.md): the sandbox, translating Kalangu, releasing.
 - [Design](design.md): why it works the way it does.

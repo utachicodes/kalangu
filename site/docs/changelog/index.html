@@ -13,7 +13,8 @@
 <header class="top">
   <a class="brand" href="/"><i></i>kalangu</a>
   <nav class="top-r" aria-label="Site">
-    <a href="/docs/" aria-current="true">Docs</a>
+    <a href="/docs/agents/">Agents</a>
+    <a href="/docs/providers/">Providers</a>
     <a href="/contributing/">Contributing</a>
     <a href="https://github.com/utachicodes/kalangu">GitHub</a>
   </nav>
@@ -21,7 +22,7 @@
 <div class="layout">
   <details class="side" open>
     <summary>Menu</summary>
-    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/" aria-current="page">Changelog</a></li></ul></div></nav>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/" aria-current="page">Changelog</a></li></ul></div></nav>
   </details>
   <main id="content">
     <article class="doc">
@@ -31,6 +32,14 @@
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="noopener">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Website: a Providers page (models: Ollama, Claude, Gemini, any API in
+OpenAI&#39;s chat format, a model per language; gateways: Africa&#39;s Talking,
+several channels at once, writing a channel for another gateway). The
+header links to Agents and Providers, and Quick start opens a popup with
+one paste that builds and runs an agent from npm.</li>
+</ul>
+<h3 id="added-1">Added<a class="anchor" href="#added-1" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Documentation on the website (kalangu.utachi.website/docs/): a quick start,
 a guide to building agents, guides (the Africa&#39;s Talking sandbox,
@@ -96,7 +105,7 @@ error is reported in one line.</li>
 saved response in words, with an exit status, instead of crashing.</li>
 </ul>
 <h2 id="010-alpha2---2026-11-17">[0.1.0-alpha.2] - 2026-11-17<a class="anchor" href="#010-alpha2---2026-11-17" aria-label="Link to this section">#</a></h2>
-<h3 id="added-1">Added<a class="anchor" href="#added-1" aria-label="Link to this section">#</a></h3>
+<h3 id="added-2">Added<a class="anchor" href="#added-2" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Language detection as a hint (docs/languages-design.md §9.5):
 <code>languages.detection: { detector, threshold, minChars, timeoutMs? }</code> with
@@ -145,7 +154,7 @@ It now says to install without a tag and to check the tags after approving.</li>
 <h2 id="010-alpha0---2026-11-17">[0.1.0-alpha.0] - 2026-11-17<a class="anchor" href="#010-alpha0---2026-11-17" aria-label="Link to this section">#</a></h2>
 <p>First publish of <code>@kalangu/core</code>, <code>@kalangu/ussd</code>, <code>@kalangu/sms</code> and
 <code>@kalangu/sim</code>. Everything below was in it.</p>
-<h3 id="added-2">Added<a class="anchor" href="#added-2" aria-label="Link to this section">#</a></h3>
+<h3 id="added-3">Added<a class="anchor" href="#added-3" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><p>Payments in <code>@kalangu/core</code> (prep, no real provider yet): the <code>pay</code> step,
 <code>createAgent({ payments })</code> with a mandatory policy, the confirm screen

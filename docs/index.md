@@ -10,6 +10,8 @@ npm as alpha releases: the API may change before 1.0.
   a few minutes, with no account and no API key.
 - [Agents](agents.md): steps, handlers, sessions, slow answers, languages,
   payments, channels, testing, and what to set before production.
+- [Providers](providers.md): plug in a model (Ollama, Claude, Gemini, any
+  API in OpenAI's format) and gateways, several at once.
 
 ## Guides
 

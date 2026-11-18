@@ -148,6 +148,36 @@ a { color: inherit; text-decoration: none; }
 .stat span { display: block; margin-top: calc(10 * var(--u)); font-size: calc(16.5 * var(--u)); color: var(--ink-56); font-weight: 500; line-height: 1.3; }
 .drum { width: calc(96 * var(--u)); height: calc(120 * var(--u)); flex: none; margin-left: auto; color: var(--ink); }
 
+/* ---------- Quick start popup ---------- */
+.nav-r .btn + .btn { margin-left: calc(-30 * var(--u)); }
+.qs {
+  width: min(720px, calc(100% - 32px)); max-height: calc(100vh - 48px);
+  margin: auto; padding: 28px; border: 1.4px solid var(--ink); border-radius: 10px;
+  background: var(--cream); color: var(--ink); overflow: auto;
+}
+.qs::backdrop { background: rgba(13, 13, 12, .45); }
+.qs-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.qs h2 { font-size: 28px; font-weight: 500; letter-spacing: -.02em; }
+.qs-x { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: inherit; cursor: pointer; }
+.qs-x:hover { background: var(--hair); }
+.qs-x svg { width: 20px; height: 20px; }
+.qs-p { font-size: 15px; line-height: 1.5; color: var(--ink-56); margin: 10px 0 14px; }
+.qs-p b { color: var(--ink); font-weight: 600; }
+.qs-small { font-size: 14px; color: var(--ink-56); margin: 18px 0 8px; }
+.qs-code { position: relative; background: var(--ink); color: var(--cream); border-radius: 8px; }
+.qs-code { overflow: hidden; }
+.qs-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 8px 18px; border-bottom: 1px solid rgba(251, 246, 239, .14); font: 500 12px/1 'Inter Tight', system-ui, sans-serif; color: rgba(251, 246, 239, .55); }
+.qs-code pre { margin: 0; padding: 14px 18px 16px; max-height: 40vh; overflow: auto; font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.qs-line pre { white-space: pre-wrap; word-break: break-all; }
+.qs-copy {
+  height: 28px; padding: 0 12px;
+  border: 1px solid rgba(251, 246, 239, .35); border-radius: 6px; background: var(--ink); color: var(--cream);
+  font: 500 13px/1 'Inter Tight', system-ui, sans-serif; cursor: pointer;
+}
+.qs-copy:hover { background: var(--cream); color: var(--ink); }
+.qs-links { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 20px; font-size: 15px; font-weight: 500; }
+.qs-links a:hover { opacity: .6; }
+
 /* ---------- Phones ---------- */
 @media (max-width: 760px) {
   :root { --u: calc(100vw / 760); }
@@ -158,7 +188,12 @@ a { color: inherit; text-decoration: none; }
   .brand { font-size: 21px; gap: 8px; }
   .brand i { width: 11px; height: 11px; }
   .nav-r > a:not(.btn) { display: none; }
-  .nav-r .btn { height: 40px; font-size: 14px; padding: 0 14px; border-radius: 6px; }
+  .nav-r .btn { height: 40px; font-size: 14px; padding: 0 12px; border-radius: 6px; }
+  .nav-r { gap: 8px; }
+  .nav-r .btn + .btn { margin-left: 0; }
+  .qs { padding: 20px 16px; }
+  .qs h2 { font-size: 24px; }
+  .qs-code pre { font-size: 12px; padding: 12px 14px 14px; }
   .hl { position: static; padding: 56px 16px 0; font-size: clamp(52px, 15.5vw, 88px); }
   .row { position: static; flex-wrap: wrap; padding: 36px 16px 0; gap: 10px; }
   .cta { height: 50px; font-size: 15px; padding: 0 18px 0 16px; border-radius: 7px; }
@@ -198,7 +233,8 @@ a { color: inherit; text-decoration: none; }
         <a href="/docs/design/">Design <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg></a>
         <a href="/docs/roadmap/">Roadmap <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg></a>
         <a href="/contributing/">Contribute <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg></a>
-        <a class="btn" href="/docs/">Docs</a>
+        <a class="btn" href="/docs/agents/">Agents</a>
+        <a class="btn" href="/docs/providers/">Providers</a>
       </div>
     </nav>
 
@@ -213,7 +249,7 @@ a { color: inherit; text-decoration: none; }
     </h1>
 
     <div class="row">
-      <a class="btn cta" id="flash" href="/docs/quick-start/">
+      <a class="btn cta" id="flash" href="/docs/quick-start/" aria-haspopup="dialog">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 14 8-14 8z"/></svg>
         Quick start
       </a>
@@ -249,6 +285,56 @@ a { color: inherit; text-decoration: none; }
     </div>
   </section>
 </div>
+
+<dialog class="qs" id="qs" aria-labelledby="qs-title">
+  <div class="qs-head">
+    <h2 id="qs-title">Quick start</h2>
+    <button class="qs-x" type="button" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <p class="qs-p">Paste this into a terminal on macOS or Linux. It needs Node 20 or later, and no account or API key.</p>
+  <div class="qs-code">
+    <div class="qs-bar"><span>Terminal</span><button class="qs-copy" type="button" data-copy="qs-snippet" autofocus>Copy</button></div>
+    <pre><code id="qs-snippet">mkdir kalangu-demo &amp;&amp; cd kalangu-demo &amp;&amp;
+  npm init -y &gt; /dev/null &amp;&amp; npm pkg set type=module &amp;&amp;
+  npm install --silent @kalangu/core @kalangu/sim &amp;&amp;
+  cat &gt; agent.mjs &lt;&lt;'EOF'
+import { ask, consoleLogger, createAgent, menu, say } from "@kalangu/core";
+import { runTerminal } from "@kalangu/sim";
+
+// Any object can be the model. This one takes 6 s on purpose: past the
+// 4 s USSD deadline, so Kalangu ends the session and texts the answer.
+const model = {
+  async answer(question) {
+    await new Promise((resolve) =&gt; setTimeout(resolve, 6000));
+    return `Thanks for asking "${question}". A nurse will call you back today.`;
+  },
+};
+
+const agent = createAgent({
+  model,
+  channels: [], // the simulator brings its own phone
+  logger: consoleLogger("warn"),
+  start: menu("Clinic line", {
+    "Opening hours": say("Open Monday to Saturday, 8:00 to 18:00."),
+    "Ask a nurse": ask("Type your question", (q, ctx) =&gt; ctx.model.answer(q)),
+  }),
+});
+
+await runTerminal(agent, { code: "*384*1#" });
+process.exit(0);
+EOF
+node agent.mjs</code></pre>
+  </div>
+  <p class="qs-p">A keypad phone opens in your terminal. Dial <b>*384*1#</b>, choose <b>2</b> and ask anything. The answer takes 6 seconds, past the 4-second USSD deadline, so it comes by SMS. <b>q</b> quits.</p>
+  <p class="qs-small">The full example, from the repository (needs pnpm):</p>
+  <div class="qs-code qs-line">
+    <div class="qs-bar"><span>Terminal</span><button class="qs-copy" type="button" data-copy="qs-repo">Copy</button></div>
+    <pre><code id="qs-repo">git clone https://github.com/utachicodes/kalangu.git &amp;&amp; cd kalangu &amp;&amp; pnpm install &amp;&amp; pnpm demo</code></pre>
+  </div>
+  <p class="qs-links"><a href="/docs/agents/">Build an agent &rarr;</a><a href="/docs/providers/">Connect a model or gateway &rarr;</a></p>
+</dialog>
 
 <script>
 (() => {
@@ -360,6 +446,41 @@ a { color: inherit; text-decoration: none; }
     if (seek !== null) return;
     document.hidden ? clock.pause() : clock.play();
   });
+})();
+// Quick start: open the popup instead of the page (the link still works without JS).
+(() => {
+  const dialog = document.getElementById('qs');
+  const open = document.getElementById('flash');
+  if (!dialog || !open || typeof dialog.showModal !== 'function') return;
+  open.addEventListener('click', (e) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+    e.preventDefault();
+    dialog.showModal();
+  });
+  dialog.addEventListener('click', (e) => {
+    if (e.target.closest('[data-close]')) return dialog.close();
+    if (e.target !== dialog) return;
+    // A click on the backdrop, not on the popup's own padding.
+    const r = dialog.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close();
+  });
+  for (const button of dialog.querySelectorAll('[data-copy]')) {
+    button.addEventListener('click', async () => {
+      const code = document.getElementById(button.dataset.copy);
+      try {
+        await navigator.clipboard.writeText(code.textContent);
+        button.textContent = 'Copied';
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        button.textContent = 'Press Ctrl+C';
+      }
+      setTimeout(() => (button.textContent = 'Copy'), 1800);
+    });
+  }
 })();
 </script>
 </body>

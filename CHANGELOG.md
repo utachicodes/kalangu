@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Website: a Providers page (models: Ollama, Claude, Gemini, any API in
+  OpenAI's chat format, a model per language; gateways: Africa's Talking,
+  several channels at once, writing a channel for another gateway). The
+  header links to Agents and Providers, and Quick start opens a popup with
+  one paste that builds and runs an agent from npm.
+
+### Added
+
 - Documentation on the website (kalangu.utachi.website/docs/): a quick start,
   a guide to building agents, guides (the Africa's Talking sandbox,
   translating, releasing), the design documents, contributing, the roadmap

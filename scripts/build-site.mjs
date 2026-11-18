@@ -26,6 +26,7 @@ export const PAGES = [
   { group: "Start here", label: "Overview", src: "docs/index.md", url: "/docs/" },
   { group: "Start here", label: "Quick start", src: "docs/quick-start.md", url: "/docs/quick-start/" },
   { group: "Start here", label: "Agents", src: "docs/agents.md", url: "/docs/agents/" },
+  { group: "Start here", label: "Providers", src: "docs/providers.md", url: "/docs/providers/" },
   { group: "Guides", label: "Africa's Talking sandbox", src: "docs/sandbox-guide.md", url: "/docs/guides/sandbox/" },
   { group: "Guides", label: "Translating", src: "docs/translating.md", url: "/docs/guides/translating/" },
   { group: "Guides", label: "Releasing", src: "RELEASING.md", url: "/docs/guides/releasing/" },
@@ -163,7 +164,8 @@ export function pageHtml(page, rendered) {
 <header class="top">
   <a class="brand" href="/"><i></i>kalangu</a>
   <nav class="top-r" aria-label="Site">
-    <a href="/docs/"${page.url.startsWith("/docs/") ? ' aria-current="true"' : ""}>Docs</a>
+    <a href="/docs/agents/"${page.url === "/docs/agents/" ? ' aria-current="true"' : ""}>Agents</a>
+    <a href="/docs/providers/"${page.url === "/docs/providers/" ? ' aria-current="true"' : ""}>Providers</a>
     <a href="/contributing/"${page.url === "/contributing/" ? ' aria-current="true"' : ""}>Contributing</a>
     <a href="${REPO}">GitHub</a>
   </nav>
