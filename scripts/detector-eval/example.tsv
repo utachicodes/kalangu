@@ -1,0 +1,20 @@
+# Format example for scripts/eval-detector.mjs: <code><TAB><text>, one per line.
+# English and French only, written for this example. A real evaluation needs
+# real or realistic keypad-typed messages in the agent's languages, labelled by
+# speakers of them (docs/languages-design.md §12, item 2).
+en	Is the clinic open on Sunday?
+en	my child has a fever
+en	when can I see a nurse
+en	hello
+en	ok
+en	Can you call me tomorrow please
+en	Where is the pharmacy
+en	thanks
+fr	La clinique est ouverte le dimanche ?
+fr	mon enfant a de la fièvre
+fr	quand est-ce que je peux voir une infirmière
+fr	bonjour
+fr	ok
+fr	Vous pouvez m'appeler demain
+fr	Où est la pharmacie
+fr	merci

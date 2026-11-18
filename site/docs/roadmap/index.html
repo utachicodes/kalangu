@@ -22,7 +22,7 @@
 <div class="layout">
   <details class="side" open>
     <summary>Menu</summary>
-    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/" aria-current="page">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/" aria-current="page">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
   </details>
   <main id="content">
     <article class="doc">
@@ -148,8 +148,11 @@ payments when <code>maxPendingPerPhone</code> is above 1</li>
 card; 2.35M parameters; PyTorch only, no ONNX or JS build; 77.6% strict
 accuracy on paragraphs; &quot;not assessed on very short text&quot;; Wolof, Hausa and
 Swahili not named as covered</li>
+<li><input checked="" disabled="" type="checkbox"> Detector evaluation harness (<code>scripts/eval-detector.mjs</code>, languages
+design §13 item 6): accuracy, confusion, length, threshold sweep, latency</li>
 <li><input disabled="" type="checkbox"> Hands-on detector evaluation on short keypad-typed text in Wolof, Hausa
-and Swahili (languages design §12): coverage, accuracy, what the score means</li>
+and Swahili (languages design §12): needs labelled samples from speakers,
+then one run of the harness per candidate detector</li>
 <li><input disabled="" type="checkbox"> Review the languages design, especially §4 (ask first, detection as a
 hint) and the seven open questions in §14</li>
 <li><input checked="" disabled="" type="checkbox"> Per-language model routing design (languages design §7)</li>
