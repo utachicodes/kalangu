@@ -1,6 +1,6 @@
 {
   "name": "@kalangu/sim",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "description": "Terminal keypad-phone simulator for Kalangu agents. No gateway, no network.",
   "keywords": [
     "ussd",
