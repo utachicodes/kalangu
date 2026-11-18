@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Providers · Kalangu</title>
+<meta name="description" content="An agent has two kinds of provider: the model that writes its answers, and the gateway that carries its screens and messages to phones. Kalangu is tied to neith">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/agents/">Agents</a>
+    <a href="/docs/providers/" aria-current="true">Providers</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/" aria-current="page">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="providers">Providers</h1>
+<p>An agent has two kinds of provider: the <strong>model</strong> that writes its answers,
+and the <strong>gateway</strong> that carries its screens and messages to phones. Kalangu
+is tied to neither. This page shows how to plug in each, and how to run one
+agent on several at once.</p>
+<h2 id="models">Models<a class="anchor" href="#models" aria-label="Link to this section">#</a></h2>
+<p>Kalangu never calls a model itself. Whatever you pass as <code>model</code> reaches your
+handlers as <code>ctx.model</code>, so any provider works: a local model, a hosted API,
+your own service, or several of them.</p>
+<pre><code class="language-js">const agent = createAgent({
+  model,  // any object, used by your handlers
+  start: menu(&quot;Clinic line&quot;, {
+    &quot;Ask a nurse&quot;: ask(&quot;Type your question&quot;, (q, ctx) =&gt; ctx.model.answer(q)),
+  }),
+  channels,
+});
+</code></pre>
+<p>Two things matter more on a phone than in a chat app:</p>
+<ul>
+<li><strong>Time.</strong> A USSD gateway waits about 10 seconds. A handler that takes
+longer than <code>deadlineMs</code> (4 seconds by default) has its answer sent by SMS
+instead, so a slow model still works, but a fast one keeps the user on the
+same screen. See <a href="/docs/agents/#slow-answers">slow answers</a>.</li>
+<li><strong>Length.</strong> A long answer is split across USSD screens, which is fine, but
+an SMS reply over 4 segments is an error, never cut. Ask the model for
+short, plain-text answers, and shorten them if they still run long: the
+example&#39;s <a href="https://github.com/utachicodes/kalangu/blob/main/examples/clinic/src/ollama.ts" rel="noopener"><code>fitSms</code></a> cuts at the last
+whole sentence that fits.</li>
+</ul>
+<p>Each snippet below is a complete <code>model</code> object. Keys come from environment
+variables; never put one in your code or repository.</p>
+<h3 id="ollama-on-your-own-machine">Ollama, on your own machine<a class="anchor" href="#ollama-on-your-own-machine" aria-label="Link to this section">#</a></h3>
+<p>No account, no key, nothing leaves the machine. Install
+<a href="https://ollama.com" rel="noopener">Ollama</a> and <code>ollama pull llama3.2</code>.</p>
+<pre><code class="language-js">const model = {
+  async answer(question) {
+    const res = await fetch(&quot;http://localhost:11434/api/chat&quot;, {
+      method: &quot;POST&quot;,
+      headers: { &quot;content-type&quot;: &quot;application/json&quot; },
+      body: JSON.stringify({
+        model: &quot;llama3.2&quot;,
+        stream: false,
+        options: { num_predict: 150 },
+        messages: [
+          { role: &quot;system&quot;, content: &quot;Answer in plain text, in at most 2 short sentences.&quot; },
+          { role: &quot;user&quot;, content: question },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`Ollama answered ${res.status}`);
+    return (await res.json()).message.content.trim();
+  },
+};
+</code></pre>
+<p>The clinic example does this with <code>OLLAMA_MODEL=llama3.2 pnpm demo</code>. The
+server running the agent must be able to reach Ollama, so a serverless host
+cannot use <code>localhost</code>.</p>
+<h3 id="claude">Claude<a class="anchor" href="#claude" aria-label="Link to this section">#</a></h3>
+<p>With Anthropic&#39;s SDK (<code>npm install @anthropic-ai/sdk</code>), which reads
+<code>ANTHROPIC_API_KEY</code> from the environment:</p>
+<pre><code class="language-js">import Anthropic from &quot;@anthropic-ai/sdk&quot;;
+
+const client = new Anthropic();
+
+const model = {
+  async answer(question) {
+    const response = await client.beta.messages.create({
+      model: &quot;claude-opus-5-5&quot;,
+      max_tokens: 1024,
+      output_config: { effort: &quot;low&quot; }, // short answers; raise it for harder questions
+      // If the model declines a request, the API retries it on a fallback model.
+      betas: [&quot;server-side-fallback-2026-07-01&quot;],
+      fallbacks: &quot;default&quot;,
+      system: &quot;Answer in plain text, in at most 2 short sentences.&quot;,
+      messages: [{ role: &quot;user&quot;, content: question }],
+    });
+    if (response.stop_reason === &quot;refusal&quot;) return &quot;Sorry, I can&#39;t help with that.&quot;;
+    return response.content
+      .filter((block) =&gt; block.type === &quot;text&quot;)
+      .map((block) =&gt; block.text)
+      .join(&quot;&quot;)
+      .trim();
+  },
+};
+</code></pre>
+<h3 id="gemini">Gemini<a class="anchor" href="#gemini" aria-label="Link to this section">#</a></h3>
+<p>Google&#39;s REST API, with <code>GEMINI_API_KEY</code> in the environment:</p>
+<pre><code class="language-js">const model = {
+  async answer(question) {
+    const name = &quot;gemini-3.5-flash-lite&quot;;
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${name}:generateContent`, {
+      method: &quot;POST&quot;,
+      headers: { &quot;content-type&quot;: &quot;application/json&quot;, &quot;x-goog-api-key&quot;: process.env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: &quot;Answer in plain text, in at most 2 short sentences.&quot; }] },
+        contents: [{ role: &quot;user&quot;, parts: [{ text: question }] }],
+      }),
+    });
+    if (!res.ok) throw new Error(`Gemini answered ${res.status}`);
+    const data = await res.json();
+    return data.candidates[0].content.parts.map((p) =&gt; p.text).join(&quot;&quot;).trim();
+  },
+};
+</code></pre>
+<h3 id="any-api-in-openai39s-chat-format">Any API in OpenAI&#39;s chat format<a class="anchor" href="#any-api-in-openai39s-chat-format" aria-label="Link to this section">#</a></h3>
+<p>Many providers and local servers accept OpenAI&#39;s chat completions format.
+Set the address, key and model name for the one you use:</p>
+<pre><code class="language-js">const model = {
+  async answer(question) {
+    const res = await fetch(`${process.env.MODEL_BASE_URL}/chat/completions`, {
+      method: &quot;POST&quot;,
+      headers: {
+        &quot;content-type&quot;: &quot;application/json&quot;,
+        authorization: `Bearer ${process.env.MODEL_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.MODEL_NAME,
+        messages: [
+          { role: &quot;system&quot;, content: &quot;Answer in plain text, in at most 2 short sentences.&quot; },
+          { role: &quot;user&quot;, content: question },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`The model answered ${res.status}`);
+    return (await res.json()).choices[0].message.content.trim();
+  },
+};
+</code></pre>
+<h3 id="a-different-model-per-language">A different model per language<a class="anchor" href="#a-different-model-per-language" aria-label="Link to this section">#</a></h3>
+<p>One model may be good in French and weak in Wolof. Pass <code>models</code> instead of
+<code>model</code>, and <code>ctx.model</code> is the entry for the user&#39;s language, or <code>default</code>:</p>
+<pre><code class="language-js">createAgent({
+  models: { default: claude, fr: claude, wo: wolofModel },
+  languages: { supported: [/* ... */] },
+  // ...
+});
+</code></pre>
+<p>See <a href="/docs/agents/#languages">languages</a>.</p>
+<h2 id="gateways">Gateways<a class="anchor" href="#gateways" aria-label="Link to this section">#</a></h2>
+<p>A gateway connects phones to your server: it turns a USSD dial or an SMS into
+an HTTP request, and your reply back into a screen or a message. In Kalangu a
+gateway is a <strong>channel</strong>.</p>
+<h3 id="africa39s-talking-built">Africa&#39;s Talking: built<a class="anchor" href="#africa39s-talking-built" aria-label="Link to this section">#</a></h3>
+<p><code>@kalangu/ussd</code> and <code>@kalangu/sms</code> talk to <a href="https://africastalking.com" rel="noopener">Africa&#39;s
+Talking</a>, which reaches operators in several
+African countries. Both run in one agent:</p>
+<pre><code class="language-js">import { africasTalkingSms } from &quot;@kalangu/sms&quot;;
+import { africasTalkingUssd } from &quot;@kalangu/ussd&quot;;
+
+createAgent({
+  channels: [
+    africasTalkingUssd({ code: &quot;*384*1#&quot;, path: &quot;/ussd&quot; }),
+    africasTalkingSms({ username: process.env.AT_USERNAME, apiKey: process.env.AT_API_KEY, path: &quot;/sms&quot; }),
+  ],
+  // ...
+});
+</code></pre>
+<p>To try it without real operators, follow the
+<a href="/docs/guides/sandbox/">sandbox guide</a>.</p>
+<h3 id="several-channels-at-once">Several channels at once<a class="anchor" href="#several-channels-at-once" aria-label="Link to this section">#</a></h3>
+<p>One agent can serve any number of channels, each on its own path:</p>
+<ul>
+<li><strong>One user, every channel.</strong> Sessions are keyed by phone number, so a user
+keeps their place, data and language whether they dial or text.</li>
+<li><strong>Slow answers</strong> go out on the first SMS channel in the list that can send.</li>
+<li><strong>Paths must differ.</strong> Two channels on the same path are refused at
+startup. <code>agent.requestHandler</code> sends each request to its channel by path.</li>
+</ul>
+<h3 id="another-gateway-write-a-channel">Another gateway: write a channel<a class="anchor" href="#another-gateway-write-a-channel" aria-label="Link to this section">#</a></h3>
+<p>There is no package yet for other gateways, but a channel is small. Core&#39;s
+<code>smsChannel</code> and <code>ussdChannel</code> do the rendering; you add the route that reads
+your gateway&#39;s request and answers in its format. An SMS gateway, with the
+field names your gateway documents:</p>
+<pre><code class="language-js">import { smsChannel } from &quot;@kalangu/core&quot;;
+
+async function send({ to, text }) {
+  // Call your gateway&#39;s send API here.
+}
+
+const mySms = smsChannel({
+  id: &quot;my-sms&quot;,
+  send,
+  routes: [
+    {
+      path: &quot;/my-sms&quot;,
+      async handle(req, agent) {
+        const form = await req.formData();
+        const outcome = await agent.handle({
+          channel: &quot;my-sms&quot;,
+          phone: String(form.get(&quot;from&quot;)),
+          input: String(form.get(&quot;text&quot;)),
+        });
+        await send({ to: String(form.get(&quot;from&quot;)), text: outcome.text });
+        return new Response(&quot;ok&quot;);
+      },
+    },
+  ],
+});
+</code></pre>
+<p>A USSD gateway is the same with <code>ussdChannel</code>: pass <code>newSession</code> on a fresh
+dial, the gateway&#39;s session id as <code>gatewaySessionId</code>, and every input so far
+as <code>inputs</code>, then answer with <code>outcome.text</code>, ending the session when
+<code>outcome.end</code> is true. The Africa&#39;s Talking packages
+(<a href="https://github.com/utachicodes/kalangu/blob/main/packages/ussd/src/index.ts" rel="noopener"><code>packages/ussd</code></a>,
+<a href="https://github.com/utachicodes/kalangu/blob/main/packages/sms/src/index.ts" rel="noopener"><code>packages/sms</code></a>) are complete examples. If you
+build one, a pull request is welcome.</p>
+<h3 id="whatsapp">WhatsApp<a class="anchor" href="#whatsapp" aria-label="Link to this section">#</a></h3>
+<p>Designed, not built: see the <a href="/docs/design/whatsapp/">WhatsApp design</a>.</p>
+<h2 id="payment-providers">Payment providers<a class="anchor" href="#payment-providers" aria-label="Link to this section">#</a></h2>
+<p>Experimental: payments have only run against a fake provider, and there is no
+real provider package yet. See the <a href="/docs/design/payments/">payments design</a>.</p>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/providers.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/providers.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#models">Models</a></li><li><a href="#gateways">Gateways</a></li><li><a href="#payment-providers">Payment providers</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

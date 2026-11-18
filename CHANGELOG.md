@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cap, formatting and reasoning blocks are stripped, and an apology is sent
   when Ollama is down. Without `OLLAMA_MODEL`, the fake nurse as before. The
   quick start shows the same call for your own agent.
+- Website: a Providers page (models: Ollama, Claude, Gemini, any API in
+  OpenAI's chat format, a model per language; gateways: Africa's Talking,
+  several channels at once, writing a channel for another gateway). The
+  header links to Agents and Providers, and Quick start opens a popup with
+  one paste that builds and runs an agent from npm.
 
 ## [0.1.0-alpha.4] - 2026-11-18
 
