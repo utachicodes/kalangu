@@ -115,6 +115,11 @@ takes 6 seconds and the deadline is 4, so the screen says the answer will
 come by SMS, and a couple of seconds later it does. `x` hangs up mid-session
 (dial again to resume), `sms <text>` texts the agent, `q` quits.
 
+To have a real model answer instead, run a local [Ollama](https://ollama.com)
+model: `ollama pull llama3.2`, then `OLLAMA_MODEL=llama3.2 pnpm demo`
+(`OLLAMA_HOST` if it is not on this machine). See
+[examples/clinic/src/ollama.ts](examples/clinic/src/ollama.ts).
+
 To run the same example against Africa's Talking's real gateway, in their
 free sandbox with their phone simulator, follow
 [docs/sandbox-guide.md](docs/sandbox-guide.md).

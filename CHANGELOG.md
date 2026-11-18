@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The clinic example can answer with a local Ollama model:
+  `OLLAMA_MODEL=llama3.2 pnpm demo` (and the same for the server), with
+  `OLLAMA_HOST` for another machine. Answers are shortened to fit the SMS
+  cap, formatting and reasoning blocks are stripped, and an apology is sent
+  when Ollama is down. Without `OLLAMA_MODEL`, the fake nurse as before. The
+  quick start shows the same call for your own agent.
 - Website: a Providers page (models: Ollama, Claude, Gemini, any API in
   OpenAI's chat format, a model per language; gateways: Africa's Talking,
   several channels at once, writing a channel for another gateway). The

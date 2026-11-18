@@ -23,6 +23,18 @@ so the screen says the answer will come by SMS, and a couple of seconds later
 it does. `x` hangs up mid-session (dial again to resume), `sms <text>` texts
 the agent, `q` quits.
 
+**With a real model.** Install [Ollama](https://ollama.com), pull a model and
+run the demo with it:
+
+```sh
+ollama pull llama3.2
+OLLAMA_MODEL=llama3.2 pnpm demo
+```
+
+Ask anything now; a local model usually takes more than 4 seconds, so most
+answers come by SMS. If Ollama runs on another machine, set `OLLAMA_HOST`
+too, for example `OLLAMA_HOST=192.168.1.20:11434`.
+
 ## 2. Write your first agent
 
 In a new folder:
@@ -81,6 +93,37 @@ Run it with `node try.mjs`:
 Each line is one USSD screen. `end: true` means the session is over. To use
 the keypad in your terminal instead, run
 `import { runTerminal } from "@kalangu/sim"; await runTerminal(agent, { code: "*384*1#" });`.
+
+To answer with Ollama instead of echoing, make `answer` call its chat API:
+
+```js
+const model = {
+  async answer(question) {
+    const res = await fetch("http://localhost:11434/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "llama3.2",
+        stream: false,
+        options: { num_predict: 150 },
+        messages: [
+          { role: "system", content: "You answer clinic questions sent from basic phones. Plain text, at most 2 short sentences." },
+          { role: "user", content: question },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`Ollama answered ${res.status}`);
+    return (await res.json()).message.content.trim();
+  },
+};
+```
+
+Keep answers short: a long answer is split across USSD screens, which is
+fine, but an SMS reply over 4 segments is an error, never cut. The example's
+[`ollama.ts`](../examples/clinic/src/ollama.ts) shortens to fit, strips
+formatting, and apologises when Ollama is down. Ollama must be reachable
+from wherever the agent runs, so not from a serverless host unless you expose
+it.
 
 ## 4. Put it on a real gateway
 

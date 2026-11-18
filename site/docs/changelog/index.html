@@ -33,6 +33,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="n
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>The clinic example can answer with a local Ollama model:
+<code>OLLAMA_MODEL=llama3.2 pnpm demo</code> (and the same for the server), with
+<code>OLLAMA_HOST</code> for another machine. Answers are shortened to fit the SMS
+cap, formatting and reasoning blocks are stripped, and an apology is sent
+when Ollama is down. Without <code>OLLAMA_MODEL</code>, the fake nurse as before. The
+quick start shows the same call for your own agent.</li>
 <li>Website: a Providers page (models: Ollama, Claude, Gemini, any API in
 OpenAI&#39;s chat format, a model per language; gateways: Africa&#39;s Talking,
 several channels at once, writing a channel for another gateway). The
