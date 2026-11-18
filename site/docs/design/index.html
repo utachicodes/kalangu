@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kalangu — v0.1 design · Kalangu</title>
+<title>Kalangu: v0.1 design · Kalangu</title>
 <meta name="description" content="Status: draft for review. v0.1 is implemented in this repository; §14 lists where the code differs from this document. Date: 2026-11-16. Scope: version 0.1 only">
 <link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/docs/docs.css">
@@ -25,7 +25,7 @@
   </details>
   <main id="content">
     <article class="doc">
-<h1 id="kalangu--v01-design">Kalangu — v0.1 design</h1>
+<h1 id="kalangu-v01-design">Kalangu: v0.1 design</h1>
 <p>Status: <strong>draft for review</strong>. v0.1 is implemented in this repository;
 §14 lists where the code differs from this document.
 Date: 2026-11-16. Scope: version 0.1 only (core, ussd, sms, sim, one example).
@@ -60,11 +60,11 @@ afterwards, all user input so far concatenated with <code>*</code> (e.g. <code>1
 So the <em>new</em> input each turn is the last <code>*</code>-separated segment.</li>
 <li><strong>Response</strong>: plain text (<code>Content-Type: text/plain</code>), HTTP 200, starting
 with <code>CON</code> to continue or <code>END</code> to terminate. The official SDK emits
-<code>&quot;CON &quot;</code> / <code>&quot;END &quot;</code> — <strong>with a trailing space</strong> before the body.</li>
+<code>&quot;CON &quot;</code> / <code>&quot;END &quot;</code>, <strong>with a trailing space</strong> before the body.</li>
 <li>A malformed response (no <code>CON</code>/<code>END</code> prefix) or HTTP 4xx makes the gateway
 terminate the session gracefully. The adapter must therefore always answer
 200 with a valid <code>CON</code>/<code>END</code> body, even on internal errors.</li>
-<li><strong>Menus must not contain special characters</strong> — telcos cannot render them.
+<li><strong>Menus must not contain special characters</strong>: telcos cannot render them.
 The USSD renderer enforces a safe character set.</li>
 <li>Optional response header <code>at-ussd-hop-metadata</code> (≤ 99 chars, no <code>|</code>) labels
 the current step for journey tracking; it is echoed back on the next request
@@ -84,7 +84,7 @@ and shown in the dashboard. We expose it, default off (no PII in it).</li>
 <td>Safaricom</td>
 <td>180 s</td>
 <td>30 s</td>
-<td>—</td>
+<td>not published</td>
 </tr>
 <tr>
 <td>Airtel</td>
@@ -96,7 +96,7 @@ and shown in the dashboard. We expose it, default off (no PII in it).</li>
 <td>Equitel</td>
 <td>180 s</td>
 <td>30 s</td>
-<td>—</td>
+<td>not published</td>
 </tr>
 </tbody></table></div>
 <ul>
@@ -167,7 +167,7 @@ length limits; the legacy-vs-new SMS endpoint split and the HTTP 201 quirk.</li>
 <li>Not yet verified (needs a real account or hardware, per the checklist):
 real production truncation behaviour on other operators, whether USSD and
 SMS to the same number coexist on every operator (deferral depends on it),
-live session timings outside Kenya, and callback authenticity guarantees —
+live session timings outside Kenya, and callback authenticity guarantees:
 <strong>no request signing is documented</strong> for callbacks; treat callbacks as
 unauthenticated input and document path-secret/IP-allowlist mitigations.</li>
 </ol>
@@ -431,7 +431,7 @@ math, and the demo&#39;s French content must not blow past 70 chars unnoticed.</
 </tbody></table></div>
 <hr>
 <h2 id="7-adapters">7. Adapters<a class="anchor" href="#7-adapters" aria-label="Link to this section">#</a></h2>
-<h3 id="71-kalanguussd--africa39s-talking">7.1 <code>@kalangu/ussd</code> — Africa&#39;s Talking<a class="anchor" href="#71-kalanguussd--africa39s-talking" aria-label="Link to this section">#</a></h3>
+<h3 id="71-kalanguussd-africa39s-talking">7.1 <code>@kalangu/ussd</code>: Africa&#39;s Talking<a class="anchor" href="#71-kalanguussd-africa39s-talking" aria-label="Link to this section">#</a></h3>
 <pre><code class="language-ts">africasTalkingUssd({
   code: &quot;*384*1#&quot;,
   path: &quot;/ussd&quot;,            // for agent.requestHandler dispatch
@@ -446,14 +446,14 @@ math, and the demo&#39;s French content must not blow past 70 chars unnoticed.</
 <li>Input parsing: new input = last <code>*</code>-separated segment (empty string on
 first request). Known limitation: a literal <code>*</code> typed inside free text
 splits the segment; documented, numeric input unaffected.</li>
-<li>Always answers <code>200 text/plain</code> with <code>CON </code>/<code>END </code> prefix — internal
+<li>Always answers <code>200 text/plain</code> with <code>CON </code>/<code>END </code> prefix. Internal
 errors produce a localized <code>END apology</code> screen, never a malformed body.</li>
 <li>Exposes an optional second handler for <strong>session-end notifications</strong>
 (<code>path</code> configurable, default <code>/ussd/end</code>) used for logging/cleanup.</li>
 <li>Adapter tests run against recorded request fixtures (form-encoded bodies
 captured from the docs&#39; examples and the official SDK&#39;s middleware shape).</li>
 </ul>
-<h3 id="72-kalangusms--africa39s-talking">7.2 <code>@kalangu/sms</code> — Africa&#39;s Talking<a class="anchor" href="#72-kalangusms--africa39s-talking" aria-label="Link to this section">#</a></h3>
+<h3 id="72-kalangusms-africa39s-talking">7.2 <code>@kalangu/sms</code>: Africa&#39;s Talking<a class="anchor" href="#72-kalangusms-africa39s-talking" aria-label="Link to this section">#</a></h3>
 <pre><code class="language-ts">africasTalkingSms({
   senderId: &quot;CLINIC&quot;,       // registered sender ID or short code
   path: &quot;/sms&quot;,             // inbound messages callback
@@ -544,20 +544,20 @@ not, so many French answers are sent as UCS-2 at 70 characters per SMS.
 <hr>
 <h2 id="10-testing-plan-priority-order">10. Testing plan (priority order)<a class="anchor" href="#10-testing-plan-priority-order" aria-label="Link to this section">#</a></h2>
 <ol>
-<li><strong>Budgeter</strong> — GSM-7 vs UCS-2 classification (French é/à ok; œ, Wolof
+<li><strong>Budgeter</strong>: GSM-7 vs UCS-2 classification (French é/à ok; œ, Wolof
 ɲ/ŋ, Hausa ɓ/ɗ, Arabic/Devanagari force UCS-2), extension-table double
 counting, segment math (160/153, 70/67), never exceeding a limit, USSD
 pagination with reserved numbers, unsafe-character policy.</li>
-<li><strong>Engine deadline behaviour</strong> — fake clock; fast path never calls the
+<li><strong>Engine deadline behaviour</strong>: fake clock; fast path never calls the
 model; deadline hit → deferred notice <code>END</code>, background completion sends
 exactly one SMS; late model error → logged, user already notified.</li>
-<li><strong>Adapters against recorded fixtures</strong> — USSD inbound (first request,
+<li><strong>Adapters against recorded fixtures</strong>: USSD inbound (first request,
 <code>1*1</code> cumulative input, resumption), always-valid responses (error path
 still <code>END …</code>), SMS inbound and delivery-report parsing, HTTP 201 send
 success, DND 409 mapping.</li>
-<li><strong>Sessions</strong> — resume after drop keyed by phone; locale persistence;
+<li><strong>Sessions</strong>: resume after drop keyed by phone; locale persistence;
 last-write-wins policy.</li>
-<li><strong>Renderer/consumer contract</strong> — every turn kind renders on every channel;
+<li><strong>Renderer/consumer contract</strong>: every turn kind renders on every channel;
 exhaustive switch guards future <code>pay</code>.</li>
 </ol>
 <hr>

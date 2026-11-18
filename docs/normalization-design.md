@@ -1,4 +1,4 @@
-# Kalangu — text normalization design
+# Kalangu: text normalization design
 
 Status: **draft for review. No normalization code exists.**
 Date: 2026-11-17. Scope: how Kalangu should handle the many ways people

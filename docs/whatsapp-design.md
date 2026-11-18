@@ -1,4 +1,4 @@
-# Kalangu — 0.4 WhatsApp adapter design
+# Kalangu: 0.4 WhatsApp adapter design
 
 Status: **draft for review. No WhatsApp code exists.**
 Date: 2026-11-17. Scope: a `@kalangu/whatsapp` channel for the WhatsApp

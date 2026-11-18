@@ -1,4 +1,4 @@
-# Kalangu — 0.2 payments design
+# Kalangu: 0.2 payments design
 
 Status: **draft for review. No payment code exists, and none should be
 written until this document is reviewed** (CONTRIBUTING: money code should
