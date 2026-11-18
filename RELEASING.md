@@ -128,9 +128,13 @@ packing.
     model per language; its files took two to three minutes after approval
     to download) and `0.1.0-alpha.3` (fixes from an independent review of
     the language features).
-  - 18 Nov 2026: `0.1.0-alpha.4`, `latest` (fixes from CodeRabbit's review
-    of everything since #20: a shared time budget per turn, races around
+  - 18 Nov 2026: `0.1.0-alpha.4` (fixes from CodeRabbit's review of
+    everything since #20: a shared time budget per turn, races around
     language suggestions, the language menu's order, the SMS cap on direct
-    sends).
+    sends) and `0.1.0-alpha.5`, `latest` (payment outcomes run `onPaid` once
+    and never overwrite a concurrent turn; language detection on a
+    conversation's first SMS). For `0.1.0-alpha.5`, core's tarball returned
+    `404` for about five minutes after approval while the other three
+    downloaded at once.
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.
