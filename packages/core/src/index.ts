@@ -101,6 +101,7 @@ export {
   DEFAULT_POLL_REPEAT_MS,
   DEFAULT_POLL_SCHEDULE_MS,
   MAX_NOTIFY_ATTEMPTS,
+  checkPaymentStore,
   createPaymentController,
   createPolicyCheck,
   fromMinorUnits,
@@ -112,6 +113,7 @@ export {
   toMinorUnits,
 } from "./payments/index.js";
 export type {
+  CheckPaymentStoreOptions,
   Offer,
   OfferResult,
   PaymentController,

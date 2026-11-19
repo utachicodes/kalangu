@@ -285,6 +285,15 @@ interface PaymentRecord {
   an agent with `payments` refuses to start on a session store that is not
   `atomic`. If the process dies between that claim and recording the payment,
   nothing was charged and the next "Yes" simply re-offers.
+- **`checkPaymentStore(makeStore)`** runs this contract against a store you
+  write and returns the problems found (19 Nov 2026): reads, the idempotent
+  `create`, copies, `update`, a final status kept final, exactly one winner
+  among simultaneous transitions and among simultaneous notification claims,
+  release and retry counting, `unnotified`, `pending`, the `totals` the
+  policy relies on, and a phone lock that never overlaps and survives a
+  failure. It races from one process, which catches a store that checks and
+  then writes in two steps; cross-process atomicity still rests on the
+  database (a conditional `UPDATE`, an advisory lock).
 - An in-memory store ships **for tests and the simulator only**. Using it
   with a real provider logs an error at startup: a restart would forget
   pending payments.

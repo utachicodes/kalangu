@@ -280,6 +280,15 @@ processed&quot;. This holds even with <code>maxPendingPerPhone</code> above 1, a
 an agent with <code>payments</code> refuses to start on a session store that is not
 <code>atomic</code>. If the process dies between that claim and recording the payment,
 nothing was charged and the next &quot;Yes&quot; simply re-offers.</li>
+<li><strong><code>checkPaymentStore(makeStore)</code></strong> runs this contract against a store you
+write and returns the problems found (19 Nov 2026): reads, the idempotent
+<code>create</code>, copies, <code>update</code>, a final status kept final, exactly one winner
+among simultaneous transitions and among simultaneous notification claims,
+release and retry counting, <code>unnotified</code>, <code>pending</code>, the <code>totals</code> the
+policy relies on, and a phone lock that never overlaps and survives a
+failure. It races from one process, which catches a store that checks and
+then writes in two steps; cross-process atomicity still rests on the
+database (a conditional <code>UPDATE</code>, an advisory lock).</li>
 <li>An in-memory store ships <strong>for tests and the simulator only</strong>. Using it
 with a real provider logs an error at startup: a restart would forget
 pending payments.</li>

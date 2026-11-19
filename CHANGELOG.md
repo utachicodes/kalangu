@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `checkPaymentStore(makeStore)`: the payment store contract, runnable:
+  idempotent create, a final status kept final, exactly one winner among
+  simultaneous transitions and notification claims, release counting,
+  `unnotified`, `pending`, the policy's `totals`, and the phone lock.
 - Clinic example: `sqliteSessionStore`, a durable, atomic session store on
   Node's built-in `node:sqlite` (Node 22.13+), as a reference for writing
   one on any database. It passes `checkSessionStore`; `SESSION_DB=sessions.db`
