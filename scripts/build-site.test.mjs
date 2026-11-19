@@ -1,7 +1,7 @@
 // Run with: node --test "scripts/**/*.test.mjs"
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { FAVICON, PAGES, ROBOTS, SITE_URL, build, checkLinks, renderMarkdown, rewriteLink, sitemap, slugify } from "./build-site.mjs";
+import { FAVICON, PAGES, ROBOTS, SITE_URL, build, checkLinks, notFoundHtml, renderMarkdown, rewriteLink, sitemap, slugify } from "./build-site.mjs";
 
 const pageBySrc = new Map(PAGES.map((p) => [p.src, p]));
 const exists = (p) => ["examples/clinic/src/server.ts", "packages"].includes(p);
@@ -64,7 +64,7 @@ describe("the real site", () => {
   it("builds every page with no broken internal link", async () => {
     const { files, problems } = await build();
     assert.deepEqual(problems, []);
-    assert.equal(files.size, PAGES.length + 4); // the pages, the stylesheet, the sitemap, robots.txt and the favicon
+    assert.equal(files.size, PAGES.length + 5); // the pages, the stylesheet, the sitemap, robots.txt, the favicon and the 404 page
   });
 });
 
@@ -89,5 +89,15 @@ describe("discoverability", () => {
     assert.match(html, /<link rel="icon" href="\/favicon.svg"/);
     assert.ok([...files.keys()].some((p) => p.endsWith("/favicon.svg")));
     assert.ok(FAVICON.startsWith("<svg"));
+  });
+});
+
+describe("the 404 page", () => {
+  it("is not indexed, and links only to pages that exist", () => {
+    const html = notFoundHtml();
+    assert.match(html, /<meta name="robots" content="noindex">/);
+    const internal = [...html.matchAll(/href="(\/[^"#]*)"/g)].map((m) => m[1]).filter((h) => !/\.(css|svg|woff2)$/.test(h));
+    const known = new Set(["/", ...PAGES.map((p) => p.url)]);
+    for (const link of internal) assert.ok(known.has(link), `the 404 page links to ${link}, which is not a page`);
   });
 });

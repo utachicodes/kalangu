@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Website: a 404 page with the docs header and links to the documentation,
+  the quick start and the roadmap, generated with the docs.
 - Website: a sitemap, `robots.txt`, a favicon, canonical URLs, and link
   previews (Open Graph and Twitter tags) on every page. The sitemap,
   `robots.txt` and favicon are generated with the docs and checked in CI.
