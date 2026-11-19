@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security policy · Kalangu</title>
+<meta name="description" content="Kalangu handles phone numbers, conversations and, experimentally, payments. If you find a way to break that, please tell us privately first.">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/agents/">Agents</a>
+    <a href="/docs/providers/">Providers</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/security/" aria-current="page">Security</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="security-policy">Security policy</h1>
+<p>Kalangu handles phone numbers, conversations and, experimentally, payments.
+If you find a way to break that, please tell us privately first.</p>
+<h2 id="reporting-a-vulnerability">Reporting a vulnerability<a class="anchor" href="#reporting-a-vulnerability" aria-label="Link to this section">#</a></h2>
+<p>Use GitHub&#39;s private reporting: on the repository, open the <strong>Security</strong> tab
+and choose <strong>Report a vulnerability</strong>. Only the maintainers see the report.</p>
+<p>Please <strong>do not</strong> open a public issue, pull request or discussion for a
+security problem, and do not include real people&#39;s phone numbers or any
+API key in a report; a made-up number such as <code>+254700000001</code> is enough.</p>
+<p>Include what you can of:</p>
+<ul>
+<li>the package and version (<code>npm ls @kalangu/core</code>), and your Node version;</li>
+<li>what an attacker can do, and what they need first (for example, knowing a
+callback URL);</li>
+<li>the smallest steps or code that show it.</li>
+</ul>
+<h2 id="what-to-expect">What to expect<a class="anchor" href="#what-to-expect" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>An acknowledgement within <strong>5 working days</strong>.</li>
+<li>An assessment, and a fix or a plan, within <strong>30 days</strong>. Kalangu is a
+small project; if it will take longer, we will say so and why.</li>
+<li>A security advisory and a release with the fix, crediting you unless you
+would rather not be named.</li>
+</ul>
+<h2 id="supported-versions">Supported versions<a class="anchor" href="#supported-versions" aria-label="Link to this section">#</a></h2>
+<p>Kalangu is in alpha. Only the <strong>latest published version</strong> gets fixes:
+upgrade to it before reporting, and check the <a href="/docs/changelog/">changelog</a> in
+case it is already fixed.</p>
+<h2 id="what-is-in-scope">What is in scope<a class="anchor" href="#what-is-in-scope" aria-label="Link to this section">#</a></h2>
+<p>Anything in this repository, in particular:</p>
+<ul>
+<li>the engine (<code>@kalangu/core</code>): sessions, turns, and the saves that keep a
+payment or a deferred answer from being lost or applied twice;</li>
+<li>payments: anything that could charge twice, charge the wrong amount, or
+report a payment that did not happen;</li>
+<li>the gateway adapters (<code>@kalangu/ussd</code>, <code>@kalangu/sms</code>): parsing callbacks
+and sending messages;</li>
+<li>phone numbers or keys reaching logs, URLs or third parties.</li>
+</ul>
+<h2 id="known-limits-not-vulnerabilities">Known limits, not vulnerabilities<a class="anchor" href="#known-limits-not-vulnerabilities" aria-label="Link to this section">#</a></h2>
+<p>These are documented; reports that only restate them will be closed, though
+ideas to improve them are welcome as ordinary issues:</p>
+<ul>
+<li><strong>Gateway callbacks are not signed.</strong> Africa&#39;s Talking does not sign USSD
+or SMS callbacks, so anyone who knows a callback URL can call it. Use
+hard-to-guess paths and, where you can, allow only the gateway&#39;s addresses
+(<a href="/docs/design/">design</a> §2).</li>
+<li><strong>Payments are experimental</strong> and have only run against a fake provider;
+the <a href="/docs/design/payments/">payments design</a> §9 lists what is not
+guaranteed.</li>
+<li><strong>The in-memory stores</strong> lose everything on restart and are for tests and
+the simulator only.</li>
+</ul>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/SECURITY.md">Edit this page on GitHub</a>
+      <span>Generated from <code>SECURITY.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#reporting-a-vulnerability">Reporting a vulnerability</a></li><li><a href="#what-to-expect">What to expect</a></li><li><a href="#supported-versions">Supported versions</a></li><li><a href="#what-is-in-scope">What is in scope</a></li><li><a href="#known-limits-not-vulnerabilities">Known limits, not vulnerabilities</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

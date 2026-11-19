@@ -52,6 +52,8 @@ from a machine draft.
 
 ## House rules
 
+- **Security problems are reported privately,** never in a public issue:
+  see [SECURITY.md](SECURITY.md).
 - **Never commit secrets** (API keys, phone numbers of real users).
   Phone numbers are personal data; mask them in logs, tests, and fixtures.
 - Fixed strings that face users go through locale files (`en`, `fr` ship

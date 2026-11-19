@@ -38,6 +38,7 @@ export const PAGES = [
   { group: "Design", label: "Text normalization", src: "docs/normalization-design.md", url: "/docs/design/normalization/" },
   { group: "Design", label: "Prior art", src: "docs/prior-art.md", url: "/docs/design/prior-art/" },
   { group: "Project", label: "Contributing", src: "CONTRIBUTING.md", url: "/contributing/" },
+  { group: "Project", label: "Security", src: "SECURITY.md", url: "/security/" },
   { group: "Project", label: "Roadmap and to-do", src: "TODO.md", url: "/docs/roadmap/" },
   { group: "Project", label: "Changelog", src: "CHANGELOG.md", url: "/docs/changelog/" },
 ];
