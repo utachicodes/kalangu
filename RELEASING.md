@@ -35,7 +35,10 @@ the maintainer; nothing here runs on its own.
    tags after approving (step 6) rather than assuming.
 2. Move the CHANGELOG's `[Unreleased]` entries under the new version and
    date.
-3. Merge to `main` and wait for CI to pass.
+3. Merge to `main` and wait for CI to pass. CI already packs the four
+   packages and runs them from an empty project (`pnpm pack:check`), so a
+   file missing from the tarball or a broken `bin` shows there, not after
+   publishing.
 4. Run the **Release** workflow from `main`. It defaults to a dry run
    (typecheck, tests, build, and what would be published); run it again with
    `dry_run` off. A dry run does **not** prove the token or the organisation

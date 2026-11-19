@@ -62,7 +62,10 @@ tags after approving (step 6) rather than assuming.</p>
 <li><p>Move the CHANGELOG&#39;s <code>[Unreleased]</code> entries under the new version and
 date.</p>
 </li>
-<li><p>Merge to <code>main</code> and wait for CI to pass.</p>
+<li><p>Merge to <code>main</code> and wait for CI to pass. CI already packs the four
+packages and runs them from an empty project (<code>pnpm pack:check</code>), so a
+file missing from the tarball or a broken <code>bin</code> shows there, not after
+publishing.</p>
 </li>
 <li><p>Run the <strong>Release</strong> workflow from <code>main</code>. It defaults to a dry run
 (typecheck, tests, build, and what would be published); run it again with

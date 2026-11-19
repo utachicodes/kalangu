@@ -8,9 +8,24 @@ import { createInterface } from "node:readline";
 import type { Agent } from "@kalangu/core";
 import { SimPhone, type Screen, type SimPhoneOptions, type SimSms } from "./phone.js";
 
+/**
+ * Where the terminal reads lines from: `process.stdin` by default, or any
+ * readable stream. Described by what is used, so the published types do not
+ * need Node's own type definitions.
+ */
+export interface TerminalInput {
+  on(event: string, listener: (...args: any[]) => void): unknown;
+}
+
+/** Where the terminal writes: `process.stdout` by default, or any writable stream. */
+export interface TerminalOutput {
+  write(text: string): unknown;
+  isTTY?: boolean;
+}
+
 export interface TerminalOptions extends SimPhoneOptions {
-  input?: NodeJS.ReadableStream;
-  output?: NodeJS.WritableStream;
+  input?: TerminalInput;
+  output?: TerminalOutput;
   /** Width of the screen box's text area. Default 34. */
   width?: number;
 }
@@ -21,8 +36,13 @@ export function runTerminal(agent: Agent, options: TerminalOptions = {}): Promis
   const output = options.output ?? process.stdout;
   const width = options.width ?? 34;
   const phone = new SimPhone(agent, options);
-  const tty = (output as { isTTY?: boolean }).isTTY === true;
-  const rl = createInterface({ input, output, terminal: tty });
+  const tty = output.isTTY === true;
+  // readline needs Node's stream types; the options only promise the parts used.
+  const rl = createInterface({
+    input: input as NodeJS.ReadableStream,
+    output: output as NodeJS.WritableStream,
+    terminal: tty,
+  });
 
   const write = (text: string) => output.write(`${text}\n`);
   let prompt = "Dial> ";

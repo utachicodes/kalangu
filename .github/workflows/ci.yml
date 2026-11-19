@@ -49,3 +49,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm smoke
+      # The packages as npm users get them: packed, installed in an empty project,
+      # the CLI run, imported, typechecked against the published types, and an agent run.
+      - run: node scripts/pack-check.mjs
