@@ -491,7 +491,7 @@ Input> Is the clinic open on Sunday?
 │ shortly.                           │
 └────────────────────────────────────┘
 … (≈6 s later)
-✉ SMS from CLINIC: The clinic is closed on Sundays…
+✉ SMS from CLINIC (1 segment): The clinic is closed on Sundays…
 ```
 
 - Calls the engine directly (no HTTP); uses the USSD renderer for screens and

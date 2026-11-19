@@ -5,7 +5,7 @@
  */
 
 import { createInterface } from "node:readline";
-import type { Agent } from "@kalangu/core";
+import { smsLength, type Agent } from "@kalangu/core";
 import { SimPhone, type Screen, type SimPhoneOptions, type SimSms } from "./phone.js";
 
 /**
@@ -124,8 +124,17 @@ export function box(screen: Screen, width = 34): string {
   return [`┌${edge}┐`, ...lines.map((l) => `│ ${l.padEnd(width)} │`), `└${edge}┘`].join("\n");
 }
 
+/**
+ * An incoming SMS, with what it costs: real SMS is billed per segment, and
+ * one character outside the GSM-7 alphabet (such as Wolof ë or Hausa ɓ) makes
+ * the whole message UCS-2, 70 characters per segment instead of 160.
+ */
 export function formatSms(sms: SimSms): string {
-  return `✉ SMS from ${sms.from}: ${sms.text}`;
+  const length = smsLength(sms.text);
+  const cost =
+    `${length.segments} segment${length.segments === 1 ? "" : "s"}` +
+    (length.encoding === "ucs2" ? `, UCS-2 because of ${length.nonGsmChars.join(" ")}` : "");
+  return `✉ SMS from ${sms.from} (${cost}): ${sms.text}`;
 }
 
 function wrap(line: string, width: number): string[] {

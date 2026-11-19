@@ -40,6 +40,9 @@ are now typed by what they use (<code>TerminalInput</code>, <code>TerminalOutput
 </ul>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li><code>@kalangu/sim</code>: each incoming SMS shows what it costs, for example
+<code>✉ SMS from CLINIC (2 segments, UCS-2 because of ë): ...</code>, so a message
+that one letter makes three times as expensive is visible while testing.</li>
 <li>The quick start is tested: its files are written out exactly as the page
 shows them, run, and their output compared with the page&#39;s (in CI).</li>
 <li><code>pnpm pack:check</code> (in CI, on Node 20): packs the four packages, installs
