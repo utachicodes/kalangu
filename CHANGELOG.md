@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `SECURITY.md`: how to report a vulnerability privately, what to expect,
+  what is in scope, and the documented limits that are not vulnerabilities.
+  On the website under Project.
 - Machine drafts of Kalangu's fixed strings in Wolof, Hausa and Swahili
   (`locales/*.draft.json`, Gemini, not reviewed), with `locales/README.md`
   on how a native speaker reviews one. CI runs `kalangu locale check

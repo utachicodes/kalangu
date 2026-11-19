@@ -201,6 +201,9 @@ example on Africa's Talking (sandbox or live) with Node's `http` module.
 
 ## Known limits
 
+To report a security problem, see [SECURITY.md](SECURITY.md); please do not
+open a public issue.
+
 - A `*` typed inside a free-text USSD answer splits it; the gateway sends
   no way to tell it apart from a separator. Numeric input is unaffected.
 - USSD screens are restricted to printable ASCII: accents are dropped
