@@ -281,8 +281,14 @@ what its handler changed after the deadline (the data keys it set or
 removed, and the language) to the session as it is now, so changes saved in
 the meantime, by a payment outcome for example, are kept; and if the user
 has moved on to a new question, they keep their place while the answer is
-still sent. A turn's own final save is not versioned: the last turn wins, as
-before.
+still sent. Since 19 Nov 2026 a turn's own final save is versioned too: if a
+payment outcome or a deferred answer saved the session while the turn ran,
+the turn's changes are merged into it rather than written over it. In the
+merge a field only one side changed keeps that side's value, data keys the
+writer changed are kept, and where both changed something the user's turn
+wins over a background delivery; the screen position is decided as a whole,
+and a background delivery takes it only if the user is not waiting on a
+newer question.
 
 - **Keyed by phone number**, not gateway `sessionId`, so a dropped session
   resumes on redial. The gateway `sessionId` is stored for correlation only.

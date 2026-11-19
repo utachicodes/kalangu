@@ -122,6 +122,15 @@ describe("summarize", () => {
   });
 });
 
+describe("runDetector", () => {
+  it("moves on from a detector that never answers, as Kalangu would", async () => {
+    const hung = { detect: () => new Promise(() => {}) };
+    const results = await runDetector([{ code: "en", text: "is it open" }], hung, { candidates: ["en"], timeoutMs: 10 });
+    assert.equal(results[0].timedOut, true);
+    assert.equal(results[0].result, null);
+  });
+});
+
 describe("resolveDetector", () => {
   const detect = async () => null;
   it("accepts a default export, a named export, and a factory", async () => {

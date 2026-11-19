@@ -31,6 +31,28 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/" rel="noopener">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="noopener">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
+<h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
+<p>From a review of everything since 0.1.0-alpha.4:</p>
+<ul>
+<li>A turn&#39;s own save could undo a payment outcome or a deferred answer saved
+while it ran: <code>onPaid</code>&#39;s session changes were lost (and, the outcome being
+marked delivered, never retried), or the &quot;answer on its way&quot; notice came
+back for 15 minutes after the answer was sent. The turn&#39;s save is now
+versioned and merges its changes into the newer session. Payment outcomes,
+deferred answers and turns share one merge, so the two background paths no
+longer have their own retry loops.</li>
+<li>Payment delivery no longer runs <code>onPaid</code> again when the session keeps
+changing: after five conflicts the message is sent without updating the
+session, instead of failing and being retried.</li>
+<li>A deferred answer whose save conflicted was rendered again, repeating the
+developer&#39;s <code>spec</code> callback and the operator lookup when the reply was a
+pay step. It is now rendered once and merged.</li>
+<li>Clinic example: <code>OLLAMA_HOST=localhost</code> (no port) pointed at port 80; it
+now uses Ollama&#39;s 11434 when no scheme is given. Cleaning up a model&#39;s
+answer no longer strips <code>*</code> and <code>#</code> from USSD codes such as <code>*384*1#</code>.</li>
+<li><code>scripts/eval-detector.mjs</code> no longer hangs on a detector that never
+answers: past the timeout it moves on, as Kalangu does.</li>
+</ul>
 <h2 id="010-alpha6---2026-11-18">[0.1.0-alpha.6] - 2026-11-18<a class="anchor" href="#010-alpha6---2026-11-18" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
@@ -42,7 +64,7 @@ suggested setting under a false-offer limit. <code>--ascii</code> folds the text
 typed on a keypad. A guide on the website, and an English and French
 example to show the format.</li>
 </ul>
-<h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-1">Fixed<a class="anchor" href="#fixed-1" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>A deferred answer could undo changes saved while it was pending. When a
 slow answer went out by SMS, the session was saved with the whole of the
@@ -73,7 +95,7 @@ several channels at once, writing a channel for another gateway). The
 header links to Agents and Providers, and Quick start opens a popup with
 one paste that builds and runs an agent from npm.</li>
 </ul>
-<h3 id="fixed-1">Fixed<a class="anchor" href="#fixed-1" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-2">Fixed<a class="anchor" href="#fixed-2" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Payments: a retried outcome delivery ran <code>onPaid</code> or <code>onFailed</code> again. When
 the outcome SMS failed to send, the handler had already run and saved, and
@@ -98,7 +120,7 @@ out of date or have a broken link (<code>pnpm site:check</code>). The landing pa
 links to them. The translation instructions moved from CONTRIBUTING.md to
 <code>docs/translating.md</code>.</li>
 </ul>
-<h3 id="fixed-2">Fixed<a class="anchor" href="#fixed-2" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-3">Fixed<a class="anchor" href="#fixed-3" aria-label="Link to this section">#</a></h3>
 <p>From CodeRabbit&#39;s review of everything since #20 (#32):</p>
 <ul>
 <li>A live turn&#39;s time limit is now shared. Language detection, the handler
@@ -127,7 +149,7 @@ installs the exact new version. The translation guide says how to use a
 translation and where to send one.</li>
 </ul>
 <h2 id="010-alpha3---2026-11-17">[0.1.0-alpha.3] - 2026-11-17<a class="anchor" href="#010-alpha3---2026-11-17" aria-label="Link to this section">#</a></h2>
-<h3 id="fixed-3">Fixed<a class="anchor" href="#fixed-3" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-4">Fixed<a class="anchor" href="#fixed-4" aria-label="Link to this section">#</a></h3>
 <p>From an independent review of everything merged in #21 and #26 to #30:</p>
 <ul>
 <li>A pending language suggestion could answer a later question: after a
@@ -177,7 +199,7 @@ first dot, so <code>wo.draft.json</code> is checked as <code>wo</code>.</li>
 USSD spelling, canonicalizing; Gemini offline only; its own repository
 later).</li>
 </ul>
-<h3 id="fixed-4">Fixed<a class="anchor" href="#fixed-4" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-5">Fixed<a class="anchor" href="#fixed-5" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>A typed answer that names an option without its accents was refused: on
 USSD the language menu shows &quot;Français&quot; as &quot;Francais&quot;, and typing that back
@@ -188,7 +210,7 @@ the yes and no words ignoring accents, case, spacing and apostrophe style
 folded match that fits more than one label is refused.</li>
 </ul>
 <h2 id="010-alpha1---2026-11-17">[0.1.0-alpha.1] - 2026-11-17<a class="anchor" href="#010-alpha1---2026-11-17" aria-label="Link to this section">#</a></h2>
-<h3 id="fixed-5">Fixed<a class="anchor" href="#fixed-5" aria-label="Link to this section">#</a></h3>
+<h3 id="fixed-6">Fixed<a class="anchor" href="#fixed-6" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>The installed <code>kalangu</code> command did nothing. npm installs a package&#39;s
 command as a symlink, and the check for &quot;started as a command&quot; compared

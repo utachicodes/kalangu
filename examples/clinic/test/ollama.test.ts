@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { smsLength } from "@kalangu/core";
-import { clean, fitSms, nurseFromEnv, ollamaNurse } from "../src/ollama.js";
+import { clean, fitSms, normalizeHost, nurseFromEnv, ollamaNurse } from "../src/ollama.js";
 
 function fakeOllama(reply: { status?: number; body: unknown }) {
   const calls: Array<{ url: string; body: any }> = [];
@@ -34,6 +34,19 @@ describe("the Ollama nurse", () => {
 
   it("drops a reasoning block and formatting", () => {
     expect(clean("<think>long\nthoughts</think>\n**Rest** and   drink water.")).toBe("Rest and drink water.");
+  });
+
+  it("keeps a USSD code while removing markdown", () => {
+    expect(clean("Dial *384*1# to book.")).toBe("Dial *384*1# to book.");
+    expect(clean("# Answer\n- Rest\n- Drink *plenty* of water")).toBe("Answer Rest Drink plenty of water");
+    expect(clean("Use `code` _here_ please")).toBe("Use code here please");
+  });
+
+  it("reads OLLAMA_HOST as Ollama does: port 11434 unless a scheme or port is given", () => {
+    expect(normalizeHost("localhost")).toBe("http://localhost:11434");
+    expect(normalizeHost("0.0.0.0")).toBe("http://0.0.0.0:11434");
+    expect(normalizeHost("10.0.0.5:9999")).toBe("http://10.0.0.5:9999");
+    expect(normalizeHost("https://ollama.example.com/")).toBe("https://ollama.example.com");
   });
 
   it("keeps a long answer within the SMS cap, at a sentence end where it can", async () => {

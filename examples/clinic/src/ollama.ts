@@ -88,16 +88,31 @@ export function nurseFromEnv(env: NodeJS.ProcessEnv = process.env): { model: Nur
   };
 }
 
-/** OLLAMA_HOST may be "127.0.0.1:11434", as Ollama itself accepts. */
-function normalizeHost(value: string): string {
-  return /^https?:\/\//.test(value) ? value : `http://${value}`;
+/**
+ * OLLAMA_HOST as Ollama itself reads it: "localhost" or "0.0.0.0:11434"
+ * without a scheme means http on Ollama's port 11434 unless one is given; a
+ * full URL such as https://ollama.example.com keeps its scheme's own port.
+ */
+export function normalizeHost(value: string): string {
+  const trimmed = value.trim();
+  const hasScheme = /^https?:\/\//i.test(trimmed);
+  const url = new URL(hasScheme ? trimmed : `http://${trimmed}`);
+  if (!hasScheme && url.port === "") url.port = "11434";
+  return url.origin + url.pathname.replace(/\/+$/, "");
 }
 
-/** Plain text: no reasoning block, no markdown emphasis, single spaces. */
+/**
+ * Plain text: no reasoning block, no markdown, single spaces. Only markdown
+ * is removed, never a lone * or #, so a USSD code such as *384*1# survives.
+ */
 export function clean(text: string): string {
   return text
     .replace(/<think>[\s\S]*?<\/think>/g, "")
-    .replace(/[*_`#]+/g, "")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "") // headings
+    .replace(/^\s*[-*+]\s+/gm, "") // list bullets
+    .replace(/(\*\*|__)(.+?)\1/g, "$2") // bold
+    .replace(/(^|[\s(])([*_])(\S(?:.*?\S)?)\2(?=[\s).,!?;:]|$)/g, "$1$3") // italics
+    .replace(/`+/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }

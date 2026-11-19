@@ -113,13 +113,17 @@ export async function runDetector(samples, detector, { candidates, timeoutMs, no
     try {
       const call = Promise.resolve().then(() => detector.detect(sample.text, { candidates }));
       const late = new Promise((resolve) => {
-        // Measured, not enforced on the work: a call past the timeout still finishes,
-        // so its answer is known, but Kalangu would have ignored it.
         timer = setTimeout(() => resolve("late"), timeoutMs);
       });
       const first = await Promise.race([call.then(() => "done"), late]);
-      result = await call;
-      timedOut = first === "late";
+      if (first === "late") {
+        // Kalangu would have moved on here; so does the harness, so a detector that
+        // never answers cannot hang the run. A late answer counts as none.
+        call.catch(() => {});
+        timedOut = true;
+      } else {
+        result = await call;
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
     } finally {

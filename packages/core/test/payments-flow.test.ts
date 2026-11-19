@@ -21,6 +21,7 @@ import {
   type PayTarget,
   type PaymentsConfig,
   type StatusResult,
+  SessionConflictError,
 } from "../src/index.js";
 
 const PHONE = "+254700000001";
@@ -234,11 +235,13 @@ describe("pay step", () => {
     });
     await agent.handle({ channel: "sms", phone: PHONE, input: "hi" });
 
-    // Both selections read the menu session before either saves.
+    // Both selections read the menu session before either saves. Only those two
+    // loads are held: a save that conflicts loads again, and must not wait.
     const realLoad = sessions.load.bind(sessions);
     const waiting: Array<() => void> = [];
     sessions.load = async (phone) => {
       const record = await realLoad(phone);
+      if (waiting.length >= 2) return record;
       await new Promise<void>((resolve) => {
         waiting.push(resolve);
         if (waiting.length === 2) waiting.forEach((release) => release());
@@ -686,6 +689,7 @@ describe("two processes sharing one store", () => {
     const waiting: Array<() => void> = [];
     first.sessions.load = async (phone) => {
       const record = await realLoad(phone);
+      if (waiting.length >= 2) return record; // a conflicting save loads again: do not hold it
       await new Promise<void>((resolve) => {
         waiting.push(resolve);
         if (waiting.length === 2) waiting.forEach((release) => release());
@@ -991,5 +995,71 @@ describe("an outcome delivered while the user is in another turn", () => {
     await flush();
     expect(t.sent.some((m) => m.text.startsWith("Book a follow-up?"))).toBe(true);
     expect((await t.sms("1")).text).toBe("Booked for Monday.");
+  });
+});
+
+describe("an outcome saved while a turn that read the session earlier is still running", () => {
+  it("keeps what onPaid wrote when that turn saves after it", async () => {
+    const t = setup({
+      onPaid: (payment, ctx) => {
+        ctx.session["paid"] = payment.id ?? null;
+        return "Paid. See you on Monday.";
+      },
+    });
+    await toConfirm(t);
+    await t.press("1");
+    await flush();
+    const id = t.fake.initiated[0]!.id;
+    t.fake.set(id, { found: true, status: "COMPLETED" });
+
+    // A turn loads the session, then its save is held until the outcome has been saved.
+    const real = t.sessions.save.bind(t.sessions);
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let first = true;
+    t.sessions.save = async (record, options) => {
+      if (first) {
+        first = false;
+        await held;
+      }
+      return real(record, options);
+    };
+    const turn = t.sms("hi");
+    await flush();
+    await t.advance(1000); // the poll finds COMPLETED; onPaid runs and its session is saved
+    expect(t.sent.map((m) => m.text)).toContain("Paid. See you on Monday.");
+    release();
+    expect((await turn).text).toContain("Clinic");
+    t.sessions.save = real;
+
+    const session = await t.sessions.load(PHONE);
+    expect(session?.data["paid"]).toBe(id);
+    expect(session?.paymentOutcomes?.map((o) => o.id)).toEqual([id]);
+    expect(session?.turn).toMatchObject({ kind: "choose", question: "Clinic" }); // the user's turn keeps its place
+  });
+
+  it("never runs onPaid again when the session cannot be updated", async () => {
+    const t = setup();
+    await toConfirm(t);
+    await t.press("1");
+    await flush();
+    const id = t.fake.initiated[0]!.id;
+    t.fake.set(id, { found: true, status: "COMPLETED" });
+
+    // Every versioned save conflicts, as if the session kept changing.
+    const real = t.sessions.save.bind(t.sessions);
+    t.sessions.save = async (record, options) => {
+      if (options?.ifVersion !== undefined) throw new SessionConflictError("changed");
+      return real(record, options);
+    };
+    await t.advance(1000);
+    t.sessions.save = real;
+
+    expect(t.paid).toHaveLength(1);
+    expect(t.sent.map((m) => m.text)).toContain("Paid. See you on Monday.");
+    expect((await t.store.get(id))?.notifiedAt).toBeDefined();
+    expect(t.errors.some((e) => e.includes("kept changing"))).toBe(true);
+    await t.agent.payments!.reconcile({ minAgeMs: 0 });
+    expect(t.paid).toHaveLength(1);
   });
 });

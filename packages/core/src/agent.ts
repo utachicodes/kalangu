@@ -247,13 +247,20 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
     // again, and never run onPaid or onFailed a second time.
     let text = appliedOutcome(latest, payment.id);
     if (text === undefined) {
-      const before = structuredClone(latest);
+      const base = loaded ? structuredClone(loaded) : null;
       const outcome = await run.paymentOutcome(step, payment);
       text = outcome.text;
       latest.channel = sender.id;
       latest.updatedAt = clock.now();
       recordOutcome(latest, payment.id, text);
-      text = await saveOutcome(before, latest, payment.id, text, loaded !== null);
+      // onPaid or onFailed has run: from here nothing may throw, or a retry would run it
+      // again. If the session cannot be updated, the message is still sent (design §9).
+      if (!(await saveMerged(store, base, latest, { background: true }))) {
+        logger.error("Payment outcome: the session kept changing and was not updated; sending the message anyway", {
+          payment: payment.id,
+          phone: mask(payment.phone),
+        });
+      }
     }
     await sendWithRetry(sender, { to: payment.phone, text });
     logger.info("Payment outcome sent", { payment: payment.id, phone: mask(payment.phone), status: payment.status });
@@ -264,44 +271,6 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
       } catch (err) {
         logger.error("Receipt could not be sent", { payment: payment.id, error: describeError(err) });
       }
-    }
-  }
-
-  /**
-   * Saves what a payment outcome did to the session, without overwriting a turn
-   * that saved it meanwhile and without running the handler again: on a
-   * conflict the handler's changes are applied to the newer session instead
-   * (payments design §9). Returns the message to send.
-   */
-  async function saveOutcome(
-    before: SessionRecord,
-    after: SessionRecord,
-    paymentId: string,
-    text: string,
-    existed: boolean,
-  ): Promise<string> {
-    let attempt = after;
-    let basedOn = existed ? (before.version ?? 0) : 0;
-    for (let tries = 0; ; tries++) {
-      try {
-        await store.save(attempt, { ifVersion: basedOn });
-        return text;
-      } catch (err) {
-        if (!(err instanceof SessionConflictError) || tries >= OUTCOME_SAVE_TRIES - 1) throw err;
-      }
-      const current = await store.load(after.phone);
-      if (!current) {
-        // Cleared meanwhile: start from what the outcome made of it.
-        attempt = after;
-        basedOn = 0;
-        continue;
-      }
-      const applied = appliedOutcome(current, paymentId);
-      if (applied !== undefined) return applied;
-      attempt = mergeOutcome(before, after, current);
-      recordOutcome(attempt, paymentId, text);
-      basedOn = current.version ?? 0;
-      logger.info("Payment outcome merged into a newer session", { payment: paymentId, phone: mask(after.phone) });
     }
   }
 
@@ -342,6 +311,9 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
 
       const now = clock.now();
       const loaded = await store.load(event.phone);
+      // What this turn started from, to tell its own changes from those of a
+      // payment outcome or deferred answer saved while it ran.
+      const base = loaded ? structuredClone(loaded) : null;
       const record = loaded ?? freshRecord(event.phone, catalog.defaultLocale, now);
       if (loaded && now - loaded.updatedAt > resumeWindow) resetPosition(record);
       if (record.deferred && now - record.deferred.since > DEFERRAL_TTL_MS) record.deferred = null;
@@ -379,8 +351,12 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
       record.channel = channel.id;
       record.updatedAt = clock.now();
       try {
-        // A turn that lost its session to a newer one must not overwrite it.
-        if (!turn.superseded) await store.save(record);
+        // A turn that lost its session to a newer one must not overwrite it. Otherwise
+        // its changes are merged into anything saved meanwhile, never written over it.
+        if (!turn.superseded && !(await saveMerged(store, base, record, { background: false }))) {
+          logger.warn("Session kept changing; saving this turn over it", { phone: mask(event.phone) });
+          await store.save(record);
+        }
       } finally {
         markSaved();
       }
@@ -764,52 +740,39 @@ class TurnRun<M> {
 
     // Start from the stored session, which other turns or a payment outcome may have
     // changed meanwhile, and apply only what the handler changed after the deadline.
-    // Saved with a version check; on a conflict, reload and apply again. Rendering
-    // the reply again is safe: it never runs the handler a second time.
+    // The reply is rendered once; a conflicting save is merged, never rendered again.
+    const loaded = await deps.store.load(event.phone);
+    const base = loaded ? structuredClone(loaded) : null;
+    const target = structuredClone(loaded ?? this.record);
+    applyChanges(deferral.before, this.record, target);
+    // Still this answer's deferral, or has the session moved on without it?
+    const ours = loaded === null || loaded.deferred?.since === deferral.since;
+    if (ours) target.deferred = null;
+
+    const run = new TurnRun<M>(target, sender, { channel: sender.id, phone: event.phone, input: "" }, {
+      ...deps,
+      saved: Promise.resolve(),
+    });
     let text = "";
-    for (let tries = 0; ; tries++) {
-      const loaded = await deps.store.load(event.phone);
-      const target = structuredClone(loaded ?? this.record);
-      applyChanges(deferral.before, this.record, target);
-      // Still this answer's deferral, or has the session moved on without it?
-      const ours = loaded === null || loaded.deferred?.since === deferral.since;
-      if (ours) target.deferred = null;
-
-      const run = new TurnRun<M>(target, sender, { channel: sender.id, phone: event.phone, input: "" }, {
-        ...deps,
-        saved: Promise.resolve(),
-      });
-      let failed = failure;
-      if (failed === undefined) {
-        try {
-          text = (await run.finish(reply, owner)).text;
-        } catch (err) {
-          failed = err;
-        }
-      }
-      if (failed !== undefined) {
-        if (ours) resetPosition(target);
-        text = deps.catalog.translator(target.locale)("common.error");
-      }
-      // A newer turn waiting for an answer keeps its place; the SMS still goes out.
-      if (loaded && !ours && isWaiting(loaded)) copyPosition(loaded, target);
-
-      target.channel = sender.id;
-      target.updatedAt = deps.clock.now();
+    if (failure === undefined) {
       try {
-        await deps.store.save(target, { ifVersion: loaded?.version ?? 0 });
-        failure = failed;
-        break;
+        text = (await run.finish(reply, owner)).text;
       } catch (err) {
-        if (!(err instanceof SessionConflictError)) throw err;
-        if (tries >= OUTCOME_SAVE_TRIES - 1) {
-          failure = failed;
-          deps.logger.error("Deferred answer: the session kept changing and was not updated; sending the answer anyway", {
-            phone: deps.mask(event.phone),
-          });
-          break;
-        }
+        failure = err;
       }
+    }
+    if (failure !== undefined) {
+      if (ours) resetPosition(target);
+      text = deps.catalog.translator(target.locale)("common.error");
+    }
+    // A newer turn waiting for an answer keeps its place; the SMS still goes out.
+    if (loaded && !ours && isWaiting(loaded)) copyPosition(loaded, target);
+    target.channel = sender.id;
+    target.updatedAt = deps.clock.now();
+    if (!(await saveMerged(deps.store, base, target, { background: true }))) {
+      deps.logger.error("Deferred answer: the session kept changing and was not updated; sending the answer anyway", {
+        phone: deps.mask(event.phone),
+      });
     }
     if (failure !== undefined) {
       deps.logger.error("Deferred answer failed", {
@@ -1292,8 +1255,8 @@ function newTurnId(previous: number | undefined): number {
   }
 }
 
-/** Versioned attempts to save a payment outcome before giving up for reconcile to retry. */
-const OUTCOME_SAVE_TRIES = 5;
+/** Versioned attempts at a merged save before giving up. */
+const SAVE_TRIES = 5;
 /** Applied payment outcomes kept per session, enough to cover any retry. */
 const OUTCOMES_KEPT = 10;
 
@@ -1310,17 +1273,80 @@ function recordOutcome(record: SessionRecord, paymentId: string, text: string): 
 const POSITION_KEYS = ["stepId", "turn", "page", "turnId", "languageSuggestion", "languageCodes", "payIntent", "channel"] as const;
 
 /**
- * `current`, a session another turn saved after the outcome's handler read
- * `before`, with the handler's changes (`after`) applied to it: the data keys
- * it set or removed, and its language. Its position too, but only when
- * `current` is not waiting for an answer, so a user mid-question keeps it.
+ * Saves `mine`, a session changed from `base` (what was loaded; null for a
+ * new one), without undoing anything saved meanwhile: the save is versioned,
+ * and on a conflict `mine`'s changes are merged into the newer session and
+ * saved again. Never runs a handler or renders anything a second time. False
+ * if the session kept changing through every attempt.
  */
-function mergeOutcome(before: SessionRecord, after: SessionRecord, current: SessionRecord): SessionRecord {
-  const merged = structuredClone(current);
-  applyChanges(before, after, merged);
-  if (!isWaiting(current)) copyPosition(after, merged);
-  merged.updatedAt = after.updatedAt;
-  return merged;
+async function saveMerged(
+  store: SessionStore,
+  base: SessionRecord | null,
+  mine: SessionRecord,
+  options: { background: boolean },
+): Promise<boolean> {
+  let attempt = mine;
+  let basedOn = mine.version ?? 0;
+  for (let tries = 0; tries < SAVE_TRIES; tries++) {
+    try {
+      await store.save(attempt, { ifVersion: basedOn });
+      if (attempt !== mine) mine.version = attempt.version;
+      return true;
+    } catch (err) {
+      if (!(err instanceof SessionConflictError)) throw err;
+    }
+    const theirs = await store.load(mine.phone);
+    attempt = theirs ? mergeSessions(base, mine, theirs, options) : mine;
+    basedOn = theirs?.version ?? 0;
+  }
+  return false;
+}
+
+const MERGE_SKIP = new Set(["data", "version", "paymentOutcomes", ...POSITION_KEYS]);
+
+/**
+ * A three-way merge of sessions: `theirs`, saved meanwhile, with `mine`'s
+ * changes from `base` applied. A field only one side changed keeps that
+ * side's value. Data keys `mine` changed are always kept (a handler's write).
+ * Where both changed a field, the user's own turn wins, and a background
+ * delivery gives way. The screen position is decided as one: a background
+ * delivery takes it unless the user moved meanwhile and is waiting on a
+ * question, who then keeps their place. Applied payment outcomes from both
+ * are kept.
+ */
+function mergeSessions(
+  base: SessionRecord | null,
+  mine: SessionRecord,
+  theirs: SessionRecord,
+  { background }: { background: boolean },
+): SessionRecord {
+  const from = (base ?? {}) as Partial<SessionRecord>;
+  const out = structuredClone(theirs);
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const field = (r: Partial<SessionRecord>, key: string) => (r as Record<string, unknown>)[key];
+  const set = (key: string, value: unknown) => {
+    (out as unknown as Record<string, unknown>)[key] = structuredClone(value);
+  };
+
+  applyChanges({ data: from.data ?? {} } as SessionRecord, { data: mine.data } as SessionRecord, out, { dataOnly: true });
+
+  const keys = new Set([...Object.keys(mine), ...Object.keys(theirs)]);
+  for (const key of keys) {
+    if (MERGE_SKIP.has(key)) continue;
+    if (same(field(mine, key), field(from, key))) continue;
+    const theirsChanged = !same(field(theirs, key), field(from, key));
+    if (!theirsChanged || !background) set(key, field(mine, key));
+  }
+
+  // A background delivery gives way only to a user who moved and is now waiting
+  // on a question; a conversation that ended takes the delivery's follow-up.
+  const moved = (r: Partial<SessionRecord>) => POSITION_KEYS.some((k) => !same(field(r, k), field(from, k)));
+  if (moved(mine) && (!background || !moved(theirs) || !isWaiting(theirs))) copyPosition(mine, out);
+
+  const outcomes = [...(theirs.paymentOutcomes ?? [])];
+  for (const o of mine.paymentOutcomes ?? []) if (!outcomes.some((t) => t.id === o.id)) outcomes.push(o);
+  if (outcomes.length > 0) out.paymentOutcomes = outcomes.slice(-OUTCOMES_KEPT);
+  return out;
 }
 
 /**
@@ -1328,13 +1354,19 @@ function mergeOutcome(before: SessionRecord, after: SessionRecord, current: Sess
  * set or removed, and the language. Keys nobody touched keep `target`'s value,
  * so changes saved meanwhile by others survive.
  */
-function applyChanges(before: SessionRecord, after: SessionRecord, target: SessionRecord): void {
+function applyChanges(
+  before: SessionRecord,
+  after: SessionRecord,
+  target: SessionRecord,
+  { dataOnly = false }: { dataOnly?: boolean } = {},
+): void {
   const keys = new Set([...Object.keys(before.data), ...Object.keys(after.data)]);
   for (const key of keys) {
     if (JSON.stringify(before.data[key]) === JSON.stringify(after.data[key])) continue;
     if (after.data[key] === undefined) delete target.data[key];
     else target.data[key] = structuredClone(after.data[key])!;
   }
+  if (dataOnly) return;
   if (after.locale !== before.locale) target.locale = after.locale;
   if (after.languageChosen !== before.languageChosen) target.languageChosen = after.languageChosen;
 }
@@ -1344,7 +1376,7 @@ function isWaiting(record: SessionRecord): boolean {
   return record.deferred !== null || (record.turn !== null && record.turn.kind !== "say");
 }
 
-function copyPosition(from: SessionRecord, to: SessionRecord): void {
+function copyPosition(from: Partial<SessionRecord>, to: SessionRecord): void {
   for (const key of POSITION_KEYS) (to as unknown as Record<string, unknown>)[key] = structuredClone(from[key]);
 }
 
