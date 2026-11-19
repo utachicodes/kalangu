@@ -28,6 +28,12 @@ runs `pnpm site:check`, which fails if the pages are out of date or if a link
 points to a page or heading that does not exist. The list of pages and the
 sidebar are in `scripts/build-site.mjs`.
 
+The quick start is also run: `scripts/docs-snippets.test.mjs` writes out
+every block introduced by "Create `<file>`", runs the one after "Run it with
+`node <file>`", and fails if the output differs from the block the page
+shows. If you change the quick start's code or its output, keep them in
+step.
+
 ## Working on the code
 
 - `pnpm install`, then `pnpm test`, `pnpm typecheck` and `pnpm build` at the
