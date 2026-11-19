@@ -20,6 +20,27 @@ import { Marked } from "marked";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SITE = join(ROOT, "site");
 const REPO = "https://github.com/utachicodes/kalangu";
+export const SITE_URL = "https://kalangu.utachi.website";
+
+/** The brand's dot, as the browser tab icon. */
+export const FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="#0D0D0C"/></svg>
+`;
+
+export const ROBOTS = `User-agent: *
+Allow: /
+
+Sitemap: ${SITE_URL}/sitemap.xml
+`;
+
+/** Every page of the site, the landing page first. */
+export function sitemap(pages) {
+  const urls = ["/", ...pages.map((p) => p.url)];
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map((u) => `  <url><loc>${SITE_URL}${u}</loc></url>`).join("\n")}
+</urlset>
+`;
+}
 
 /** Every page, in sidebar order. `src` is relative to the repository root. */
 export const PAGES = [
@@ -158,6 +179,14 @@ export function pageHtml(page, rendered) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)} · Kalangu</title>
 <meta name="description" content="${escapeHtml(rendered.description)}">
+<link rel="canonical" href="${SITE_URL}${page.url}">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Kalangu">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(rendered.description)}">
+<meta property="og:url" content="${SITE_URL}${page.url}">
+<meta name="twitter:card" content="summary">
 <link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/docs/docs.css">
 </head>
@@ -311,6 +340,9 @@ export async function build() {
   const problems = checkLinks(rendered);
   const files = new Map([[join(SITE, "docs", "docs.css"), CSS]]);
   for (const [page, r] of rendered) files.set(join(SITE, page.url, "index.html"), pageHtml(page, r));
+  files.set(join(SITE, "sitemap.xml"), sitemap(PAGES));
+  files.set(join(SITE, "robots.txt"), ROBOTS);
+  files.set(join(SITE, "favicon.svg"), FAVICON);
   return { files, problems };
 }
 
