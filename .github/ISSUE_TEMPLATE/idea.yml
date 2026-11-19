@@ -1,0 +1,24 @@
+name: Idea or proposal
+description: A change to Kalangu, or a question about its design.
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The design documents ([docs/design.md](https://github.com/utachicodes/kalangu/blob/main/docs/design.md) and the others in `docs/`) explain why Kalangu works the way it does, including open questions. Pointing at the section you want to change helps.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: Who it affects (developers, or people using an agent on their phone) and how.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+  - type: textarea
+    id: context
+    attributes:
+      label: Where it would be used
+      description: "Country, operator, gateway, language: real-world details matter for USSD and SMS."

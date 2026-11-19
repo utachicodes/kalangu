@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/utachicodes/kalangu/blob/main/SECURITY.md
+    about: Please report vulnerabilities privately, never in a public issue.
+  - name: Documentation
+    url: https://kalangu.utachi.website/docs/
+    about: The quick start, building agents, providers and guides.

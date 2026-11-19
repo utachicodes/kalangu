@@ -1,0 +1,45 @@
+name: Bug report
+description: Something in Kalangu does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security problems go to the private report on the Security tab, not here** (see SECURITY.md).
+        Never paste a real person's phone number or an API key: a made-up number such as `+254700000001` is enough.
+  - type: input
+    id: version
+    attributes:
+      label: Versions
+      description: Output of `npm ls @kalangu/core @kalangu/ussd @kalangu/sms @kalangu/sim`, and `node --version`.
+      placeholder: "@kalangu/core 0.1.0-alpha.8, Node 22.12"
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen?
+      options:
+        - USSD
+        - SMS
+        - The simulator (pnpm demo or @kalangu/sim)
+        - Payments
+        - Languages or translations
+        - The kalangu command
+        - The website or docs
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+      description: The screens or messages as they appeared, if you have them.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce it
+      description: The smallest agent and the inputs that show it. A script using `createPhone` from `@kalangu/sim` is ideal.
+      render: js
