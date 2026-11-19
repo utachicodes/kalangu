@@ -353,3 +353,36 @@ describe("a late answer and what happened meanwhile", () => {
     expect((await press("1")).text).toBe("Type your question");
   });
 });
+
+describe("a turn that read the session before a late answer was saved", () => {
+  it("does not bring back the pending notice once the answer has gone out", async () => {
+    const { dial, press, pressAndWait, background, store, sent, model } = setup();
+    await dial();
+    await press("2");
+    await pressAndWait("Open on Sunday?", 4000);
+
+    // A redial loads the pending session; its save is held until the late answer is saved.
+    const real = store.save.bind(store);
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let first = true;
+    store.save = async (record, options) => {
+      if (first) {
+        first = false;
+        await held;
+      }
+      return real(record, options);
+    };
+    const redial = dial();
+    await flush();
+    model.next.resolve("Closed on Sundays.");
+    await background.settle();
+    expect(sent.map((m) => m.text)).toEqual(["Closed on Sundays."]);
+    release();
+    await redial;
+    store.save = real;
+
+    expect((await store.load(PHONE))?.deferred).toBeNull();
+    expect((await dial()).text).toMatch(/^Clinic line/); // not "We are working on your question"
+  });
+});

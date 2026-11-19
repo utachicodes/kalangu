@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+From a review of everything since 0.1.0-alpha.4:
+
+- A turn's own save could undo a payment outcome or a deferred answer saved
+  while it ran: `onPaid`'s session changes were lost (and, the outcome being
+  marked delivered, never retried), or the "answer on its way" notice came
+  back for 15 minutes after the answer was sent. The turn's save is now
+  versioned and merges its changes into the newer session. Payment outcomes,
+  deferred answers and turns share one merge, so the two background paths no
+  longer have their own retry loops.
+- Payment delivery no longer runs `onPaid` again when the session keeps
+  changing: after five conflicts the message is sent without updating the
+  session, instead of failing and being retried.
+- A deferred answer whose save conflicted was rendered again, repeating the
+  developer's `spec` callback and the operator lookup when the reply was a
+  pay step. It is now rendered once and merged.
+- Clinic example: `OLLAMA_HOST=localhost` (no port) pointed at port 80; it
+  now uses Ollama's 11434 when no scheme is given. Cleaning up a model's
+  answer no longer strips `*` and `#` from USSD codes such as `*384*1#`.
+- `scripts/eval-detector.mjs` no longer hangs on a detector that never
+  answers: past the timeout it moves on, as Kalangu does.
+
 ## [0.1.0-alpha.6] - 2026-11-18
 
 ### Added
