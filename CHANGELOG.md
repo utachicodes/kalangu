@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `@kalangu/sim`: typing something that is not a code at `Dial>` (such as
+  `1` after a USSD screen ended, or to answer an SMS) still gets the phone's
+  own "invalid MMI code" screen, now followed by a line saying what to type
+  instead: dial the code, or reply by SMS with `sms 1`. The header also says
+  to dial again after a screen marked `END`.
+
 ## [0.1.0-alpha.7] - 2026-11-19
 
 ### Fixed

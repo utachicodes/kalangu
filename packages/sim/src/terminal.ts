@@ -45,6 +45,7 @@ export function runTerminal(agent: Agent, options: TerminalOptions = {}): Promis
   write(
     `│ Dial ${options.code ?? "a code such as *384#"} · x hangs up · sms <text> texts the agent · q quits`,
   );
+  write("│ After a screen marked END, dial again. Replies to an SMS start with sms, e.g. sms 1");
   showPrompt();
 
   return new Promise((resolve) => {
@@ -78,13 +79,18 @@ export function runTerminal(agent: Agent, options: TerminalOptions = {}): Promis
     if (line === "") return true;
 
     let screen: Screen;
+    const dialling = !phone.inSession;
     try {
-      screen = phone.inSession ? await phone.press(line) : await phone.dial(line);
+      screen = dialling ? await phone.dial(line) : await phone.press(line);
     } catch (err) {
       write(`! ${err instanceof Error ? err.message : String(err)}`);
       return true;
     }
     write(box(screen, width));
+    if (dialling && !line.startsWith("*")) {
+      // What a real phone says, then what the person most likely meant.
+      write(`→ Not a code. Dial ${options.code ?? "a code such as *384#"} to start, or reply by SMS with: sms ${line}`);
+    }
     prompt = screen.end ? "Dial> " : looksLikeMenu(screen.text) ? "Choice> " : "Input> ";
     return true;
   }

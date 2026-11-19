@@ -95,4 +95,20 @@ describe("runTerminal", () => {
     expect(printed).toContain("✉ SMS from AGENT: Clinic line");
     expect(phone.inbox).toHaveLength(1);
   });
+
+  it("explains a number typed where a code was expected", async () => {
+    const input = new PassThrough();
+    const output = new PassThrough();
+    let printed = "";
+    output.on("data", (chunk: Buffer) => (printed += chunk.toString()));
+
+    const done = runTerminal(agent(), { input, output, code: "*384*1#" });
+    input.end(["1", "*99#", "q", ""].join("\n"));
+    await done;
+
+    expect(printed).toContain("END Connection problem or invalid");
+    expect(printed).toContain("→ Not a code. Dial *384*1# to start, or reply by SMS with: sms 1");
+    // A mistyped code gets the phone's own error and no hint.
+    expect(printed.match(/→ Not a code/g)).toHaveLength(1);
+  });
 });

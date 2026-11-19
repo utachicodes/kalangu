@@ -31,6 +31,14 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/" rel="noopener">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="noopener">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
+<h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><code>@kalangu/sim</code>: typing something that is not a code at <code>Dial&gt;</code> (such as
+<code>1</code> after a USSD screen ended, or to answer an SMS) still gets the phone&#39;s
+own &quot;invalid MMI code&quot; screen, now followed by a line saying what to type
+instead: dial the code, or reply by SMS with <code>sms 1</code>. The header also says
+to dial again after a screen marked <code>END</code>.</li>
+</ul>
 <h2 id="010-alpha7---2026-11-19">[0.1.0-alpha.7] - 2026-11-19<a class="anchor" href="#010-alpha7---2026-11-19" aria-label="Link to this section">#</a></h2>
 <h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
 <p>From a review of everything since 0.1.0-alpha.4:</p>
@@ -358,7 +366,7 @@ workflow (dry run by default, npm provenance), and <code>RELEASING.md</code>.
 Nothing is published yet.</p>
 </li>
 </ul>
-<h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
+<h3 id="changed-1">Changed<a class="anchor" href="#changed-1" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>README: v0.1 status, package list, quick start, how to write an agent,
 and known limits. CONTRIBUTING updated for working on the code.</li>
