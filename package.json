@@ -31,7 +31,7 @@
     "site:check": "node scripts/build-site.mjs --check"
   },
   "devDependencies": {
-    "@types/node": "^20.19.43",
+    "@types/node": "^26.6.6",
     "marked": "18.2.1",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
