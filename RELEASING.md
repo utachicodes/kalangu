@@ -131,10 +131,13 @@ packing.
   - 18 Nov 2026: `0.1.0-alpha.4` (fixes from CodeRabbit's review of
     everything since #20: a shared time budget per turn, races around
     language suggestions, the language menu's order, the SMS cap on direct
-    sends) and `0.1.0-alpha.5`, `latest` (payment outcomes run `onPaid` once
+    sends) and `0.1.0-alpha.5` (payment outcomes run `onPaid` once
     and never overwrite a concurrent turn; language detection on a
     conversation's first SMS). For `0.1.0-alpha.5`, core's tarball returned
     `404` for about five minutes after approval while the other three
     downloaded at once.
+  - 19 Nov 2026: `0.1.0-alpha.6`, `latest` (a deferred answer keeps changes
+    saved while it was pending, and a newer turn's place). All four
+    downloaded as soon as they were approved.
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.
