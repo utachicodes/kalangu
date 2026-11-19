@@ -11,6 +11,8 @@ export type { PaymentRecord, PaymentStatus, PaymentTotals } from "./store.js";
 export { isFinalPaymentStatus } from "./store.js";
 export type { PaymentStore } from "./store.js";
 export { memoryPaymentStore } from "./store.js";
+export { checkPaymentStore } from "./storeChecks.js";
+export type { CheckPaymentStoreOptions } from "./storeChecks.js";
 
 export type {
   PaymentLimits,

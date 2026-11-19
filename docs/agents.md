@@ -203,6 +203,9 @@ provider package yet, so do not use them with real money. In outline:
   policy is mandatory: allowed currencies and a limit per payment.
 - Call `agent.payments.reconcile()` from a scheduled job, about every 5
   minutes, so payments finish even after a restart.
+- A durable payment store must make three operations atomic; test yours
+  with `checkPaymentStore(() => myPaymentStore())`, which returns the
+  problems found, as `checkSessionStore` does for sessions.
 
 The full design, and what it does not guarantee, is in the
 [payments design](payments-design.md).

@@ -271,6 +271,9 @@ payment in the background. The outcome and a receipt arrive by SMS.</li>
 policy is mandatory: allowed currencies and a limit per payment.</li>
 <li>Call <code>agent.payments.reconcile()</code> from a scheduled job, about every 5
 minutes, so payments finish even after a restart.</li>
+<li>A durable payment store must make three operations atomic; test yours
+with <code>checkPaymentStore(() =&gt; myPaymentStore())</code>, which returns the
+problems found, as <code>checkSessionStore</code> does for sessions.</li>
 </ul>
 <p>The full design, and what it does not guarantee, is in the
 <a href="/docs/design/payments/">payments design</a>.</p>
