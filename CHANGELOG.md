@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Machine drafts of Kalangu's fixed strings in Wolof, Hausa and Swahili
+  (`locales/*.draft.json`, Gemini, not reviewed), with `locales/README.md`
+  on how a native speaker reviews one. CI runs `kalangu locale check
+  --complete` on every file in `locales/`.
+
 ## [0.1.0-alpha.8] - 2026-11-19
 
 ### Added

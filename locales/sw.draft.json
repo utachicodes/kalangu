@@ -1,0 +1,43 @@
+{
+  "_draft": {
+    "language": "Swahili (sw)",
+    "by": "Machine draft by gemini-3.5-flash-lite",
+    "date": "2026-11-19",
+    "reviewed": false,
+    "note": "Not reviewed. A native speaker must check every string before this ships; until then it is experimental."
+  },
+  "messages": {
+    "common.more": "Zaidi",
+    "common.back": "Rudi",
+    "common.yes": "Ndiyo",
+    "common.no": "Hapana",
+    "common.deferredNotice": "Tunashughulikia swali lako. Utapokea SMS hivi karibuni.",
+    "common.invalidChoice": "Uchaguzi si sahihi. Jaribu tena.",
+    "common.invalidNumber": "Tafadhali weka namba.",
+    "common.typeAnswer": "Tafadhali andika jibu.",
+    "common.replyYesNo": "Jibu {yes} au {no}",
+    "common.error": "Samahani, kosa limetokea. Tafadhali jaribu tena baadaye.",
+    "common.expiredChoice": "Uchaguzi huo umekwisha muda wake.",
+    "common.language": "Lugha",
+    "common.suggestLanguage": "Endelea kwa {language}?",
+    "payments.confirm": "Lipa {amount} {currency} kwa {payee} kwa ajili ya {reason}?",
+    "payments.confirmNoReason": "Lipa {amount} {currency} kwa {payee}?",
+    "payments.pinPrompt": "Utapokea ombi la kuingiza namba yako ya siri.",
+    "payments.refused": "Samahani, malipo haya hayawezi kufanyika. {why}",
+    "payments.notStarted": "Samahani, malipo hayakuweza kuanzishwa. Hakuna kilichokatwa.",
+    "payments.failed": "Malipo hayajakamilika. Hakuna kilichokatwa.",
+    "payments.unresolved": "Hatukuweza kuthibitisha malipo yako. Tafadhali wasiliana na {payee} kabla ya kulipa tena.",
+    "payments.receipt": "Risiti: {amount} {currency} zimelipwa kwa {payee}. Kumbukumbu {ref}.",
+    "payments.alreadyStarted": "Malipo yako yanashughulikiwa tayari.",
+    "payments.unavailable": "Malipo hayapatikani sasa hivi. Hakuna kilichokatwa. Jaribu baadaye.",
+    "payments.paid": "Malipo yamepokelewa. Asante.",
+    "payments.refusal.currency": "Malipo kwa {currency} hayaruhusiwi.",
+    "payments.refusal.per-payment": "Malipo haya yanazidi kikomo kinachoruhusiwa.",
+    "payments.refusal.per-day": " Umefika kikomo cha malipo cha siku.",
+    "payments.refusal.pending-limit": "Una malipo yanayoendelea. Maliza hayo kwanza.",
+    "payments.refusal.provider-closed": "Malipo ya mtandao wako hayapatikani kwa sasa. Jaribu baadaye.",
+    "payments.refusal.amount-bounds": "Kiasi hiki hakihimiliwi na mtandao wako.",
+    "payments.refusal.decimals": "Kiasi hiki hakihimiliwi na mtandao wako.",
+    "payments.refusal.unknown-operator": "Hatukuweza kutambua mtandao wako wa simu."
+  }
+}

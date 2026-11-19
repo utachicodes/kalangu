@@ -140,8 +140,8 @@ above).
   priors (languages design §4, §9.4)
 - [x] Gemini drafting script for translations (`scripts/translate-locale.mjs`,
   CONTRIBUTING.md): drafts only, marked unreviewed
-- [ ] Wolof, Hausa and Swahili translations, through the checker: draft with
-  the script if useful, then native speakers (see the next item)
+- [x] Wolof, Hausa and Swahili machine drafts (Gemini, 19 Nov 2026), through
+  the checker and checked in CI: `locales/*.draft.json`, marked not reviewed
 - [x] Draft the text normalization design:
   [docs/normalization-design.md](docs/normalization-design.md) (fold,
   render for USSD, canonicalize; Gemini offline only; own repo later)
@@ -151,8 +151,8 @@ above).
   the label (normalization design §11 step 1)
 - [ ] Review the normalization design and its questions for native speakers
   (§10, §12)
-- [ ] Native speakers to supply and review the Wolof and Hausa translations
-  (the first draft's sample Wolof strings were removed: unverified)
+- [ ] Native speakers to review the Wolof, Hausa and Swahili drafts in
+  `locales/` (`locales/README.md` says how)
 
 ## Version 0.4: channels
 

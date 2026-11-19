@@ -32,6 +32,8 @@ jobs:
       - run: node --test "scripts/**/*.test.mjs"
       # The website's docs pages are generated from the markdown; they must be current.
       - run: pnpm site:check
+      # Contributed translations: a lost placeholder or a missing key fails the build.
+      - run: for f in locales/*.json; do node packages/core/dist/cli.js locale check "$f" --complete || exit 1; done
 
   runtime-node-20:
     name: Runtime smoke test (Node 20)

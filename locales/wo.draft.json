@@ -1,0 +1,43 @@
+{
+  "_draft": {
+    "language": "Wolof (wo)",
+    "by": "Machine draft by gemini-3.5-flash-lite",
+    "date": "2026-11-19",
+    "reviewed": false,
+    "note": "Not reviewed. A native speaker must check every string before this ships; until then it is experimental."
+  },
+  "messages": {
+    "common.more": "Yok",
+    "common.back": "Gane",
+    "common.yes": "Waaw",
+    "common.no": "Déedéet",
+    "common.deferredNotice": "Ñu ngi topp sa laaj. Dina nga jot SMS su gën yàgg.",
+    "common.invalidChoice": "Tann bu baaxul. Jéemal kat.",
+    "common.invalidNumber": "Mbindal lim.",
+    "common.typeAnswer": "Bindal tontu.",
+    "common.replyYesNo": "Tontul {yes} walla {no}",
+    "common.error": "Baal ma, am na njumte. Jéemal bu ko defarule.",
+    "common.expiredChoice": "Tann bi jeex na.",
+    "common.language": "Làkk",
+    "common.suggestLanguage": "Wowale ci {language}?",
+    "payments.confirm": "Fay {amount} {currency} ci {payee} ngir {reason}?",
+    "payments.confirmNoReason": "Fay {amount} {currency} ci {payee}?",
+    "payments.pinPrompt": "Dina nga jot njël bu la laaj sa code PIN.",
+    "payments.refused": "Baal ma, fay bi mënuula am. {why}",
+    "payments.notStarted": "Baal ma, fay bi mënuula tambali. Tus bañula taxawe.",
+    "payments.failed": "Fay bi jeexul. Tus bañula taxawe.",
+    "payments.unresolved": "Mënuunu kàddu sa fay. Wottul {payee} bu ko fay ba noppi.",
+    "payments.receipt": "Kàddu fay: {amount} {currency} fay na {payee}. Ref {ref}.",
+    "payments.alreadyStarted": "Sa fay mingi dox.",
+    "payments.unavailable": "Fay yi amul léegi. Tus bañula taxawe. Jéemal bu ko defarule.",
+    "payments.paid": "Fay bi jot na. Jërëjëf.",
+    "payments.refusal.currency": "Fay yi ci {currency} nanguwuñu leen.",
+    "payments.refusal.per-payment": "Fay bi dafa gën dayoo bi.",
+    "payments.refusal.per-day": "Yàgg nga dayoo fay bi ci bis bi.",
+    "payments.refusal.pending-limit": "Am nga fay bu dox. Tagatal ko bu baax.",
+    "payments.refusal.provider-closed": "Fay yi ak say opératër amul léegi. Jéemal bu ko defarule.",
+    "payments.refusal.amount-bounds": "Dayoo bi du ko dëppal sa opératër.",
+    "payments.refusal.decimals": "Dayoo bi du ko dëppal sa opératër.",
+    "payments.refusal.unknown-operator": "Mënuunu xam sa opératër mobile money."
+  }
+}
