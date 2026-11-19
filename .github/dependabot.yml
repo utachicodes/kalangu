@@ -1,0 +1,22 @@
+# Weekly update proposals. Each one is an ordinary pull request: CI must pass
+# and a maintainer merges it; nothing updates on its own.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Minor and patch updates of the build and test tools, in one pull request.
+      dev-tools:
+        dependency-type: development
+        update-types: [minor, patch]
