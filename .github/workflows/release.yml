@@ -23,14 +23,16 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           standalone: true
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+          # Never restore a cache in the job that publishes: what ships is built from a clean install.
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
