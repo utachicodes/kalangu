@@ -1,0 +1,43 @@
+{
+  "_draft": {
+    "language": "Hausa (ha)",
+    "by": "Machine draft by gemini-3.5-flash-lite",
+    "date": "2026-11-19",
+    "reviewed": false,
+    "note": "Not reviewed. A native speaker must check every string before this ships; until then it is experimental."
+  },
+  "messages": {
+    "common.more": "Kara",
+    "common.back": "Baya",
+    "common.yes": "Eh",
+    "common.no": "A'a",
+    "common.deferredNotice": "Muna aiki kan tambayarka. Zaka sami SMS nan ba da jimawa ba.",
+    "common.invalidChoice": "Zaɓin da bai dace ba. Sake gwadawa.",
+    "common.invalidNumber": "Don Allah sanya lamba.",
+    "common.typeAnswer": "Don Allah rubuta amsa.",
+    "common.replyYesNo": "Mayar da martani da {yes} ko {no}",
+    "common.error": "Yi hakuri, wani abu ya lalace. Don Allah sake gwadawa daga baya.",
+    "common.expiredChoice": "Wannan zaɓin ya ƙare.",
+    "common.language": "Harshe",
+    "common.suggestLanguage": "Ci gaba da {language}?",
+    "payments.confirm": "Biya {amount} {currency} zuwa {payee} domin {reason}?",
+    "payments.confirmNoReason": "Biya {amount} {currency} zuwa {payee}?",
+    "payments.pinPrompt": "Zaka karɓi saƙon shigar da lambar sirrinka ta PIN.",
+    "payments.refused": "Yi hakuri, ba za a iya yin wannan biyan ba. {why}",
+    "payments.notStarted": "Yi hakuri, ba a iya fara biyan ba. Ba a cire komai ba.",
+    "payments.failed": "Ba a kammala biyan ba. Ba a cire komai ba.",
+    "payments.unresolved": "Ba mu iya tabbatar da biyan kudin ba. Tuntuɓi {payee} kafin ka sake biya.",
+    "payments.receipt": "Risit: An biya {amount} {currency} ga {payee}. Ref {ref}.",
+    "payments.alreadyStarted": "Ana ci gaba da sarrafa biyan kuɗinka.",
+    "payments.unavailable": "Biyan kuɗi ba su samu yanzu ba. Ba a cire komai ba. Sake gwadawa daga baya.",
+    "payments.paid": "An karɓi biyan kuɗi. Na gode.",
+    "payments.refusal.currency": "Ba a karɓar biya cikin {currency}.",
+    "payments.refusal.per-payment": "Wannan biyan ya wuce iyakar da aka yarda da ita.",
+    "payments.refusal.per-day": "Ka kai iyakar biyan kuɗi na yau.",
+    "payments.refusal.pending-limit": "Kuna da biyan kuɗi da ke gudana. Kammala shi tukuna.",
+    "payments.refusal.provider-closed": "Biyan kuɗi da kamfanin ku ba su samuwa yanzu. Gwada daga baya.",
+    "payments.refusal.amount-bounds": "Kamfaninka bai goyi bayan wannan adadin ba.",
+    "payments.refusal.decimals": "Kamfaninka bai goyi bayan wannan adadin ba.",
+    "payments.refusal.unknown-operator": "Ba mu iya gane kamfanin kuɗin wayarku ba."
+  }
+}

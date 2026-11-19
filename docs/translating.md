@@ -45,6 +45,8 @@ the [languages design](languages-design.md) §8 and §9 for the why.
    If the file came from the drafting script below, pass its `messages`
    object, not the whole file.
 6. **Share it.** Open a pull request with the file at `locales/<code>.json`.
+   Machine drafts for Wolof, Hausa and Swahili are already there, waiting for
+   a speaker to review them ([`locales/`](../locales/README.md)).
    That folder is where contributions wait; Kalangu does not read it. Shipping
    a language inside `@kalangu/core`, as `en` and `fr` are, is still an open
    decision ([languages design](languages-design.md) §14), so until then a
