@@ -145,7 +145,10 @@ packing.
     everything since `0.1.0-alpha.4`: a turn's own save merges instead of
     undoing a payment outcome or a deferred answer, and `onPaid` runs once
     when the session keeps changing; the four arrived one at a time, about
-    four and a half minutes after approval) and `0.1.0-alpha.8`, `latest`
-    (the simulator explains a number typed where a dial code was expected).
+    four and a half minutes after approval), `0.1.0-alpha.8` (the simulator
+    explains a number typed where a dial code was expected) and
+    `0.1.0-alpha.9`, `latest` (store contract checks, SMS costs in the
+    simulator, and its types no longer need `@types/node`; the first release
+    checked by `pnpm pack:check` before publishing).
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.

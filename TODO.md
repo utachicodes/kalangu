@@ -8,7 +8,7 @@ State as of 19 Nov 2026. Design reference: [docs/design.md](docs/design.md).
   design doc §2, corrections in §2.5
 - [x] Claim the `@kalangu` npm scope: claimed; `0.1.0-alpha.0` to
   `0.1.0-alpha.3` published on 17 Nov 2026, `0.1.0-alpha.4` and
-  `0.1.0-alpha.5` on 18 Nov 2026, and `0.1.0-alpha.6` to `0.1.0-alpha.8`
+  `0.1.0-alpha.5` on 18 Nov 2026, and `0.1.0-alpha.6` to `0.1.0-alpha.9`
   on 19 Nov 2026 (see [RELEASING.md](RELEASING.md))
 - [ ] Claim the GitHub organisation / repo name
 - [ ] Domain
