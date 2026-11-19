@@ -71,6 +71,8 @@ export type { LogFields, LogLevel, Logger } from "./logger.js";
 export { NotSupportedError, foldForMatch, interpret, renderSms, renderUssd } from "./render.js";
 export type { ChannelKind, InterpretContext, Interpretation, RenderContext, Rendered } from "./render.js";
 export { SessionConflictError, freshRecord, memoryStore } from "./session.js";
+export { checkSessionStore } from "./storeChecks.js";
+export type { CheckSessionStoreOptions, StoreProblem } from "./storeChecks.js";
 export type { Json, PayIntent, SessionRecord, SessionSaveOptions, SessionStore } from "./session.js";
 export { ask, choose, confirm, indexSteps, isStep, languageMenu, menu, pay, say } from "./steps.js";
 export type {

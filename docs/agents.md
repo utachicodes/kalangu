@@ -130,6 +130,21 @@ stored version is still that one (a compare-and-set) and otherwise throw
 `SessionConflictError`. Agents that take payments require a store that does
 this atomically and says so with `atomic: true`.
 
+To test a store you write, run the contract against it. `makeStore` must
+return a fresh, empty store each time:
+
+```js
+import { checkSessionStore } from "@kalangu/core";
+
+const problems = await checkSessionStore(() => myStore());
+// [] when the store keeps the contract; otherwise { check, problem } for each failure
+```
+
+It checks loading, saving and clearing, that each save bumps the version,
+that a stale `ifVersion` throws `SessionConflictError` and changes nothing,
+that data comes back intact, and, for a store that says it is atomic, that
+exactly one of several simultaneous saves wins.
+
 ## Languages
 
 ```js

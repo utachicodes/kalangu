@@ -40,6 +40,10 @@ are now typed by what they use (<code>TerminalInput</code>, <code>TerminalOutput
 </ul>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li><code>checkSessionStore(makeStore)</code>: runs the session store contract against a
+store you write (versions, <code>ifVersion</code> conflicts, copies, isolation by
+phone, clearing, and for atomic stores, one winner among simultaneous
+saves) and returns the problems found, for any test framework.</li>
 <li><code>@kalangu/sim</code>: each incoming SMS shows what it costs, for example
 <code>✉ SMS from CLINIC (2 segments, UCS-2 because of ë): ...</code>, so a message
 that one letter makes three times as expensive is visible while testing.</li>

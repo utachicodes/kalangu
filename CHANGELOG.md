@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `checkSessionStore(makeStore)`: runs the session store contract against a
+  store you write (versions, `ifVersion` conflicts, copies, isolation by
+  phone, clearing, and for atomic stores, one winner among simultaneous
+  saves) and returns the problems found, for any test framework.
 - `@kalangu/sim`: each incoming SMS shows what it costs, for example
   `✉ SMS from CLINIC (2 segments, UCS-2 because of ë): ...`, so a message
   that one letter makes three times as expensive is visible while testing.

@@ -207,6 +207,17 @@ durable <code>sessionStore</code>:</p>
 stored version is still that one (a compare-and-set) and otherwise throw
 <code>SessionConflictError</code>. Agents that take payments require a store that does
 this atomically and says so with <code>atomic: true</code>.</p>
+<p>To test a store you write, run the contract against it. <code>makeStore</code> must
+return a fresh, empty store each time:</p>
+<pre><code class="language-js">import { checkSessionStore } from &quot;@kalangu/core&quot;;
+
+const problems = await checkSessionStore(() =&gt; myStore());
+// [] when the store keeps the contract; otherwise { check, problem } for each failure
+</code></pre>
+<p>It checks loading, saving and clearing, that each save bumps the version,
+that a stale <code>ifVersion</code> throws <code>SessionConflictError</code> and changes nothing,
+that data comes back intact, and, for a store that says it is atomic, that
+exactly one of several simultaneous saves wins.</p>
 <h2 id="languages">Languages<a class="anchor" href="#languages" aria-label="Link to this section">#</a></h2>
 <pre><code class="language-js">createAgent({
   languages: {
