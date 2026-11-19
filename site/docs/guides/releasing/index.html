@@ -155,11 +155,14 @@ the language features).</li>
 <li>18 Nov 2026: <code>0.1.0-alpha.4</code> (fixes from CodeRabbit&#39;s review of
 everything since #20: a shared time budget per turn, races around
 language suggestions, the language menu&#39;s order, the SMS cap on direct
-sends) and <code>0.1.0-alpha.5</code>, <code>latest</code> (payment outcomes run <code>onPaid</code> once
+sends) and <code>0.1.0-alpha.5</code> (payment outcomes run <code>onPaid</code> once
 and never overwrite a concurrent turn; language detection on a
 conversation&#39;s first SMS). For <code>0.1.0-alpha.5</code>, core&#39;s tarball returned
 <code>404</code> for about five minutes after approval while the other three
 downloaded at once.</li>
+<li>19 Nov 2026: <code>0.1.0-alpha.6</code>, <code>latest</code> (a deferred answer keeps changes
+saved while it was pending, and a newer turn&#39;s place). All four
+downloaded as soon as they were approved.</li>
 </ul>
 </li>
 <li>Move to <code>1.0</code> only after the verify-first checklist in <code>TODO.md</code> is done
