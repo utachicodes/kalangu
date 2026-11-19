@@ -218,6 +218,11 @@ const problems = await checkSessionStore(() =&gt; myStore());
 that a stale <code>ifVersion</code> throws <code>SessionConflictError</code> and changes nothing,
 that data comes back intact, and, for a store that says it is atomic, that
 exactly one of several simultaneous saves wins.</p>
+<p>For a working example, the clinic example&#39;s
+<a href="https://github.com/utachicodes/kalangu/blob/main/examples/clinic/src/sqliteStore.ts" rel="noopener"><code>sqliteStore.ts</code></a> is a durable,
+atomic store on Node&#39;s built-in SQLite (Node 22.13 or later), about seventy
+lines, that passes the check. Each versioned save is a single
+<code>UPDATE … WHERE version = ?</code>, the pattern to copy for any SQL database.</p>
 <h2 id="languages">Languages<a class="anchor" href="#languages" aria-label="Link to this section">#</a></h2>
 <pre><code class="language-js">createAgent({
   languages: {

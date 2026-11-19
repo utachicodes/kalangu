@@ -104,6 +104,8 @@ serves:</p>
 </tr>
 </tbody></table></div>
 <p><code>AT_SANDBOX=1</code> makes the SMS adapter use <code>api.sandbox.africastalking.com</code>.
+Add <code>SESSION_DB=sessions.db</code> (Node 22.13 or later) to keep conversations in
+SQLite across restarts; otherwise they are in memory.
 Add <code>OLLAMA_MODEL=llama3.2</code> to have a local <a href="https://ollama.com" rel="noopener">Ollama</a>
 model answer instead of the fake nurse, or <code>GEMINI_MODEL=gemini-3.5-flash-lite</code>
 with <code>GEMINI_API_KEY</code> exported (step 2 shows how to keep a key out of your

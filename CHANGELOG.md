@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Clinic example: `sqliteSessionStore`, a durable, atomic session store on
+  Node's built-in `node:sqlite` (Node 22.13+), as a reference for writing
+  one on any database. It passes `checkSessionStore`; `SESSION_DB=sessions.db`
+  makes the example server use it.
 - `checkSessionStore(makeStore)`: runs the session store contract against a
   store you write (versions, `ifVersion` conflicts, copies, isolation by
   phone, clearing, and for atomic stores, one winner among simultaneous
