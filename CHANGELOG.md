@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `@kalangu/sim`: the published types needed Node's own type definitions
+  (`NodeJS.ReadableStream`), so a TypeScript project without `@types/node`
+  got errors from the package. The terminal's `input` and `output` options
+  are now typed by what they use (`TerminalInput`, `TerminalOutput`).
+
+### Added
+
+- `pnpm pack:check` (in CI, on Node 20): packs the four packages, installs
+  the tarballs in an empty project, runs the installed `kalangu` command,
+  imports every package, typechecks against the published types, and runs
+  an agent on the simulator.
+
 ### Added
 
 - `SECURITY.md`: how to report a vulnerability privately, what to expect,

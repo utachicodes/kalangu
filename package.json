@@ -28,7 +28,8 @@
     "smoke": "pnpm --filter @kalangu/example-clinic smoke",
     "test:scripts": "node --test \"scripts/**/*.test.mjs\"",
     "site:build": "node scripts/build-site.mjs",
-    "site:check": "node scripts/build-site.mjs --check"
+    "site:check": "node scripts/build-site.mjs --check",
+    "pack:check": "node scripts/pack-check.mjs"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
