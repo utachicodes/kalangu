@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `@kalangu/sim`: each incoming SMS shows what it costs, for example
+  `✉ SMS from CLINIC (2 segments, UCS-2 because of ë): ...`, so a message
+  that one letter makes three times as expensive is visible while testing.
 - The quick start is tested: its files are written out exactly as the page
   shows them, run, and their output compared with the page's (in CI).
 - `pnpm pack:check` (in CI, on Node 20): packs the four packages, installs

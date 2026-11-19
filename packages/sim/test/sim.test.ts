@@ -1,7 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
 import { ask, createAgent, menu, say, silentLogger, ussdChannel } from "@kalangu/core";
-import { box, createPhone, runTerminal } from "../src/index.js";
+import { box, createPhone, formatSms, runTerminal } from "../src/index.js";
 
 const clinic = menu("Clinic line", {
   "Opening hours": say("Open Monday to Saturday, 8:00 to 18:00."),
@@ -76,6 +76,16 @@ describe("box", () => {
   });
 });
 
+describe("formatSms", () => {
+  it("says what a message costs, and why when it is UCS-2", () => {
+    expect(formatSms({ from: "CLINIC", at: new Date(0), text: "Open 8 to 18." })).toBe("✉ SMS from CLINIC (1 segment): Open 8 to 18.");
+    expect(formatSms({ from: "CLINIC", at: new Date(0), text: "x".repeat(161) })).toMatch(/^✉ SMS from CLINIC \(2 segments\): /);
+    const wolof = "Ñu ngi topp sa laaj. Dina nga jot SMS su gën yàgg.";
+    expect(formatSms({ from: "CLINIC", at: new Date(0), text: wolof })).toBe(`✉ SMS from CLINIC (1 segment, UCS-2 because of ë): ${wolof}`);
+    expect(formatSms({ from: "CLINIC", at: new Date(0), text: "ë".repeat(71) })).toMatch(/^✉ SMS from CLINIC \(2 segments, UCS-2 because of ë\)/);
+  });
+});
+
 describe("runTerminal", () => {
   it("runs a scripted session", async () => {
     const input = new PassThrough();
@@ -92,7 +102,7 @@ describe("runTerminal", () => {
     expect(printed).toContain("Choice> ");
     expect(printed).toContain("Input> ");
     expect(printed).toContain("END You asked: Is it open on");
-    expect(printed).toContain("✉ SMS from AGENT: Clinic line");
+    expect(printed).toContain("✉ SMS from AGENT (1 segment): Clinic line");
     expect(phone.inbox).toHaveLength(1);
   });
 
