@@ -13,7 +13,7 @@ import { createServer, type IncomingMessage } from "node:http";
 import { africasTalkingSms } from "@kalangu/sms";
 import { africasTalkingUssd } from "@kalangu/ussd";
 import { createClinic } from "./clinic.js";
-import { nurseFromEnv } from "./ollama.js";
+import { nurseFromEnv } from "./nurses.js";
 
 const env = (name: string, fallback?: string): string => {
   const value = process.env[name] ?? fallback;
@@ -25,7 +25,7 @@ const env = (name: string, fallback?: string): string => {
 };
 
 const sandbox = env("AT_SANDBOX", "0") === "1";
-// Set OLLAMA_MODEL (and OLLAMA_HOST if it is not local) to answer with Ollama.
+// Set GEMINI_MODEL (with GEMINI_API_KEY) or OLLAMA_MODEL to answer with a real model.
 const nurse = nurseFromEnv();
 const clinic = createClinic({
   model: nurse.model,

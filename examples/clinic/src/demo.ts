@@ -6,10 +6,10 @@
 import { consoleLogger } from "@kalangu/core";
 import { runTerminal } from "@kalangu/sim";
 import { createClinic } from "./clinic.js";
-import { nurseFromEnv } from "./ollama.js";
+import { nurseFromEnv } from "./nurses.js";
 
 const code = "*384*1#";
-// OLLAMA_MODEL=llama3.2 pnpm demo asks a local Ollama model instead of the fake nurse.
+// GEMINI_MODEL=... (with GEMINI_API_KEY) or OLLAMA_MODEL=... picks a real model instead of the fake nurse.
 const nurse = nurseFromEnv();
 
 // The simulator swaps in its own USSD and SMS channels.
