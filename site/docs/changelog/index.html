@@ -92,6 +92,13 @@ On the website under Project.</li>
 (<code>locales/*.draft.json</code>, Gemini, not reviewed), with <code>locales/README.md</code>
 on how a native speaker reviews one. CI runs <code>kalangu locale check --complete</code> on every file in <code>locales/</code>.</li>
 </ul>
+<h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>The four package READMEs (what npm shows): <code>npm install</code>, links to the
+website&#39;s docs, the store checks and the reference SQLite store, the
+simulator&#39;s SMS costs and <code>Dial&gt;</code> hint, the SMS cap on direct sends, and
+how to protect unsigned callbacks.</li>
+</ul>
 <h2 id="010-alpha8---2026-11-19">[0.1.0-alpha.8] - 2026-11-19<a class="anchor" href="#010-alpha8---2026-11-19" aria-label="Link to this section">#</a></h2>
 <h3 id="added-2">Added<a class="anchor" href="#added-2" aria-label="Link to this section">#</a></h3>
 <ul>
@@ -101,7 +108,7 @@ never sent; answers are cleaned and fitted to the SMS cap as for Ollama,
 whose shared pieces moved to <code>answer.ts</code>. <code>nurses.ts</code> picks Gemini, then
 Ollama, then the fake nurse.</li>
 </ul>
-<h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
+<h3 id="changed-1">Changed<a class="anchor" href="#changed-1" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><code>@kalangu/sim</code>: typing something that is not a code at <code>Dial&gt;</code> (such as
 <code>1</code> after a USSD screen ended, or to answer an SMS) still gets the phone&#39;s
@@ -436,7 +443,7 @@ workflow (dry run by default, npm provenance), and <code>RELEASING.md</code>.
 Nothing is published yet.</p>
 </li>
 </ul>
-<h3 id="changed-1">Changed<a class="anchor" href="#changed-1" aria-label="Link to this section">#</a></h3>
+<h3 id="changed-2">Changed<a class="anchor" href="#changed-2" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>README: v0.1 status, package list, quick start, how to write an agent,
 and known limits. CONTRIBUTING updated for working on the code.</li>

@@ -61,6 +61,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on how a native speaker reviews one. CI runs `kalangu locale check
   --complete` on every file in `locales/`.
 
+### Changed
+
+- The four package READMEs (what npm shows): `npm install`, links to the
+  website's docs, the store checks and the reference SQLite store, the
+  simulator's SMS costs and `Dial>` hint, the SMS cap on direct sends, and
+  how to protect unsigned callbacks.
+
 ## [0.1.0-alpha.8] - 2026-11-19
 
 ### Added

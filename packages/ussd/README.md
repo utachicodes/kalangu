@@ -6,7 +6,7 @@ agents.
 > Alpha. The API may change before 1.0.
 
 ```sh
-pnpm add @kalangu/core @kalangu/ussd
+npm install @kalangu/core @kalangu/ussd
 ```
 
 ```ts
@@ -29,8 +29,12 @@ const agent = createAgent({
   (default `98`), `unsafeChars` (`"strip"` or `"throw"`), `hopMetadata`,
   and a session-end notification route (`endPath`, default `/ussd/end`).
 
-Callbacks from the gateway are not signed. Use a hard-to-guess path and,
-where you can, allow only the gateway's IP addresses.
+Callbacks from the gateway are not signed: anyone who knows the URL can
+call it. Put the routes under a secret path segment and, where you can,
+allow only the gateway's addresses (its support shares them on request):
+[how](https://kalangu.utachi.website/docs/agents/#channels). To try the
+gateway for free, follow the
+[sandbox guide](https://kalangu.utachi.website/docs/guides/sandbox/).
 
 A `*` typed inside free text splits the answer; the gateway gives no way
 to tell it apart from a separator. Numeric input is unaffected.

@@ -7,7 +7,7 @@ logs delivery reports.
 > Alpha. The API may change before 1.0.
 
 ```sh
-pnpm add @kalangu/core @kalangu/sms
+npm install @kalangu/core @kalangu/sms
 ```
 
 ```ts
@@ -35,11 +35,13 @@ const agent = createAgent({
 - A refused send raises `SmsSendError` with the gateway's own `statusCode`
   and `status`, for example `409 DoNotDisturbRejection` in Nigeria.
 - Messages over the segment cap (`maxSegments`, default 4) are an error,
-  never truncated.
+  never truncated, for replies and for direct `send` calls alike.
 - "Success" in a send response means sent, not delivered; delivery reports
   say what actually happened.
 
-Callbacks from the gateway are not signed. Use hard-to-guess paths and,
-where you can, allow only the gateway's IP addresses.
+Callbacks from the gateway are not signed: anyone who knows the URL can
+call it. Put the routes under a secret path segment and, where you can,
+allow only the gateway's addresses (its support shares them on request):
+[how](https://kalangu.utachi.website/docs/agents/#channels).
 
 MIT licensed.
