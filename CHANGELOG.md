@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8] - 2026-11-19
+
 ### Added
 
 - The clinic example can answer with Gemini: `GEMINI_MODEL=gemini-3.5-flash-lite
