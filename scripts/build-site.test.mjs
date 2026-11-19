@@ -1,7 +1,7 @@
 // Run with: node --test "scripts/**/*.test.mjs"
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { PAGES, build, checkLinks, renderMarkdown, rewriteLink, slugify } from "./build-site.mjs";
+import { FAVICON, PAGES, ROBOTS, SITE_URL, build, checkLinks, renderMarkdown, rewriteLink, sitemap, slugify } from "./build-site.mjs";
 
 const pageBySrc = new Map(PAGES.map((p) => [p.src, p]));
 const exists = (p) => ["examples/clinic/src/server.ts", "packages"].includes(p);
@@ -64,6 +64,30 @@ describe("the real site", () => {
   it("builds every page with no broken internal link", async () => {
     const { files, problems } = await build();
     assert.deepEqual(problems, []);
-    assert.equal(files.size, PAGES.length + 1); // the pages and the stylesheet
+    assert.equal(files.size, PAGES.length + 4); // the pages, the stylesheet, the sitemap, robots.txt and the favicon
+  });
+});
+
+describe("discoverability", () => {
+  it("lists the landing page and every page in the sitemap", () => {
+    const xml = sitemap(PAGES);
+    assert.match(xml, new RegExp(`<loc>${SITE_URL}/</loc>`));
+    for (const page of PAGES) assert.ok(xml.includes(`<loc>${SITE_URL}${page.url}</loc>`), `${page.url} missing from the sitemap`);
+    assert.equal((xml.match(/<url>/g) ?? []).length, PAGES.length + 1);
+  });
+
+  it("points robots.txt at the sitemap", () => {
+    assert.match(ROBOTS, new RegExp(`Sitemap: ${SITE_URL}/sitemap.xml`));
+  });
+
+  it("gives each page a canonical URL and a preview title", async () => {
+    const { files } = await build();
+    const [path, html] = [...files].find(([p]) => p.endsWith("/docs/agents/index.html"));
+    assert.ok(path);
+    assert.match(html, new RegExp(`<link rel="canonical" href="${SITE_URL}/docs/agents/">`));
+    assert.match(html, /<meta property="og:title" content="Agents">/);
+    assert.match(html, /<link rel="icon" href="\/favicon.svg"/);
+    assert.ok([...files.keys()].some((p) => p.endsWith("/favicon.svg")));
+    assert.ok(FAVICON.startsWith("<svg"));
   });
 });

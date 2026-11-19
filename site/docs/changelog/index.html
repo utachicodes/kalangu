@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Changelog · Kalangu</title>
 <meta name="description" content="All notable changes to this project will be documented in this file.">
+<link rel="canonical" href="https://kalangu.utachi.website/docs/changelog/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Kalangu">
+<meta property="og:title" content="Changelog">
+<meta property="og:description" content="All notable changes to this project will be documented in this file.">
+<meta property="og:url" content="https://kalangu.utachi.website/docs/changelog/">
+<meta name="twitter:card" content="summary">
 <link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/docs/docs.css">
 </head>
@@ -40,6 +48,9 @@ are now typed by what they use (<code>TerminalInput</code>, <code>TerminalOutput
 </ul>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>Website: a sitemap, <code>robots.txt</code>, a favicon, canonical URLs, and link
+previews (Open Graph and Twitter tags) on every page. The sitemap,
+<code>robots.txt</code> and favicon are generated with the docs and checked in CI.</li>
 <li><code>checkPaymentStore(makeStore)</code>: the payment store contract, runnable:
 idempotent create, a final status kept final, exactly one winner among
 simultaneous transitions and notification claims, release counting,
