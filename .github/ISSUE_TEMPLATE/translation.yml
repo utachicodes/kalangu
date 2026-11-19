@@ -1,0 +1,40 @@
+name: Translation review
+description: Review or correct Kalangu's fixed strings in a language you speak.
+title: "Translation review: "
+labels: ["translation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Kalangu's fixed strings (Yes, No, "Invalid choice", payment messages) are only usable once a native speaker has checked them.
+        Machine drafts are waiting in [`locales/`](https://github.com/utachicodes/kalangu/tree/main/locales); [`locales/README.md`](https://github.com/utachicodes/kalangu/blob/main/locales/README.md) explains the review.
+        If you can, open a pull request with the corrected file instead: that is the fastest way.
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      placeholder: "Wolof (wo)"
+    validations:
+      required: true
+  - type: dropdown
+    id: fluency
+    attributes:
+      label: How do you speak it?
+      options:
+        - First language
+        - Fluent, daily use
+        - Learning it
+    validations:
+      required: true
+  - type: textarea
+    id: corrections
+    attributes:
+      label: Corrections
+      description: "One per line: the key, what the draft says, and what it should say. For example: common.deferredNotice: ... -> ..."
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Words that become ambiguous on USSD (which drops accents and special letters), regional spellings, or strings that read badly on a small screen.
