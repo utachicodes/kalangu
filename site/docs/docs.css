@@ -98,3 +98,8 @@ a { color: inherit; }
   .doc h2 { font-size: 23px; }
   .doc p, .doc li { font-size: 16px; }
 }
+
+/* 404 */
+.notfound { max-width: 760px; margin: 0 auto; padding: 72px 32px 96px; }
+.notfound .code-404 { font-size: 15px; font-weight: 600; letter-spacing: .08em; color: var(--accent); margin: 0; }
+@media (max-width: 760px) { .notfound { padding: 40px 16px 64px; } }

@@ -32,6 +32,48 @@ Allow: /
 Sitemap: ${SITE_URL}/sitemap.xml
 `;
 
+/** Served by the host for any path that does not exist. Same header as the docs pages. */
+export function notFoundHtml() {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found · Kalangu</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/agents/">Agents</a>
+    <a href="/docs/providers/">Providers</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="${REPO}">GitHub</a>
+  </nav>
+</header>
+<main id="content" class="notfound">
+  <article class="doc">
+    <p class="code-404">404</p>
+    <h1>This page does not exist</h1>
+    <p>The address may be mistyped, or the page may have moved. These are a good place to start:</p>
+    <ul>
+      <li><a href="/docs/">Documentation</a>: everything, from the quick start to the design</li>
+      <li><a href="/docs/quick-start/">Quick start</a>: an agent on a simulated phone in a few minutes</li>
+      <li><a href="/docs/roadmap/">Roadmap</a>: what is built and what is next</li>
+      <li><a href="/">Home</a></li>
+    </ul>
+    <p>If a link on this site brought you here, please <a href="${REPO}/issues/new?template=bug.yml">report it</a>.</p>
+  </article>
+</main>
+</body>
+</html>
+`;
+}
+
 /** Every page of the site, the landing page first. */
 export function sitemap(pages) {
   const urls = ["/", ...pages.map((p) => p.url)];
@@ -327,6 +369,11 @@ a { color: inherit; }
   .doc h2 { font-size: 23px; }
   .doc p, .doc li { font-size: 16px; }
 }
+
+/* 404 */
+.notfound { max-width: 760px; margin: 0 auto; padding: 72px 32px 96px; }
+.notfound .code-404 { font-size: 15px; font-weight: 600; letter-spacing: .08em; color: var(--accent); margin: 0; }
+@media (max-width: 760px) { .notfound { padding: 40px 16px 64px; } }
 `;
 
 /** Builds every page in memory. Returns the files and any broken internal links. */
@@ -343,6 +390,7 @@ export async function build() {
   files.set(join(SITE, "sitemap.xml"), sitemap(PAGES));
   files.set(join(SITE, "robots.txt"), ROBOTS);
   files.set(join(SITE, "favicon.svg"), FAVICON);
+  files.set(join(SITE, "404.html"), notFoundHtml());
   return { files, problems };
 }
 
