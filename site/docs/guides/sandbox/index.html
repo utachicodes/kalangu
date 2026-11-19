@@ -127,8 +127,10 @@ for ngrok it is typically <code>ngrok http 3000</code>; check your tool&#39;s do
 On a free tunnel the address usually changes each time it restarts; when it
 does, update the callbacks in steps 6 and 7.</p>
 <p><strong>The tunnel makes your server public.</strong> Africa&#39;s Talking does not sign its
-callbacks, so anyone who finds the address can call it. Stop the tunnel when
-you are done.</p>
+callbacks, so anyone who finds the address can call it. Set
+<code>CALLBACK_SECRET</code> to 16 or more random characters (<code>openssl rand -hex 16</code>)
+and use <code>https://&lt;your tunnel&gt;/&lt;secret&gt;/ussd</code> and so on as the callbacks in
+steps 6 and 7. Stop the tunnel when you are done.</p>
 <h2 id="6-create-a-ussd-channel">6. Create a USSD channel<a class="anchor" href="#6-create-a-ussd-channel" aria-label="Link to this section">#</a></h2>
 <p>Open <a href="https://account.africastalking.com/apps/sandbox/ussd/channel/create" rel="noopener">https://account.africastalking.com/apps/sandbox/ussd/channel/create</a>.</p>
 <ul>

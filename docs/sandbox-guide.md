@@ -101,8 +101,10 @@ On a free tunnel the address usually changes each time it restarts; when it
 does, update the callbacks in steps 6 and 7.
 
 **The tunnel makes your server public.** Africa's Talking does not sign its
-callbacks, so anyone who finds the address can call it. Stop the tunnel when
-you are done.
+callbacks, so anyone who finds the address can call it. Set
+`CALLBACK_SECRET` to 16 or more random characters (`openssl rand -hex 16`)
+and use `https://<your tunnel>/<secret>/ussd` and so on as the callbacks in
+steps 6 and 7. Stop the tunnel when you are done.
 
 ## 6. Create a USSD channel
 

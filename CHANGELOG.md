@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Protecting callbacks, which Africa's Talking does not sign: the Agents
+  page now explains a secret path segment and an address allowlist (the
+  gateway's addresses are not published; its support shares them), with
+  code. The clinic example server takes `CALLBACK_SECRET` and `ALLOWED_IPS`.
 - Website: a 404 page with the docs header and links to the documentation,
   the quick start and the roadmap, generated with the docs.
 - Website: a sitemap, `robots.txt`, a favicon, canonical URLs, and link

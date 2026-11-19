@@ -78,9 +78,10 @@ and sending messages;</li>
 ideas to improve them are welcome as ordinary issues:</p>
 <ul>
 <li><strong>Gateway callbacks are not signed.</strong> Africa&#39;s Talking does not sign USSD
-or SMS callbacks, so anyone who knows a callback URL can call it. Use
-hard-to-guess paths and, where you can, allow only the gateway&#39;s addresses
-(<a href="/docs/design/">design</a> §2).</li>
+or SMS callbacks, so anyone who knows a callback URL can call it. Use a
+secret path segment and, where you can, allow only the gateway&#39;s addresses
+(which its support shares on request); see
+<a href="/docs/agents/#channels">Agents</a>.</li>
 <li><strong>Payments are experimental</strong> and have only run against a fake provider;
 the <a href="/docs/design/payments/">payments design</a> §9 lists what is not
 guaranteed.</li>

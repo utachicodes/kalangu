@@ -223,8 +223,29 @@ africasTalkingSms({ username, apiKey, senderId, sandbox, path: "/sms" });
 Each channel adds its callback routes, and `agent.requestHandler` dispatches
 requests to them by path: a standard `Request` to `Response` function.
 
-**Callbacks are not signed** by Africa's Talking. Use hard-to-guess paths
-and, where you can, allow only the gateway's IP addresses.
+**Callbacks are not signed** by Africa's Talking, so anyone who knows a
+callback URL can call it. Two mitigations, both outside Kalangu's routes:
+
+- **A secret path segment.** Give the channels paths such as
+  `/3f9a1c0e7b2d4a6f/ussd`: the URL is then the secret. Use at least 16
+  random characters (`openssl rand -hex 16`), never log it, and change it if
+  it leaks.
+- **Only the gateway's addresses.** Africa's Talking does not publish the
+  addresses its callbacks come from (checked 19 Nov 2026); its support shares
+  them on request. Check the address before the agent sees the request:
+
+  ```js
+  const allowed = new Set(["<address from support>"]);
+  const handler = (req) => {
+    // Only behind a proxy you control that sets X-Forwarded-For; otherwise it can be forged.
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    return allowed.has(ip) ? agent.requestHandler(req) : new Response("Forbidden", { status: 403 });
+  };
+  ```
+
+A user-agent check, which some guides suggest, is trivially faked. The
+clinic example does both (`CALLBACK_SECRET`, `ALLOWED_IPS`); see its
+[`callbackGuard.ts`](../examples/clinic/src/callbackGuard.ts).
 
 ## Testing
 
