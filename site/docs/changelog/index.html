@@ -39,58 +39,42 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/" rel="noopener">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="noopener">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
-<h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
-<ul>
-<li>Website: on phones the docs header&#39;s four links ran into the logo (since
-the Agents and Providers links were added). The logo no longer shrinks,
-GitHub hides below 440 px (it is in every page&#39;s footer) and Contributing
-below 360 px (it is in the sidebar).</li>
-<li><code>@kalangu/sim</code>: the published types needed Node&#39;s own type definitions
-(<code>NodeJS.ReadableStream</code>), so a TypeScript project without <code>@types/node</code>
-got errors from the package. The terminal&#39;s <code>input</code> and <code>output</code> options
-are now typed by what they use (<code>TerminalInput</code>, <code>TerminalOutput</code>).</li>
-</ul>
+<h2 id="010-alpha9---2026-11-19">[0.1.0-alpha.9] - 2026-11-19<a class="anchor" href="#010-alpha9---2026-11-19" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
-<li>Protecting callbacks, which Africa&#39;s Talking does not sign: the Agents
-page now explains a secret path segment and an address allowlist (the
-gateway&#39;s addresses are not published; its support shares them), with
-code. The clinic example server takes <code>CALLBACK_SECRET</code> and <code>ALLOWED_IPS</code>.</li>
-<li>Website: a 404 page with the docs header and links to the documentation,
-the quick start and the roadmap, generated with the docs.</li>
-<li>Website: a sitemap, <code>robots.txt</code>, a favicon, canonical URLs, and link
-previews (Open Graph and Twitter tags) on every page. The sitemap,
-<code>robots.txt</code> and favicon are generated with the docs and checked in CI.</li>
-<li><code>checkPaymentStore(makeStore)</code>: the payment store contract, runnable:
-idempotent create, a final status kept final, exactly one winner among
-simultaneous transitions and notification claims, release counting,
-<code>unnotified</code>, <code>pending</code>, the policy&#39;s <code>totals</code>, and the phone lock.</li>
-<li>Clinic example: <code>sqliteSessionStore</code>, a durable, atomic session store on
-Node&#39;s built-in <code>node:sqlite</code> (Node 22.13+), as a reference for writing
-one on any database. It passes <code>checkSessionStore</code>; <code>SESSION_DB=sessions.db</code>
-makes the example server use it.</li>
-<li><code>checkSessionStore(makeStore)</code>: runs the session store contract against a
-store you write (versions, <code>ifVersion</code> conflicts, copies, isolation by
-phone, clearing, and for atomic stores, one winner among simultaneous
-saves) and returns the problems found, for any test framework.</li>
+<li><code>checkSessionStore(makeStore)</code> and <code>checkPaymentStore(makeStore)</code>: the
+session and payment store contracts, runnable against a store you write,
+for any test framework. They check versions and <code>ifVersion</code> conflicts,
+copies, isolation by phone, an idempotent payment <code>create</code>, a final status
+kept final, exactly one winner among simultaneous versioned saves,
+transitions and notification claims, release counting, <code>unnotified</code>,
+<code>pending</code>, the policy&#39;s <code>totals</code>, and the phone lock. Each returns the
+problems found.</li>
 <li><code>@kalangu/sim</code>: each incoming SMS shows what it costs, for example
 <code>✉ SMS from CLINIC (2 segments, UCS-2 because of ë): ...</code>, so a message
 that one letter makes three times as expensive is visible while testing.</li>
-<li>The quick start is tested: its files are written out exactly as the page
-shows them, run, and their output compared with the page&#39;s (in CI).</li>
+<li>Clinic example: <code>sqliteSessionStore</code>, a durable, atomic session store on
+Node&#39;s built-in <code>node:sqlite</code> (Node 22.13+), a reference for writing one on
+any database; it passes <code>checkSessionStore</code>. The example server takes
+<code>SESSION_DB</code>, and <code>CALLBACK_SECRET</code> and <code>ALLOWED_IPS</code> to protect its
+callbacks.</li>
+<li>Protecting callbacks, which Africa&#39;s Talking does not sign: the Agents
+page explains a secret path segment and an address allowlist (the
+gateway&#39;s addresses are not published; its support shares them), with
+code.</li>
+<li>Machine drafts of Kalangu&#39;s fixed strings in Wolof, Hausa and Swahili
+(<code>locales/*.draft.json</code>, Gemini, not reviewed), with <code>locales/README.md</code>
+on how a native speaker reviews one. CI runs <code>kalangu locale check --complete</code> on every file in <code>locales/</code>.</li>
+<li><code>SECURITY.md</code>: how to report a vulnerability privately, what to expect,
+what is in scope, and the documented limits that are not vulnerabilities.</li>
 <li><code>pnpm pack:check</code> (in CI, on Node 20): packs the four packages, installs
 the tarballs in an empty project, runs the installed <code>kalangu</code> command,
 imports every package, typechecks against the published types, and runs
 an agent on the simulator.</li>
-</ul>
-<h3 id="added-1">Added<a class="anchor" href="#added-1" aria-label="Link to this section">#</a></h3>
-<ul>
-<li><code>SECURITY.md</code>: how to report a vulnerability privately, what to expect,
-what is in scope, and the documented limits that are not vulnerabilities.
-On the website under Project.</li>
-<li>Machine drafts of Kalangu&#39;s fixed strings in Wolof, Hausa and Swahili
-(<code>locales/*.draft.json</code>, Gemini, not reviewed), with <code>locales/README.md</code>
-on how a native speaker reviews one. CI runs <code>kalangu locale check --complete</code> on every file in <code>locales/</code>.</li>
+<li>The quick start is tested: its files are written out exactly as the page
+shows them, run, and their output compared with the page&#39;s (in CI).</li>
+<li>Website: a sitemap, <code>robots.txt</code>, a favicon, canonical URLs and link
+previews on every page, and a 404 page, all generated with the docs.</li>
 </ul>
 <h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
 <ul>
@@ -98,9 +82,25 @@ on how a native speaker reviews one. CI runs <code>kalangu locale check --comple
 website&#39;s docs, the store checks and the reference SQLite store, the
 simulator&#39;s SMS costs and <code>Dial&gt;</code> hint, the SMS cap on direct sends, and
 how to protect unsigned callbacks.</li>
+<li>Repository: CodeQL code scanning, Dependabot for GitHub Actions and npm
+(with <code>@types/node</code> held on the oldest supported Node), issue forms and a
+pull request template; the workflows moved to <code>actions/checkout@v7</code>,
+<code>actions/setup-node@v7</code> and <code>pnpm/action-setup@v6</code>, with no cache restored
+in the job that publishes.</li>
+</ul>
+<h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><code>@kalangu/sim</code>: the published types needed Node&#39;s own type definitions
+(<code>NodeJS.ReadableStream</code>), so a TypeScript project without <code>@types/node</code>
+got errors from the package. The terminal&#39;s <code>input</code> and <code>output</code> options
+are now typed by what they use (<code>TerminalInput</code>, <code>TerminalOutput</code>).
+Found by <code>pnpm pack:check</code> on its first run.</li>
+<li>Website: on phones the docs header&#39;s links ran into the logo. The logo no
+longer shrinks, GitHub hides below 440 px (it is in every page&#39;s footer)
+and Contributing below 360 px (it is in the sidebar).</li>
 </ul>
 <h2 id="010-alpha8---2026-11-19">[0.1.0-alpha.8] - 2026-11-19<a class="anchor" href="#010-alpha8---2026-11-19" aria-label="Link to this section">#</a></h2>
-<h3 id="added-2">Added<a class="anchor" href="#added-2" aria-label="Link to this section">#</a></h3>
+<h3 id="added-1">Added<a class="anchor" href="#added-1" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>The clinic example can answer with Gemini: <code>GEMINI_MODEL=gemini-3.5-flash-lite pnpm demo</code> with <code>GEMINI_API_KEY</code> exported (and the same for the server).
 The key goes in a header, never the URL; the model&#39;s thinking parts are
@@ -140,7 +140,7 @@ answer no longer strips <code>*</code> and <code>#</code> from USSD codes such a
 answers: past the timeout it moves on, as Kalangu does.</li>
 </ul>
 <h2 id="010-alpha6---2026-11-18">[0.1.0-alpha.6] - 2026-11-18<a class="anchor" href="#010-alpha6---2026-11-18" aria-label="Link to this section">#</a></h2>
-<h3 id="added-3">Added<a class="anchor" href="#added-3" aria-label="Link to this section">#</a></h3>
+<h3 id="added-2">Added<a class="anchor" href="#added-2" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><code>scripts/eval-detector.mjs</code>: measures a language detector on labelled
 samples the way Kalangu uses it: per-language accuracy, a confusion
@@ -161,7 +161,7 @@ what the handler changed after the deadline, with a version check, and
 keeps a newer turn&#39;s place.</li>
 </ul>
 <h2 id="010-alpha5---2026-11-18">[0.1.0-alpha.5] - 2026-11-18<a class="anchor" href="#010-alpha5---2026-11-18" aria-label="Link to this section">#</a></h2>
-<h3 id="added-4">Added<a class="anchor" href="#added-4" aria-label="Link to this section">#</a></h3>
+<h3 id="added-3">Added<a class="anchor" href="#added-3" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Language detection now also reads the SMS that starts a conversation
 (languages design §5). A number with no language yet gets the language
@@ -195,7 +195,7 @@ to the newer session without running the handler again, and keeps the
 user&#39;s place if they are answering a question (payments design §9).</li>
 </ul>
 <h2 id="010-alpha4---2026-11-18">[0.1.0-alpha.4] - 2026-11-18<a class="anchor" href="#010-alpha4---2026-11-18" aria-label="Link to this section">#</a></h2>
-<h3 id="added-5">Added<a class="anchor" href="#added-5" aria-label="Link to this section">#</a></h3>
+<h3 id="added-4">Added<a class="anchor" href="#added-4" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Documentation on the website (kalangu.utachi.website/docs/): a quick start,
 a guide to building agents, guides (the Africa&#39;s Talking sandbox,
@@ -261,7 +261,7 @@ error is reported in one line.</li>
 saved response in words, with an exit status, instead of crashing.</li>
 </ul>
 <h2 id="010-alpha2---2026-11-17">[0.1.0-alpha.2] - 2026-11-17<a class="anchor" href="#010-alpha2---2026-11-17" aria-label="Link to this section">#</a></h2>
-<h3 id="added-6">Added<a class="anchor" href="#added-6" aria-label="Link to this section">#</a></h3>
+<h3 id="added-5">Added<a class="anchor" href="#added-5" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Language detection as a hint (docs/languages-design.md §9.5):
 <code>languages.detection: { detector, threshold, minChars, timeoutMs? }</code> with
@@ -310,7 +310,7 @@ It now says to install without a tag and to check the tags after approving.</li>
 <h2 id="010-alpha0---2026-11-17">[0.1.0-alpha.0] - 2026-11-17<a class="anchor" href="#010-alpha0---2026-11-17" aria-label="Link to this section">#</a></h2>
 <p>First publish of <code>@kalangu/core</code>, <code>@kalangu/ussd</code>, <code>@kalangu/sms</code> and
 <code>@kalangu/sim</code>. Everything below was in it.</p>
-<h3 id="added-7">Added<a class="anchor" href="#added-7" aria-label="Link to this section">#</a></h3>
+<h3 id="added-6">Added<a class="anchor" href="#added-6" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><p>Payments in <code>@kalangu/core</code> (prep, no real provider yet): the <code>pay</code> step,
 <code>createAgent({ payments })</code> with a mandatory policy, the confirm screen
@@ -471,7 +471,7 @@ guide, pnpm workspace scaffolding (root <code>package.json</code>,
       <span>Generated from <code>CHANGELOG.md</code></span>
     </footer>
   </main>
-  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#unreleased">[Unreleased]</a></li><li><a href="#010-alpha8---2026-11-19">[0.1.0-alpha.8] - 2026-11-19</a></li><li><a href="#010-alpha7---2026-11-19">[0.1.0-alpha.7] - 2026-11-19</a></li><li><a href="#010-alpha6---2026-11-18">[0.1.0-alpha.6] - 2026-11-18</a></li><li><a href="#010-alpha5---2026-11-18">[0.1.0-alpha.5] - 2026-11-18</a></li><li><a href="#010-alpha4---2026-11-18">[0.1.0-alpha.4] - 2026-11-18</a></li><li><a href="#010-alpha3---2026-11-17">[0.1.0-alpha.3] - 2026-11-17</a></li><li><a href="#010-alpha2---2026-11-17">[0.1.0-alpha.2] - 2026-11-17</a></li><li><a href="#010-alpha1---2026-11-17">[0.1.0-alpha.1] - 2026-11-17</a></li><li><a href="#010-alpha0---2026-11-17">[0.1.0-alpha.0] - 2026-11-17</a></li></ul></nav>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#unreleased">[Unreleased]</a></li><li><a href="#010-alpha9---2026-11-19">[0.1.0-alpha.9] - 2026-11-19</a></li><li><a href="#010-alpha8---2026-11-19">[0.1.0-alpha.8] - 2026-11-19</a></li><li><a href="#010-alpha7---2026-11-19">[0.1.0-alpha.7] - 2026-11-19</a></li><li><a href="#010-alpha6---2026-11-18">[0.1.0-alpha.6] - 2026-11-18</a></li><li><a href="#010-alpha5---2026-11-18">[0.1.0-alpha.5] - 2026-11-18</a></li><li><a href="#010-alpha4---2026-11-18">[0.1.0-alpha.4] - 2026-11-18</a></li><li><a href="#010-alpha3---2026-11-17">[0.1.0-alpha.3] - 2026-11-17</a></li><li><a href="#010-alpha2---2026-11-17">[0.1.0-alpha.2] - 2026-11-17</a></li><li><a href="#010-alpha1---2026-11-17">[0.1.0-alpha.1] - 2026-11-17</a></li><li><a href="#010-alpha0---2026-11-17">[0.1.0-alpha.0] - 2026-11-17</a></li></ul></nav>
 </div>
 <script>
 // On a phone the menu starts closed, so the page's content comes first. Without
