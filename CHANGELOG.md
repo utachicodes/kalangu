@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Website: on phones the docs header's four links ran into the logo (since
+  the Agents and Providers links were added). The logo no longer shrinks,
+  GitHub hides below 440 px (it is in every page's footer) and Contributing
+  below 360 px (it is in the sidebar).
 - `@kalangu/sim`: the published types needed Node's own type definitions
   (`NodeJS.ReadableStream`), so a TypeScript project without `@types/node`
   got errors from the package. The terminal's `input` and `output` options
