@@ -15,6 +15,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # The packages support Node 20 ("engines"), so the types stay on Node 20:
+      # newer types would let code use APIs that Node 20 does not have, unseen by
+      # the typecheck. Raise this together with "engines", never on its own.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       # Minor and patch updates of the build and test tools, in one pull request.
       dev-tools:
