@@ -136,8 +136,12 @@ packing.
     conversation's first SMS). For `0.1.0-alpha.5`, core's tarball returned
     `404` for about five minutes after approval while the other three
     downloaded at once.
-  - 19 Nov 2026: `0.1.0-alpha.6`, `latest` (a deferred answer keeps changes
-    saved while it was pending, and a newer turn's place). All four
-    downloaded as soon as they were approved.
+  - 19 Nov 2026: `0.1.0-alpha.6` (a deferred answer keeps changes saved
+    while it was pending, and a newer turn's place; all four downloaded as
+    soon as they were approved) and `0.1.0-alpha.7`, `latest` (fixes from a
+    review of everything since `0.1.0-alpha.4`: a turn's own save merges
+    instead of undoing a payment outcome or a deferred answer, and `onPaid`
+    runs once when the session keeps changing). For `0.1.0-alpha.7` the four
+    arrived one at a time, about four and a half minutes after approval.
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.
