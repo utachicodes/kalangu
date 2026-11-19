@@ -14,6 +14,7 @@ import { africasTalkingSms } from "@kalangu/sms";
 import { africasTalkingUssd } from "@kalangu/ussd";
 import { createClinic } from "./clinic.js";
 import { nurseFromEnv } from "./nurses.js";
+import { sqliteSessionStore } from "./sqliteStore.js";
 
 const env = (name: string, fallback?: string): string => {
   const value = process.env[name] ?? fallback;
@@ -27,7 +28,11 @@ const env = (name: string, fallback?: string): string => {
 const sandbox = env("AT_SANDBOX", "0") === "1";
 // Set GEMINI_MODEL (with GEMINI_API_KEY) or OLLAMA_MODEL to answer with a real model.
 const nurse = nurseFromEnv();
+// SESSION_DB=sessions.db keeps conversations in SQLite across restarts; without it they are in memory.
+const sessionDb = process.env["SESSION_DB"];
+const sessionStore = sessionDb ? await sqliteSessionStore(sessionDb) : undefined;
 const clinic = createClinic({
+  ...(sessionStore ? { sessionStore } : {}),
   model: nurse.model,
   channels: [
     africasTalkingUssd({ code: env("USSD_CODE", "*384*1#"), path: "/ussd" }),
@@ -55,6 +60,7 @@ createServer(async (req, res) => {
 }).listen(port, () => {
   console.log(`Clinic agent listening on http://localhost:${port} (${sandbox ? "sandbox" : "live"})`);
   console.log(`The nurse is ${nurse.description}.`);
+  console.log(sessionDb ? `Sessions are stored in ${sessionDb}.` : "Sessions are in memory and are lost on restart (set SESSION_DB to keep them).");
 });
 
 async function toRequest(req: IncomingMessage, port: number): Promise<Request> {

@@ -145,6 +145,12 @@ that a stale `ifVersion` throws `SessionConflictError` and changes nothing,
 that data comes back intact, and, for a store that says it is atomic, that
 exactly one of several simultaneous saves wins.
 
+For a working example, the clinic example's
+[`sqliteStore.ts`](../examples/clinic/src/sqliteStore.ts) is a durable,
+atomic store on Node's built-in SQLite (Node 22.13 or later), about seventy
+lines, that passes the check. Each versioned save is a single
+`UPDATE … WHERE version = ?`, the pattern to copy for any SQL database.
+
 ## Languages
 
 ```js

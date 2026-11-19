@@ -83,6 +83,8 @@ serves:
 | `/sms/delivery` | SMS delivery reports |
 
 `AT_SANDBOX=1` makes the SMS adapter use `api.sandbox.africastalking.com`.
+Add `SESSION_DB=sessions.db` (Node 22.13 or later) to keep conversations in
+SQLite across restarts; otherwise they are in memory.
 Add `OLLAMA_MODEL=llama3.2` to have a local [Ollama](https://ollama.com)
 model answer instead of the fake nurse, or `GEMINI_MODEL=gemini-3.5-flash-lite`
 with `GEMINI_API_KEY` exported (step 2 shows how to keep a key out of your
