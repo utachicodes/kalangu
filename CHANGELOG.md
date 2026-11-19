@@ -7,59 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- Website: on phones the docs header's four links ran into the logo (since
-  the Agents and Providers links were added). The logo no longer shrinks,
-  GitHub hides below 440 px (it is in every page's footer) and Contributing
-  below 360 px (it is in the sidebar).
-- `@kalangu/sim`: the published types needed Node's own type definitions
-  (`NodeJS.ReadableStream`), so a TypeScript project without `@types/node`
-  got errors from the package. The terminal's `input` and `output` options
-  are now typed by what they use (`TerminalInput`, `TerminalOutput`).
+## [0.1.0-alpha.9] - 2026-11-19
 
 ### Added
 
-- Protecting callbacks, which Africa's Talking does not sign: the Agents
-  page now explains a secret path segment and an address allowlist (the
-  gateway's addresses are not published; its support shares them), with
-  code. The clinic example server takes `CALLBACK_SECRET` and `ALLOWED_IPS`.
-- Website: a 404 page with the docs header and links to the documentation,
-  the quick start and the roadmap, generated with the docs.
-- Website: a sitemap, `robots.txt`, a favicon, canonical URLs, and link
-  previews (Open Graph and Twitter tags) on every page. The sitemap,
-  `robots.txt` and favicon are generated with the docs and checked in CI.
-- `checkPaymentStore(makeStore)`: the payment store contract, runnable:
-  idempotent create, a final status kept final, exactly one winner among
-  simultaneous transitions and notification claims, release counting,
-  `unnotified`, `pending`, the policy's `totals`, and the phone lock.
-- Clinic example: `sqliteSessionStore`, a durable, atomic session store on
-  Node's built-in `node:sqlite` (Node 22.13+), as a reference for writing
-  one on any database. It passes `checkSessionStore`; `SESSION_DB=sessions.db`
-  makes the example server use it.
-- `checkSessionStore(makeStore)`: runs the session store contract against a
-  store you write (versions, `ifVersion` conflicts, copies, isolation by
-  phone, clearing, and for atomic stores, one winner among simultaneous
-  saves) and returns the problems found, for any test framework.
+- `checkSessionStore(makeStore)` and `checkPaymentStore(makeStore)`: the
+  session and payment store contracts, runnable against a store you write,
+  for any test framework. They check versions and `ifVersion` conflicts,
+  copies, isolation by phone, an idempotent payment `create`, a final status
+  kept final, exactly one winner among simultaneous versioned saves,
+  transitions and notification claims, release counting, `unnotified`,
+  `pending`, the policy's `totals`, and the phone lock. Each returns the
+  problems found.
 - `@kalangu/sim`: each incoming SMS shows what it costs, for example
   `✉ SMS from CLINIC (2 segments, UCS-2 because of ë): ...`, so a message
   that one letter makes three times as expensive is visible while testing.
-- The quick start is tested: its files are written out exactly as the page
-  shows them, run, and their output compared with the page's (in CI).
-- `pnpm pack:check` (in CI, on Node 20): packs the four packages, installs
-  the tarballs in an empty project, runs the installed `kalangu` command,
-  imports every package, typechecks against the published types, and runs
-  an agent on the simulator.
-
-### Added
-
-- `SECURITY.md`: how to report a vulnerability privately, what to expect,
-  what is in scope, and the documented limits that are not vulnerabilities.
-  On the website under Project.
+- Clinic example: `sqliteSessionStore`, a durable, atomic session store on
+  Node's built-in `node:sqlite` (Node 22.13+), a reference for writing one on
+  any database; it passes `checkSessionStore`. The example server takes
+  `SESSION_DB`, and `CALLBACK_SECRET` and `ALLOWED_IPS` to protect its
+  callbacks.
+- Protecting callbacks, which Africa's Talking does not sign: the Agents
+  page explains a secret path segment and an address allowlist (the
+  gateway's addresses are not published; its support shares them), with
+  code.
 - Machine drafts of Kalangu's fixed strings in Wolof, Hausa and Swahili
   (`locales/*.draft.json`, Gemini, not reviewed), with `locales/README.md`
   on how a native speaker reviews one. CI runs `kalangu locale check
   --complete` on every file in `locales/`.
+- `SECURITY.md`: how to report a vulnerability privately, what to expect,
+  what is in scope, and the documented limits that are not vulnerabilities.
+- `pnpm pack:check` (in CI, on Node 20): packs the four packages, installs
+  the tarballs in an empty project, runs the installed `kalangu` command,
+  imports every package, typechecks against the published types, and runs
+  an agent on the simulator.
+- The quick start is tested: its files are written out exactly as the page
+  shows them, run, and their output compared with the page's (in CI).
+- Website: a sitemap, `robots.txt`, a favicon, canonical URLs and link
+  previews on every page, and a 404 page, all generated with the docs.
 
 ### Changed
 
@@ -67,6 +52,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   website's docs, the store checks and the reference SQLite store, the
   simulator's SMS costs and `Dial>` hint, the SMS cap on direct sends, and
   how to protect unsigned callbacks.
+- Repository: CodeQL code scanning, Dependabot for GitHub Actions and npm
+  (with `@types/node` held on the oldest supported Node), issue forms and a
+  pull request template; the workflows moved to `actions/checkout@v7`,
+  `actions/setup-node@v7` and `pnpm/action-setup@v6`, with no cache restored
+  in the job that publishes.
+
+### Fixed
+
+- `@kalangu/sim`: the published types needed Node's own type definitions
+  (`NodeJS.ReadableStream`), so a TypeScript project without `@types/node`
+  got errors from the package. The terminal's `input` and `output` options
+  are now typed by what they use (`TerminalInput`, `TerminalOutput`).
+  Found by `pnpm pack:check` on its first run.
+- Website: on phones the docs header's links ran into the logo. The logo no
+  longer shrinks, GitHub hides below 440 px (it is in every page's footer)
+  and Contributing below 360 px (it is in the sidebar).
 
 ## [0.1.0-alpha.8] - 2026-11-19
 
