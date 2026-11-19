@@ -358,8 +358,9 @@ a { color: inherit; }
   .toc { display: none; }
 }
 @media (max-width: 760px) {
-  .top { padding: 0 16px; }
-  .top-r { gap: 18px; font-size: 14px; }
+  .top { padding: 0 16px; gap: 16px; }
+  .brand { flex-shrink: 0; }
+  .top-r { gap: 14px; font-size: 14px; }
   .layout { display: block; padding: 16px 16px 48px; }
   .side { position: static; max-height: none; margin-bottom: 16px; border: 1px solid var(--hair); border-radius: 8px; background: var(--paper); }
   .side summary { display: block; padding: 12px 14px; font-weight: 600; cursor: pointer; }
@@ -374,6 +375,15 @@ a { color: inherit; }
 .notfound { max-width: 760px; margin: 0 auto; padding: 72px 32px 96px; }
 .notfound .code-404 { font-size: 15px; font-weight: 600; letter-spacing: .08em; color: var(--accent); margin: 0; }
 @media (max-width: 760px) { .notfound { padding: 40px 16px 64px; } }
+
+/* Narrow phones: four links do not fit beside the logo. GitHub is also in every page's footer. */
+@media (max-width: 440px) {
+  .top-r a[href^="https://github.com"] { display: none; }
+}
+/* The smallest phones: Contributing is also in every page's sidebar, under Project. */
+@media (max-width: 360px) {
+  .top-r a[href="/contributing/"] { display: none; }
+}
 `;
 
 /** Builds every page in memory. Returns the files and any broken internal links. */

@@ -41,6 +41,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="n
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>Website: on phones the docs header&#39;s four links ran into the logo (since
+the Agents and Providers links were added). The logo no longer shrinks,
+GitHub hides below 440 px (it is in every page&#39;s footer) and Contributing
+below 360 px (it is in the sidebar).</li>
 <li><code>@kalangu/sim</code>: the published types needed Node&#39;s own type definitions
 (<code>NodeJS.ReadableStream</code>), so a TypeScript project without <code>@types/node</code>
 got errors from the package. The terminal&#39;s <code>input</code> and <code>output</code> options
