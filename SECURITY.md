@@ -51,9 +51,10 @@ These are documented; reports that only restate them will be closed, though
 ideas to improve them are welcome as ordinary issues:
 
 - **Gateway callbacks are not signed.** Africa's Talking does not sign USSD
-  or SMS callbacks, so anyone who knows a callback URL can call it. Use
-  hard-to-guess paths and, where you can, allow only the gateway's addresses
-  ([design](docs/design.md) §2).
+  or SMS callbacks, so anyone who knows a callback URL can call it. Use a
+  secret path segment and, where you can, allow only the gateway's addresses
+  (which its support shares on request); see
+  [Agents](docs/agents.md#channels).
 - **Payments are experimental** and have only run against a fake provider;
   the [payments design](docs/payments-design.md) §9 lists what is not
   guaranteed.

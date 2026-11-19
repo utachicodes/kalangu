@@ -4,12 +4,13 @@
  *   AT_USERNAME=sandbox AT_API_KEY=... AT_SANDBOX=1 pnpm --filter @kalangu/example-clinic start
  *
  * Point the USSD callback at /ussd (and /ussd/end), incoming SMS at /sms and
- * delivery reports at /sms/delivery. Callbacks are not signed; in
- * production, put a hard-to-guess prefix on these paths and allow only the
- * gateway's IP addresses.
+ * delivery reports at /sms/delivery. Callbacks are not signed. In
+ * production set CALLBACK_SECRET (the paths become /<secret>/ussd and so on)
+ * and, behind your own proxy, ALLOWED_IPS (see callbackGuard.ts).
  */
 
 import { createServer, type IncomingMessage } from "node:http";
+import { allowOnly, forwardedFor, secretPath } from "./callbackGuard.js";
 import { africasTalkingSms } from "@kalangu/sms";
 import { africasTalkingUssd } from "@kalangu/ussd";
 import { createClinic } from "./clinic.js";
@@ -31,26 +32,33 @@ const nurse = nurseFromEnv();
 // SESSION_DB=sessions.db keeps conversations in SQLite across restarts; without it they are in memory.
 const sessionDb = process.env["SESSION_DB"];
 const sessionStore = sessionDb ? await sqliteSessionStore(sessionDb) : undefined;
+// Callbacks are not signed: an optional secret path segment, and an optional address allowlist.
+const secret = process.env["CALLBACK_SECRET"];
+const route = (path: string) => secretPath(secret, path);
 const clinic = createClinic({
   ...(sessionStore ? { sessionStore } : {}),
   model: nurse.model,
   channels: [
-    africasTalkingUssd({ code: env("USSD_CODE", "*384*1#"), path: "/ussd" }),
+    africasTalkingUssd({ code: env("USSD_CODE", "*384*1#"), path: route("/ussd"), endPath: route("/ussd/end") }),
     africasTalkingSms({
       username: env("AT_USERNAME"),
       apiKey: env("AT_API_KEY"),
       ...(process.env["AT_SENDER_ID"] ? { senderId: process.env["AT_SENDER_ID"] } : {}),
       sandbox,
-      path: "/sms",
+      path: route("/sms"),
+      deliveryPath: route("/sms/delivery"),
     }),
   ],
 });
 
 const port = Number(env("PORT", "3000"));
+// ALLOWED_IPS=a,b: only behind a proxy you control that sets X-Forwarded-For.
+const allowedIps = process.env["ALLOWED_IPS"]?.split(",") ?? [];
+const handle = allowedIps.length ? allowOnly(clinic.requestHandler, { ips: allowedIps, ipOf: forwardedFor }) : clinic.requestHandler;
 
 createServer(async (req, res) => {
   try {
-    const response = await clinic.requestHandler(await toRequest(req, port));
+    const response = await handle(await toRequest(req, port));
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(Buffer.from(await response.arrayBuffer()));
   } catch (err) {
@@ -61,6 +69,9 @@ createServer(async (req, res) => {
   console.log(`Clinic agent listening on http://localhost:${port} (${sandbox ? "sandbox" : "live"})`);
   console.log(`The nurse is ${nurse.description}.`);
   console.log(sessionDb ? `Sessions are stored in ${sessionDb}.` : "Sessions are in memory and are lost on restart (set SESSION_DB to keep them).");
+  // The secret is part of the URLs; print where it goes, never the secret itself.
+  console.log(secret ? "Callbacks are under the secret path: /<CALLBACK_SECRET>/ussd and so on." : "Callbacks are at /ussd and /sms (set CALLBACK_SECRET in production).");
+  if (allowedIps.length) console.log(`Only ${allowedIps.length} allowed address(es) can call, read from X-Forwarded-For.`);
 });
 
 async function toRequest(req: IncomingMessage, port: number): Promise<Request> {

@@ -294,8 +294,29 @@ africasTalkingSms({ username, apiKey, senderId, sandbox, path: &quot;/sms&quot; 
 </code></pre>
 <p>Each channel adds its callback routes, and <code>agent.requestHandler</code> dispatches
 requests to them by path: a standard <code>Request</code> to <code>Response</code> function.</p>
-<p><strong>Callbacks are not signed</strong> by Africa&#39;s Talking. Use hard-to-guess paths
-and, where you can, allow only the gateway&#39;s IP addresses.</p>
+<p><strong>Callbacks are not signed</strong> by Africa&#39;s Talking, so anyone who knows a
+callback URL can call it. Two mitigations, both outside Kalangu&#39;s routes:</p>
+<ul>
+<li><p><strong>A secret path segment.</strong> Give the channels paths such as
+<code>/3f9a1c0e7b2d4a6f/ussd</code>: the URL is then the secret. Use at least 16
+random characters (<code>openssl rand -hex 16</code>), never log it, and change it if
+it leaks.</p>
+</li>
+<li><p><strong>Only the gateway&#39;s addresses.</strong> Africa&#39;s Talking does not publish the
+addresses its callbacks come from (checked 19 Nov 2026); its support shares
+them on request. Check the address before the agent sees the request:</p>
+<pre><code class="language-js">const allowed = new Set([&quot;&lt;address from support&gt;&quot;]);
+const handler = (req) =&gt; {
+  // Only behind a proxy you control that sets X-Forwarded-For; otherwise it can be forged.
+  const ip = req.headers.get(&quot;x-forwarded-for&quot;)?.split(&quot;,&quot;)[0]?.trim();
+  return allowed.has(ip) ? agent.requestHandler(req) : new Response(&quot;Forbidden&quot;, { status: 403 });
+};
+</code></pre>
+</li>
+</ul>
+<p>A user-agent check, which some guides suggest, is trivially faked. The
+clinic example does both (<code>CALLBACK_SECRET</code>, <code>ALLOWED_IPS</code>); see its
+<a href="https://github.com/utachicodes/kalangu/blob/main/examples/clinic/src/callbackGuard.ts" rel="noopener"><code>callbackGuard.ts</code></a>.</p>
 <h2 id="testing">Testing<a class="anchor" href="#testing" aria-label="Link to this section">#</a></h2>
 <p><code>@kalangu/sim</code> replaces the agent&#39;s channels with a simulated phone, so
 nothing real is called:</p>
