@@ -84,8 +84,9 @@ serves:
 
 `AT_SANDBOX=1` makes the SMS adapter use `api.sandbox.africastalking.com`.
 Add `OLLAMA_MODEL=llama3.2` to have a local [Ollama](https://ollama.com)
-model answer instead of the fake nurse (the server prints which nurse it
-uses).
+model answer instead of the fake nurse, or `GEMINI_MODEL=gemini-3.5-flash-lite`
+with `GEMINI_API_KEY` exported (step 2 shows how to keep a key out of your
+history) to use Gemini. The server prints which nurse it uses.
 Leave `AT_SENDER_ID` unset in the sandbox unless you create a short code for
 it (step 7).
 

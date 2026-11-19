@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { smsLength } from "@kalangu/core";
-import { clean, fitSms, normalizeHost, nurseFromEnv, ollamaNurse } from "../src/ollama.js";
+import { clean, fitSms } from "../src/answer.js";
+import { nurseFromEnv } from "../src/nurses.js";
+import { normalizeHost, ollamaNurse } from "../src/ollama.js";
 
 function fakeOllama(reply: { status?: number; body: unknown }) {
   const calls: Array<{ url: string; body: any }> = [];

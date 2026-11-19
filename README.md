@@ -117,8 +117,10 @@ come by SMS, and a couple of seconds later it does. `x` hangs up mid-session
 
 To have a real model answer instead, run a local [Ollama](https://ollama.com)
 model: `ollama pull llama3.2`, then `OLLAMA_MODEL=llama3.2 pnpm demo`
-(`OLLAMA_HOST` if it is not on this machine). See
-[examples/clinic/src/ollama.ts](examples/clinic/src/ollama.ts).
+(`OLLAMA_HOST` if it is not on this machine). Or use Gemini: with your
+`GEMINI_API_KEY` exported in the shell, `GEMINI_MODEL=gemini-3.5-flash-lite
+pnpm demo`. See [examples/clinic/src/ollama.ts](examples/clinic/src/ollama.ts)
+and [gemini.ts](examples/clinic/src/gemini.ts).
 
 To run the same example against Africa's Talking's real gateway, in their
 free sandbox with their phone simulator, follow

@@ -35,6 +35,20 @@ Ask anything now; a local model usually takes more than 4 seconds, so most
 answers come by SMS. If Ollama runs on another machine, set `OLLAMA_HOST`
 too, for example `OLLAMA_HOST=192.168.1.20:11434`.
 
+Or with Gemini, using an API key from
+[Google AI Studio](https://aistudio.google.com/apikey) (it starts with
+`AIza`). Export it in your shell without typing it on the command line, so
+it stays out of your history:
+
+```sh
+read -s GEMINI_API_KEY && export GEMINI_API_KEY   # paste the key; nothing is shown
+GEMINI_MODEL=gemini-3.5-flash-lite pnpm demo
+```
+
+Only the question and the nurse's instructions go to Google, never the
+caller's number. Never paste the key into a chat, an issue or a file in the
+repository.
+
 ## 2. Write your first agent
 
 In a new folder:

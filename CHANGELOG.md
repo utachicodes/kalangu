@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The clinic example can answer with Gemini: `GEMINI_MODEL=gemini-3.5-flash-lite
+  pnpm demo` with `GEMINI_API_KEY` exported (and the same for the server).
+  The key goes in a header, never the URL; the model's thinking parts are
+  never sent; answers are cleaned and fitted to the SMS cap as for Ollama,
+  whose shared pieces moved to `answer.ts`. `nurses.ts` picks Gemini, then
+  Ollama, then the fake nurse.
+
 ### Changed
 
 - `@kalangu/sim`: typing something that is not a code at `Dial>` (such as
