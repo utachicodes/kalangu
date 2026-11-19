@@ -138,12 +138,11 @@ packing.
     downloaded at once.
   - 19 Nov 2026: `0.1.0-alpha.6` (a deferred answer keeps changes saved
     while it was pending, and a newer turn's place; all four downloaded as
-    soon as they were approved), `0.1.0-alpha.7` (fixes from a
-    review of everything since `0.1.0-alpha.4`: a turn's own save merges
-    instead of undoing a payment outcome or a deferred answer, and `onPaid`
-    runs once when the session keeps changing). For `0.1.0-alpha.7` the four
-    arrived one at a time, about four and a half minutes after approval)
-    and `0.1.0-alpha.8`, `latest` (the simulator explains a number typed
-    where a dial code was expected).
+    soon as they were approved), `0.1.0-alpha.7` (fixes from a review of
+    everything since `0.1.0-alpha.4`: a turn's own save merges instead of
+    undoing a payment outcome or a deferred answer, and `onPaid` runs once
+    when the session keeps changing; the four arrived one at a time, about
+    four and a half minutes after approval) and `0.1.0-alpha.8`, `latest`
+    (the simulator explains a number typed where a dial code was expected).
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.
