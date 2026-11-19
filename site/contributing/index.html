@@ -52,6 +52,11 @@ generated HTML under <code>site/</code>, then run <code>pnpm site:build</code> a
 runs <code>pnpm site:check</code>, which fails if the pages are out of date or if a link
 points to a page or heading that does not exist. The list of pages and the
 sidebar are in <code>scripts/build-site.mjs</code>.</p>
+<p>The quick start is also run: <code>scripts/docs-snippets.test.mjs</code> writes out
+every block introduced by &quot;Create <code>&lt;file&gt;</code>&quot;, runs the one after &quot;Run it with
+<code>node &lt;file&gt;</code>&quot;, and fails if the output differs from the block the page
+shows. If you change the quick start&#39;s code or its output, keep them in
+step.</p>
 <h2 id="working-on-the-code">Working on the code<a class="anchor" href="#working-on-the-code" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><code>pnpm install</code>, then <code>pnpm test</code>, <code>pnpm typecheck</code> and <code>pnpm build</code> at the

@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The quick start is tested: its files are written out exactly as the page
+  shows them, run, and their output compared with the page's (in CI).
 - `pnpm pack:check` (in CI, on Node 20): packs the four packages, installs
   the tarballs in an empty project, runs the installed `kalangu` command,
   imports every package, typechecks against the published types, and runs
