@@ -33,11 +33,13 @@ function card(c, i) {
   const shadow = demo.attachShadow({ mode: "open" });
   // Constant markup from catalog.js, written by us, never from a visitor.
   shadow.innerHTML = `<style>${BASE}\n${c.css}</style>${c.html}`;
-  try {
-    c.js?.(shadow);
-  } catch (err) {
-    console.error(`[components] ${c.id}:`, err);
-  }
+  // Some setups load Kalangu first (async); a failure stays in its own card.
+  Promise.resolve()
+    .then(() => c.js?.(shadow))
+    .catch((err) => {
+      console.error(`[components] ${c.id}:`, err);
+      shadow.append(Object.assign(document.createElement("p"), { textContent: "This demo could not start here.", style: "padding:16px;color:#b42318" }));
+    });
 
   const files = [["HTML", c.html], ["CSS", c.css], ["JS", c.js ? source(c.js) : "// No JavaScript needed: this one is pure CSS."]];
   const pre = el("pre", { tabindex: "0", id: `code-${c.id}`, role: "tabpanel" }, el("code", { text: files[0][1] }));

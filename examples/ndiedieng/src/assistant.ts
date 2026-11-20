@@ -22,6 +22,8 @@ export interface Answer {
   par: "regles" | "gemini";
   /** Questions to offer instead, when this one could not be answered. */
   suggestions?: string[];
+  /** The answer's language: Wolof when asked in Wolof (with Gemini), French otherwise. */
+  langue?: "fr" | "wo";
 }
 
 export interface Assistant {
@@ -195,7 +197,8 @@ export function geminiAssistant(
   return {
     async ask(question) {
       try {
-        const plan = (await call({ task: "plan", question })) as { sql?: string; reponse?: string };
+        const plan = (await call({ task: "plan", question })) as { sql?: string; reponse?: string; langue?: string };
+        const langue = plan.langue === "wo" ? "wo" : "fr";
         const sql = String(plan.sql ?? "").trim();
         if (!sql) {
           const reponse = String(plan.reponse ?? "").trim();
@@ -205,12 +208,13 @@ export function geminiAssistant(
             columns: [],
             rows: [],
             par: "gemini",
+            langue,
             ...(reponse ? {} : { suggestions: EXAMPLES.slice(0, 4) }),
           };
         }
         const { columns, rows } = runReadOnly(commune, sql);
-        const written = (await call({ task: "answer", question, sql, rows: rows.slice(0, 50) })) as { reponse?: string };
-        return { answer: String(written.reponse ?? "").trim() || "Voici les données trouvées.", sql, columns, rows, par: "gemini" };
+        const written = (await call({ task: "answer", question, sql, rows: rows.slice(0, 50), langue })) as { reponse?: string };
+        return { answer: String(written.reponse ?? "").trim() || "Voici les données trouvées.", sql, columns, rows, par: "gemini", langue };
       } catch (err) {
         // The rules answer instead; the reason stays in the console, not in front of the Mayor.
         console.warn(`[ndiedieng] Gemini unavailable (${err instanceof Error ? err.message : String(err)}); answering by rules`);

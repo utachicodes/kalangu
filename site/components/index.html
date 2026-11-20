@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Components · Kalangu</title>
-<meta name="description" content="The UI components we built from scratch for Kalangu's Ndiédieng example: a voice orb, phone simulators, a quick search, undo toasts and more. Live demos, the code, and why each exists.">
+<meta name="description" content="Components for phone and voice services where the internet is thin: a USSD and SMS screen preview on Kalangu's budgeter, one USSD session on three phones, a voice orb on your real microphone, dictation that never hangs, and spoken answers that play on iPhones.">
 <link rel="canonical" href="https://kalangu.utachi.website/components/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta property="og:title" content="Components · Kalangu">
@@ -12,6 +12,7 @@
 <link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/docs/docs.css">
 <link rel="stylesheet" href="components.css">
+<script type="importmap">{ "imports": { "@kalangu/core": "/ndiedieng/vendor/core/index.js", "@kalangu/sim": "/ndiedieng/vendor/sim/phone.js" } }</script>
 <script type="module" src="page.js"></script>
 </head>
 <body>
@@ -30,10 +31,10 @@
 <main id="content">
   <section class="intro">
     <div class="intro-text">
-      <p class="eyebrow">Built from scratch, no UI library</p>
+      <p class="eyebrow">For phones without internet, and voices without keyboards</p>
       <h1>The components</h1>
-      <p class="lead">Everything in the <a href="/ndiedieng/">Ndiédieng example</a> is hand-made in plain HTML, CSS and JavaScript: no framework, no build step. Here is each piece, running live, with its code, its nickname, and why it exists.</p>
-      <p class="small">Every demo below runs from exactly the code shown under it. Copy freely: MIT, like the rest of Kalangu.</p>
+      <p class="lead">Buttons, tabs and toasts you can get anywhere. These are the pieces we could not find while building the <a href="/ndiedieng/">Ndiédieng example</a>: what an SMS really costs before you send it, what a USSD menu looks like on a keypad phone, and voice that keeps working when browsers don't.</p>
+      <p class="small">Each demo runs from exactly the code under it, two of them on Kalangu itself. Plain HTML, CSS and JavaScript, no framework. MIT, like the rest of Kalangu.</p>
     </div>
     <div class="mascot-wrap">
       <button class="mascot" id="marble" type="button" aria-label="Marble, the orb. Click to say hi.">

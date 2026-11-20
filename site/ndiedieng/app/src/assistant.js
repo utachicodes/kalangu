@@ -163,6 +163,7 @@ export function geminiAssistant(commune, options) {
         async ask(question) {
             try {
                 const plan = (await call({ task: "plan", question }));
+                const langue = plan.langue === "wo" ? "wo" : "fr";
                 const sql = String(plan.sql ?? "").trim();
                 if (!sql) {
                     const reponse = String(plan.reponse ?? "").trim();
@@ -172,12 +173,13 @@ export function geminiAssistant(commune, options) {
                         columns: [],
                         rows: [],
                         par: "gemini",
+                        langue,
                         ...(reponse ? {} : { suggestions: EXAMPLES.slice(0, 4) }),
                     };
                 }
                 const { columns, rows } = runReadOnly(commune, sql);
-                const written = (await call({ task: "answer", question, sql, rows: rows.slice(0, 50) }));
-                return { answer: String(written.reponse ?? "").trim() || "Voici les données trouvées.", sql, columns, rows, par: "gemini" };
+                const written = (await call({ task: "answer", question, sql, rows: rows.slice(0, 50), langue }));
+                return { answer: String(written.reponse ?? "").trim() || "Voici les données trouvées.", sql, columns, rows, par: "gemini", langue };
             }
             catch (err) {
                 // The rules answer instead; the reason stays in the console, not in front of the Mayor.

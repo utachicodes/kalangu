@@ -1,41 +1,239 @@
-// The components we built for the Ndiédieng example, each as a small
-// standalone piece: HTML, CSS and a setup function. The page runs every
-// demo from exactly this code (in its own shadow root) and shows the same
-// code underneath, so what you copy is what you saw working.
+// Components for phone and voice services where the internet is thin: the
+// pieces we could not find elsewhere while building the Ndiédieng example.
+// Each is HTML, CSS and a setup function. The page runs every demo from
+// exactly this code (in its own shadow root) and shows the same code, so
+// what you copy is what you saw working. Two of them run Kalangu itself
+// (@kalangu/core and @kalangu/sim, mapped in index.html).
 // MIT licensed, like the rest of Kalangu.
 
 export const COMPONENTS = [
   {
-    id: "orb",
+    id: "bouncer",
+    nickname: "The Bouncer",
+    name: "USSD and SMS screen preview, on Kalangu's own budgeter",
+    tags: ["ussd", "sms", "kalangu"],
+    why: "Write \"reçu\" in an SMS and the message silently drops from 160 characters to 70: one character outside the standard SMS alphabet (ç, ê, ô, î, and in Wolof ë or ŋ) switches the whole message to Unicode, and the operator bills you for three SMS instead of one. é, è and à are fine, which nobody guesses. On USSD, accents don't show at all, and anything past the screen limit gets split by the operator with their own \"98\". This runs Kalangu's real budgeter, so you see exactly what a keypad phone will get, before a village chief does.",
+    usedIn: { label: "@kalangu/core budgeter", href: "/docs/design/" },
+    html: `<div class="modes" role="radiogroup" aria-label="Channel">
+  <button role="radio" aria-checked="true" data-mode="sms">SMS</button>
+  <button role="radio" aria-checked="false" data-mode="ussd">USSD menu</button>
+</div>
+<label class="field"><span class="label">Your text</span>
+  <textarea rows="5" spellcheck="false"></textarea></label>
+<div class="presets"></div>
+<div class="verdict" aria-live="polite"></div>
+<div class="screens"></div>`,
+    css: `:host { display: grid; gap: 12px; padding: 20px; }
+.modes { display: inline-flex; justify-self: start; gap: 2px; padding: 3px; border-radius: 10px; background: #eef2ef; }
+.modes button { border: 0; background: none; padding: 6px 14px; border-radius: 8px; font: inherit; font-size: 14px; cursor: pointer; }
+.modes [aria-checked="true"] { background: #fff; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.field { display: grid; gap: 6px; }
+.label { font-size: 13px; font-weight: 600; color: #47564d; }
+textarea { width: 100%; padding: 10px 12px; border: 1px solid #dfe5e1; border-radius: 10px; font: 14px/1.45 ui-monospace, monospace; resize: vertical; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { border: 1px solid #dfe5e1; background: #fff; border-radius: 99px; padding: 4px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.verdict { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; }
+.verdict span { padding: 3px 10px; border-radius: 99px; background: #eef2ef; }
+.verdict .bad { background: #fdecea; color: #b42318; font-weight: 600; }
+.verdict .good { background: #e4f3eb; color: #0b6b45; font-weight: 600; }
+.screens { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.lcd { flex: none; width: 190px; padding: 8px 10px 6px; border-radius: 8px; background: linear-gradient(#cfe0b4, #b9cf97);
+  color: #1d2a12; font: 12px/1.3 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.25); }
+.lcd small { display: block; margin-top: 6px; padding-top: 3px; border-top: 1px dashed rgba(29,42,18,.35); font-size: 10.5px; opacity: .8; }
+.lcd mark { background: #ffb4a8; color: inherit; border-radius: 2px; }`,
+    js: async function setup(root) {
+      // The real thing: Kalangu's budgeter, the same code the library runs.
+      const { smsLength, splitSegments, toUssdSafe, optionNumbers, paginateMenu, BudgetError } = await import("@kalangu/core");
+      const PRESETS = {
+        sms: [
+          ["é, è, à : still 160", "Mairie de Ndiédieng : votre signalement S-0042 (forage) est résolu. Merci de l'avoir signalé. Pour un autre problème, composez *123#."],
+          ["One ç : now 70", "Mairie de Ndiédieng : nous avons bien reçu votre signalement S-0042 (forage). Il sera traité dès que possible. Pour un autre problème, composez *123#."],
+          ["Wolof ë", "Jërëjëf ! Mairie de Ndiédieng : votre signalement S-0042 (forage) est résolu. Pour un autre problème, composez *123#."],
+        ],
+        ussd: [
+          ["Menu court", "Mairie de Ndiédieng\nSignaler une panne\nDéclarer une naissance\nDéclarer un décès\nSuivre un signalement\nÉcrire un message"],
+          ["Menu long", "Quel équipement est en panne dans votre village ?\nForage du centre\nBorne-fontaine près de l'école\nPoste de santé\nCase de santé\nSalle de classe\nLatrines de l'école\nLampadaire solaire\nPiste vers Kaolack\nAutre équipement"],
+        ],
+      };
+      const textarea = root.querySelector("textarea");
+      const verdict = root.querySelector(".verdict");
+      const screens = root.querySelector(".screens");
+      let mode = "sms";
+      const pill = (text, cls = "") => Object.assign(document.createElement("span"), { textContent: text, className: cls });
+      const lcd = (text, note, bad = []) => {
+        const box = document.createElement("div");
+        box.className = "lcd";
+        for (const ch of text) { // characters that cost the encoding, highlighted (as text nodes, never HTML)
+          if (bad.includes(ch)) box.append(Object.assign(document.createElement("mark"), { textContent: ch }));
+          else box.append(ch);
+        }
+        box.append(Object.assign(document.createElement("small"), { textContent: note }));
+        return box;
+      };
+      const draw = () => {
+        const text = textarea.value;
+        if (mode === "sms") {
+          const len = smsLength(text);
+          const parts = splitSegments(text, len.encoding);
+          verdict.replaceChildren(
+            pill(len.encoding === "gsm7" ? "GSM-7: 160 per SMS" : "Unicode (UCS-2): 70 per SMS", len.encoding === "gsm7" ? "good" : "bad"),
+            pill(`${len.units} units`),
+            pill(`${len.segments} SMS billed`, len.segments > 1 ? "bad" : "good"),
+            len.nonGsmChars.length ? pill(`Because of: ${len.nonGsmChars.join(" ")}`, "bad") : pill("No costly characters", "good"),
+          );
+          screens.replaceChildren(...parts.map((p, i) => lcd(p, `SMS ${i + 1}/${parts.length}`, len.nonGsmChars)));
+          return;
+        }
+        const [head = "", ...items] = text.split("\n").map((l) => l.trim()).filter(Boolean);
+        const safe = toUssdSafe([head, ...items].join("\n"));
+        const [safeHead, ...safeItems] = safe.text.split("\n");
+        const numbers = optionNumbers(safeItems.length);
+        try {
+          const pages = paginateMenu({ head: [safeHead], items: safeItems.map((it, i) => `${numbers[i]}. ${it}`), maxChars: 160, moreLine: "98. Suite" });
+          verdict.replaceChildren(
+            pill(`${pages.length} screen${pages.length > 1 ? "s" : ""} of 160`, pages.length > 1 ? "bad" : "good"),
+            safe.changed ? pill("Accents removed: USSD can't show them", "bad") : pill("Nothing to strip", "good"),
+            safe.removed.length ? pill(`Dropped: ${safe.removed.join(" ")}`, "bad") : pill("Nothing dropped"),
+          );
+          screens.replaceChildren(...pages.map((p, i) => lcd(p, `screen ${i + 1}/${pages.length} · ${p.length}/160`)));
+        } catch (err) {
+          verdict.replaceChildren(pill(err instanceof BudgetError ? `Won't fit: ${err.message}` : String(err), "bad"));
+          screens.replaceChildren();
+        }
+      };
+      const setMode = (m) => {
+        mode = m;
+        for (const b of root.querySelectorAll("[data-mode]")) b.setAttribute("aria-checked", String(b.dataset.mode === m));
+        root.querySelector(".presets").replaceChildren(...PRESETS[m].map(([label, text]) => {
+          const b = Object.assign(document.createElement("button"), { textContent: label });
+          b.onclick = () => { textarea.value = text; draw(); };
+          return b;
+        }));
+        textarea.value = PRESETS[m][m === "sms" ? 1 : 0][1];
+        draw();
+      };
+      for (const b of root.querySelectorAll("[data-mode]")) b.onclick = () => setMode(b.dataset.mode);
+      textarea.oninput = draw;
+      setMode("sms");
+    },
+  },
+
+  {
+    id: "triplets",
+    nickname: "The Triplets",
+    name: "One Kalangu USSD session, on three phones",
+    tags: ["ussd", "simulator", "kalangu"],
+    why: "USSD looks nothing alike from one phone to the next: a green monochrome screen on a keypad phone, a system alert on an iPhone, a Material dialog on Android. If you only test on one, you ship surprises to the others. This is a real Kalangu agent and the real simulator from @kalangu/sim, no SIM card, no operator, no account. Switch phones mid-session: the session carries on.",
+    usedIn: { label: "Ndiédieng's phones", href: "/ndiedieng/" },
+    html: `<div class="skins" role="radiogroup" aria-label="Phone">
+  <button role="radio" aria-checked="true" data-skin="keypad">Keypad</button>
+  <button role="radio" aria-checked="false" data-skin="android">Android</button>
+  <button role="radio" aria-checked="false" data-skin="ios">iPhone</button>
+</div>
+<div class="phone keypad">
+  <div class="screen" aria-live="polite"></div>
+  <form class="reply">
+    <input inputmode="numeric" autocomplete="off" aria-label="Your answer">
+    <div class="btns"><button type="button" class="cancel">Annuler</button><button type="submit">Envoyer</button></div>
+  </form>
+</div>`,
+    css: `:host { display: grid; justify-items: center; gap: 14px; padding: 22px 12px; }
+.skins { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: #eef2ef; }
+.skins button { border: 0; background: none; padding: 6px 14px; border-radius: 8px; font: inherit; font-size: 14px; cursor: pointer; }
+.skins [aria-checked="true"] { background: #fff; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.phone { width: 250px; }
+.screen { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 120px; }
+.reply input { width: 100%; font: inherit; }
+.btns { display: flex; }
+.btns button { flex: 1; border: 0; background: none; font: inherit; cursor: pointer; }
+/* Keypad phone: monochrome LCD, soft keys. */
+.keypad { padding: 14px; border-radius: 26px; background: linear-gradient(160deg, #3a4048, #20242a); }
+.keypad .screen { padding: 8px; border-radius: 6px 6px 0 0; background: linear-gradient(#cfe0b4, #b9cf97); color: #1d2a12; font: 12.5px/1.3 ui-monospace, monospace; }
+.keypad .reply { padding: 0 8px 6px; border-radius: 0 0 6px 6px; background: #b9cf97; }
+.keypad input { border: 0; border-top: 1px dashed rgba(29,42,18,.4); background: transparent; color: #1d2a12; font: 12.5px ui-monospace, monospace; padding: 4px 0; outline: none; }
+.keypad .btns button { color: #1d2a12; font: 700 11px ui-monospace, monospace; text-transform: uppercase; padding: 4px 0; }
+.keypad .btns button + button { text-align: right; }
+.keypad .btns { flex-direction: row-reverse; }
+/* Android: Material dialog. */
+.android { padding: 22px 22px 10px; border-radius: 28px; background: #eef0f9; box-shadow: 0 8px 28px rgba(0,0,0,.18); font-family: Roboto, system-ui, sans-serif; }
+.android .screen { color: #44474f; font-size: 14px; line-height: 1.45; min-height: 0; }
+.android input { margin-top: 14px; padding: 10px 12px; border: 1px solid #74777f; border-radius: 4px; background: transparent; }
+.android .btns { justify-content: flex-end; margin-top: 10px; }
+.android .btns button { flex: none; padding: 10px 14px; border-radius: 20px; color: #0b57d0; font-weight: 500; }
+/* iPhone: system alert. */
+.ios { border-radius: 14px; background: rgba(242,242,247,.98); box-shadow: 0 10px 30px rgba(0,0,0,.2); font-family: -apple-system, system-ui, sans-serif; overflow: hidden; }
+.ios .screen { padding: 18px 16px 12px; font-size: 13px; line-height: 1.38; min-height: 0; }
+.ios input { width: calc(100% - 32px); margin: 0 16px 14px; padding: 5px 8px; border: .5px solid #c6c6c8; border-radius: 7px; background: #fff; }
+.ios .btns { border-top: .5px solid #c6c6c8; }
+.ios .btns button { min-height: 44px; color: #007aff; font-size: 16px; }
+.ios .btns button + button { border-left: .5px solid #c6c6c8; font-weight: 600; }
+.ended input, .ended .cancel { display: none; }`,
+    js: async function setup(root) {
+      // A real agent, and the real simulated phone that dials it.
+      const { createAgent, menu, ask, say, silentLogger } = await import("@kalangu/core");
+      const { createPhone } = await import("@kalangu/sim");
+      const agent = createAgent({
+        channels: [],
+        logger: silentLogger,
+        start: menu("Mairie de Ndiédieng", {
+          "Signaler une panne": menu("Quel équipement ?", {
+            "Forage": say("Signalement S-0042 enregistré : forage, urgence haute. Un SMS vous dira quand il est traité."),
+            "Poste de santé": say("Signalement S-0043 enregistré : poste de santé. Un SMS vous dira quand il est traité."),
+            "Piste coupée": say("Signalement S-0044 enregistré : piste. Merci."),
+          }),
+          "Suivre un signalement": ask("Numéro du signalement ?", (code) => `${code.toUpperCase()} : pris en charge par la Mairie.`),
+        }),
+      });
+      const phone = createPhone(agent, { phone: "+221770000001", code: "*123#" });
+      const box = root.querySelector(".phone");
+      const screen = root.querySelector(".screen");
+      const input = root.querySelector("input");
+      const show = (s) => {
+        screen.textContent = s.text;
+        box.classList.toggle("ended", s.end);
+        root.querySelector('[type="submit"]').textContent = s.end ? "Recomposer *123#" : "Envoyer";
+        input.value = "";
+      };
+      root.querySelector(".reply").onsubmit = async (e) => {
+        e.preventDefault();
+        show(phone.inSession ? await phone.press(input.value.trim()) : await phone.dial("*123#"));
+        if (phone.inSession) input.focus();
+      };
+      root.querySelector(".cancel").onclick = () => { phone.hangUp(); show({ text: "Session terminée.", end: true }); };
+      for (const b of root.querySelectorAll("[data-skin]")) {
+        b.onclick = () => {
+          for (const o of root.querySelectorAll("[data-skin]")) o.setAttribute("aria-checked", String(o === b));
+          box.className = `phone ${b.dataset.skin}${box.classList.contains("ended") ? " ended" : ""}`;
+        };
+      }
+      show(await phone.dial("*123#"));
+    },
+  },
+
+  {
+    id: "marble",
     nickname: "The Mood Marble",
-    name: "Voice orb",
-    tags: ["animation", "voice"],
-    why: "People don't read buttons, they tap shiny things. One control that listens, thinks and talks, and shows which one it is doing. The first version was a conic gradient that looked like a pie chart having a bad day; this one is pale glass with colour drifting inside.",
-    usedIn: { label: "Assistant", href: "/ndiedieng/assistant/" },
-    html: `<button class="orb" data-state="idle" aria-label="Talk to the orb">
+    name: "Voice orb wired to your real microphone",
+    tags: ["voice", "animation"],
+    why: "A talking interface has four moods, and people need to see which one they are in: waiting, listening, thinking, speaking. Most voice orbs are a looping animation that would wiggle just the same if your microphone were unplugged. This one grows with your actual voice (Web Audio, nothing recorded or sent), then thinks, then answers out loud.",
+    usedIn: { label: "Ndiédieng's assistant", href: "/ndiedieng/assistant/" },
+    html: `<button class="orb" data-state="idle" aria-label="Tap and speak">
   <span class="glow"></span>
   <span class="core"><i></i><i></i><i></i><i></i></span>
   <span class="shine"></span>
 </button>
-<div class="controls" role="group" aria-label="State">
-  <button data-s="idle" aria-pressed="true">Idle</button>
-  <button data-s="listening">Listening</button>
-  <button data-s="thinking">Thinking</button>
-  <button data-s="speaking">Speaking</button>
-</div>`,
-    css: `:host { display: grid; justify-items: center; gap: 22px; padding: 28px 0 8px; }
+<p class="state" aria-live="polite">Tap the orb and say something.</p>`,
+    css: `:host { display: grid; justify-items: center; gap: 18px; padding: 30px 0 18px; }
 .orb { --size: 124px; --speed: 1; --level: 0; position: relative; width: var(--size); height: var(--size);
   padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; }
 .orb > span { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
-/* a soft halo that breathes, brighter with the voice */
 .glow { inset: -30% !important; filter: blur(10px); opacity: calc(.55 + var(--level) * .45);
   background: radial-gradient(circle, rgba(155,114,203,.42), rgba(66,133,244,.22) 40%, transparent 70%);
-  scale: calc(1 + var(--level) * .25); animation: halo 4.5s ease-in-out infinite; }
-@keyframes halo { 50% { transform: scale(1.06); } }
-/* pale glass, with four blurred blobs drifting inside */
+  scale: calc(1 + var(--level) * .3); transition: scale .08s linear; }
 .core { overflow: hidden; background: radial-gradient(circle at 50% 45%, #fff, #f1f0ff 55%, #e4e6fb);
   box-shadow: inset 0 -6px 18px rgba(66,133,244,.22), inset 0 6px 14px #fff, 0 10px 30px rgba(110,90,200,.28);
-  scale: calc(1 + var(--level) * .14); transition: scale .09s linear; }
+  scale: calc(1 + var(--level) * .16); transition: scale .08s linear; }
 .core i { position: absolute; left: 18%; top: 18%; width: 64%; height: 64%; border-radius: 50%;
   filter: blur(12px); opacity: .9; animation: drift calc(var(--d) * var(--speed)) linear infinite; }
 .core i:nth-child(1) { --d: 9s;  --r: 22%; background: #4285f4; }
@@ -45,48 +243,84 @@ export const COMPONENTS = [
 @keyframes drift { from { transform: rotate(0) translateX(var(--r)) rotate(0); }
   to { transform: rotate(360deg) translateX(var(--r)) rotate(-360deg); } }
 .shine { background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.95), rgba(255,255,255,.45) 9%, transparent 26%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.55); scale: calc(1 + var(--level) * .14); }
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.55); scale: calc(1 + var(--level) * .16); }
 .orb[data-state="listening"] { --speed: .35; }
 .orb[data-state="thinking"] { --speed: .25; }
-.orb[data-state="thinking"] .core { animation: spin 1.4s linear infinite; }
+.orb[data-state="thinking"] .core { animation: spin 1.2s linear infinite; }
 .orb[data-state="speaking"] { --speed: .55; }
 @keyframes spin { to { rotate: 360deg; } }
-.controls { display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: #f0ece4; }
-.controls button { border: 0; background: none; padding: 6px 12px; border-radius: 99px; font: inherit; font-size: 13px; cursor: pointer; }
-.controls [aria-pressed="true"] { background: #fff; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }`,
+.state { margin: 0; font-size: 14px; color: #47564d; min-height: 20px; text-align: center; }`,
     js: function setup(root) {
       const orb = root.querySelector(".orb");
-      const order = ["idle", "listening", "thinking", "speaking"];
+      const label = root.querySelector(".state");
+      let stopMic = null;
       let raf = 0;
-      const set = (state) => {
-        orb.dataset.state = state;
-        for (const b of root.querySelectorAll("[data-s]")) b.setAttribute("aria-pressed", String(b.dataset.s === state));
-        cancelAnimationFrame(raf);
-        orb.style.setProperty("--level", "0");
-        if (state !== "listening" && state !== "speaking") return;
-        // A pretend voice; the real page feeds the microphone's level here.
-        const t0 = performance.now();
-        const tick = (t) => {
-          const v = Math.abs(Math.sin((t - t0) / 170)) * (0.5 + 0.5 * Math.sin((t - t0) / 610));
-          orb.style.setProperty("--level", v.toFixed(3));
+      const level = (v) => orb.style.setProperty("--level", v.toFixed(3));
+      const mood = (state, text) => { orb.dataset.state = state; label.textContent = text; };
+
+      async function listen() {
+        // Your microphone's loudness, about 60 times a second; nothing is recorded.
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const ctx = new AudioContext();
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 512;
+        ctx.createMediaStreamSource(stream).connect(analyser);
+        const data = new Uint8Array(analyser.fftSize);
+        const tick = () => {
+          analyser.getByteTimeDomainData(data);
+          let sum = 0;
+          for (const x of data) sum += ((x - 128) / 128) ** 2;
+          level(Math.min(1, Math.sqrt(sum / data.length) * 4.5));
           raf = requestAnimationFrame(tick);
         };
-        raf = requestAnimationFrame(tick);
+        tick();
+        return () => { cancelAnimationFrame(raf); stream.getTracks().forEach((t) => t.stop()); ctx.close(); level(0); };
+      }
+
+      function answer() {
+        mood("thinking", "Thinking…");
+        setTimeout(() => {
+          mood("speaking", "Speaking.");
+          const words = new SpeechSynthesisUtterance("Je vous ai bien entendu.");
+          words.lang = "fr-FR";
+          // Speech synthesis gives no level: a gentle pulse stands in while it talks.
+          const t0 = performance.now();
+          const pulse = (t) => { level(0.3 * Math.abs(Math.sin((t - t0) / 160))); raf = requestAnimationFrame(pulse); };
+          raf = requestAnimationFrame(pulse);
+          const done = () => { cancelAnimationFrame(raf); level(0); mood("idle", "Tap the orb and say something."); };
+          words.onend = done;
+          words.onerror = done;
+          if ("speechSynthesis" in window) speechSynthesis.speak(words);
+          else setTimeout(done, 1500);
+        }, 1200);
+      }
+
+      orb.onclick = async () => {
+        if (orb.dataset.state === "listening") {
+          stopMic?.();
+          stopMic = null;
+          return answer();
+        }
+        if (orb.dataset.state !== "idle") return;
+        try {
+          stopMic = await listen();
+          mood("listening", "Listening… tap again when you're done.");
+        } catch {
+          label.textContent = "No microphone here, or it was refused.";
+        }
       };
-      for (const b of root.querySelectorAll("[data-s]")) b.onclick = () => set(b.dataset.s);
-      orb.onclick = () => set(order[(order.indexOf(orb.dataset.state) + 1) % order.length]);
     },
   },
 
   {
-    id: "mini-orb",
+    id: "marble-jr",
     nickname: "Marble Jr.",
-    name: "Assistant button",
-    tags: ["animation"],
-    why: "The big orb's little sibling, so the way to the assistant already looks like the assistant. Layered radial gradients, no images, turns slowly, spins faster when you hover as if it is excited to see you.",
-    usedIn: { label: "Dashboard top bar", href: "/ndiedieng/" },
+    name: "The way in to the assistant",
+    tags: ["animation", "css only"],
+    why: "The Mood Marble's little sibling, so the button that opens the assistant already looks like the assistant: people recognise the orb before they read the word. Four layered gradients, no image, a slow turn, and a faster one when you hover, as if it is pleased to see you.",
+    usedIn: { label: "Ndiédieng's top bar", href: "/ndiedieng/" },
     html: `<a class="pill" href="#"><span class="mini"></span>Assistant</a>`,
-    css: `:host { display: grid; place-items: center; padding: 36px 0; }
+    css: `:host { display: grid; place-items: center; padding: 40px 0; }
 .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px 6px 8px; border-radius: 99px;
   border: 1px solid #dfe5e1; background: #fff; color: #15201a; font-weight: 600; text-decoration: none; }
 .mini { width: 22px; height: 22px; border-radius: 50%;
@@ -101,437 +335,163 @@ export const COMPONENTS = [
   },
 
   {
-    id: "select",
-    nickname: "The Personal Space Arrow",
-    name: "Dropdown with its own chevron",
-    tags: ["form", "css only"],
-    why: "Browsers draw the dropdown arrow wherever they like, sometimes right on top of a long village name. We drew our own, in a lane reserved for it: always vertically centred, always 18 px from the edge, and the text is told to stop and say \"…\" before it gets there.",
-    usedIn: { label: "Every dropdown", href: "/ndiedieng/" },
-    html: `<label>Chef de village
-  <select>
-    <option>Village 07 · +221 •• 07</option>
-    <option>A village with a remarkably, almost suspiciously long name</option>
-  </select>
-</label>`,
-    css: `:host { display: grid; place-items: center; padding: 34px 16px; }
-label { display: grid; gap: 6px; width: min(300px, 100%); font-size: 13px; font-weight: 600; color: #47564d; }
-select {
-  appearance: none; -webkit-appearance: none; width: 100%;
-  min-height: 42px; padding: 8px 44px 8px 12px; /* 44 px: the arrow's own lane */
-  border: 1px solid #dfe5e1; border-radius: 10px; background-color: #fff;
-  font: inherit; font-size: 15px; font-weight: 400; color: #15201a; cursor: pointer;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236b7a71' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-size: 12px; background-position: right 18px center;
-}`,
-    js: null,
-  },
-
-  {
-    id: "toast",
-    nickname: "The Oops Button",
-    name: "Toast with Undo",
-    tags: ["feedback"],
-    why: "\"Are you sure?\" dialogs train people to click Yes without reading. So deleting just happens, and for a few seconds an Undo sits at the bottom of the screen. Faster when you meant it, painless when you didn't.",
-    usedIn: { label: "Deleting a report", href: "/ndiedieng/" },
-    html: `<ul class="list">
-  <li>S-0042 · Forage en panne <button>Supprimer</button></li>
-  <li>S-0043 · Piste coupée <button>Supprimer</button></li>
-  <li>S-0044 · Lampadaire éteint <button>Supprimer</button></li>
-</ul>
-<div class="toast" role="status" hidden></div>`,
-    css: `:host { display: block; position: relative; min-height: 230px; padding: 20px; }
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.list li { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px;
-  background: #fff; border: 1px solid #e8e2d8; border-radius: 10px; font-size: 14px; }
-.list li[hidden] { display: none; }
-.list button { border: 0; background: none; color: #b42318; font: inherit; font-weight: 600; cursor: pointer; }
-.toast { position: absolute; left: 50%; bottom: 16px; translate: -50% 0; display: flex; gap: 14px; align-items: center;
-  padding: 10px 10px 10px 16px; border-radius: 12px; background: #15201a; color: #fff; font-size: 14px;
-  white-space: nowrap; animation: up .2s ease-out; }
-.toast[hidden] { display: none; }
-.toast button { border: 0; border-radius: 8px; padding: 6px 12px; background: rgba(255,255,255,.14);
-  color: #8ee4b5; font: inherit; font-weight: 700; cursor: pointer; }
-@keyframes up { from { opacity: 0; translate: -50% 8px; } }`,
-    js: function setup(root) {
-      const toast = root.querySelector(".toast");
-      let timer;
-      for (const button of root.querySelectorAll(".list button")) {
-        button.onclick = () => {
-          const item = button.closest("li");
-          item.hidden = true; // gone at once: no "are you sure?"
-          const undo = Object.assign(document.createElement("button"), { textContent: "Annuler" });
-          undo.onclick = () => { item.hidden = false; toast.hidden = true; };
-          const text = document.createElement("span");
-          text.textContent = `${item.firstChild.textContent.trim().split(" ·")[0]} supprimé.`;
-          toast.replaceChildren(text, undo);
-          toast.hidden = false;
-          clearTimeout(timer);
-          timer = setTimeout(() => (toast.hidden = true), 6000);
-        };
-      }
-    },
-  },
-
-  {
-    id: "tabs",
-    nickname: "The Headcount",
-    name: "Status filters with counts",
-    tags: ["navigation", "keyboard"],
-    why: "We had big number cards and status tabs that did the same thing, which is two things too many for a busy town hall. Now the filter is the count. Arrow keys move between them, like the radio buttons they really are.",
-    usedIn: { label: "Report list", href: "/ndiedieng/" },
-    html: `<div class="tabs" role="radiogroup" aria-label="Statut"></div>
-<p class="out" aria-live="polite"></p>`,
-    css: `:host { display: grid; justify-items: center; gap: 14px; padding: 34px 12px; }
-.tabs { display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: #eef2ef; max-width: 100%; overflow-x: auto; }
-.tabs button { display: inline-flex; gap: 6px; align-items: center; min-height: 32px; padding: 4px 12px;
-  border: 0; border-radius: 8px; background: none; font: inherit; font-size: 14px; color: #47564d; cursor: pointer; white-space: nowrap; }
-.tabs [aria-checked="true"] { background: #fff; color: #15201a; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
-.tabs small { font-size: 12px; color: #6b7a71; font-weight: 500; }
-.out { margin: 0; font-size: 13px; color: #6b7a71; }`,
-    js: function setup(root) {
-      const tabs = [["Tous", 37], ["Nouveaux", 18], ["À vérifier", 2], ["En cours", 15], ["Résolus", 2]];
-      const host = root.querySelector(".tabs");
-      let current = 0;
-      const draw = (focus = false) => {
-        host.replaceChildren(...tabs.map(([label, n], i) => {
-          const b = document.createElement("button");
-          b.setAttribute("role", "radio");
-          b.setAttribute("aria-checked", String(i === current));
-          b.tabIndex = i === current ? 0 : -1; // one tab stop for the group
-          b.append(label, Object.assign(document.createElement("small"), { textContent: n }));
-          b.onclick = () => { current = i; draw(true); };
-          return b;
-        }));
-        root.querySelector(".out").textContent = `${tabs[current][1]} signalements · ${tabs[current][0]}`;
-        if (focus) host.children[current].focus();
-      };
-      host.onkeydown = (e) => {
-        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-        current = (current + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
-        draw(true);
-      };
-      draw();
-    },
-  },
-
-  {
-    id: "palette",
-    nickname: "The Teleporter",
-    name: "Quick search (Ctrl/⌘ K)",
-    tags: ["keyboard", "search"],
-    why: "On stage, \"scroll, scroll, where was it\" is the sound of a demo dying. Type two letters and you are there. Results are grouped, the match is highlighted, and the arrow keys never leave the search box.",
-    usedIn: { label: "Dashboard", href: "/ndiedieng/" },
-    html: `<button class="open">Rechercher <kbd>Ctrl K</kbd></button>
-<dialog>
-  <input placeholder="Un signalement, un village…" role="combobox" aria-expanded="true" aria-controls="list" autocomplete="off">
-  <ul id="list" role="listbox"></ul>
-</dialog>`,
-    css: `:host { display: grid; place-items: center; padding: 38px 0; }
-.open { display: inline-flex; gap: 10px; align-items: center; padding: 8px 14px; border: 1px solid #dfe5e1;
-  border-radius: 10px; background: #fff; font: inherit; color: #6b7a71; cursor: pointer; }
-kbd { padding: 1px 6px; border: 1px solid #dfe5e1; border-bottom-width: 2px; border-radius: 6px; font: 600 11px/1.6 system-ui; }
-dialog { width: min(440px, 92vw); padding: 0; border: 0; border-radius: 14px; box-shadow: 0 24px 64px rgba(0,0,0,.28); }
-dialog::backdrop { background: rgba(15,25,20,.35); }
-input { width: 100%; padding: 14px 16px; border: 0; border-bottom: 1px solid #eef2ef; font: inherit; font-size: 16px; outline: none; }
-ul { list-style: none; margin: 0; padding: 6px; max-height: 260px; overflow: auto; }
-li { padding: 10px 12px; border-radius: 9px; cursor: pointer; font-size: 14px; }
-li[aria-selected="true"] { background: #e4f3eb; }
-mark { background: #fff3a8; color: inherit; border-radius: 3px; }`,
-    js: function setup(root) {
-      const items = ["S-0012 · Santé · Village 25", "S-0013 · Santé · Village 35", "S-0007 · Eau · Village 43",
-        "S-0021 · Piste · Village 08", "Village 10", "Nouveau signalement", "Exporter en CSV"];
-      const dialog = root.querySelector("dialog");
-      const input = root.querySelector("input");
-      const list = root.querySelector("ul");
-      const fold = (t) => t.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-      let shown = [], active = 0;
-      const draw = () => {
-        const q = fold(input.value.trim());
-        shown = items.filter((t) => fold(t).includes(q));
-        active = Math.min(active, Math.max(0, shown.length - 1));
-        list.replaceChildren(...shown.map((t, i) => {
-          const li = document.createElement("li");
-          li.setAttribute("role", "option");
-          li.setAttribute("aria-selected", String(i === active));
-          const at = q ? fold(t).indexOf(q) : -1; // highlight with text nodes, never innerHTML
-          if (at < 0) li.textContent = t;
-          else li.append(t.slice(0, at), Object.assign(document.createElement("mark"), { textContent: t.slice(at, at + q.length) }), t.slice(at + q.length));
-          li.onclick = () => { input.value = t; dialog.close(); };
-          return li;
-        }));
-      };
-      const open = () => { input.value = ""; active = 0; draw(); dialog.showModal(); input.focus(); };
-      root.querySelector(".open").onclick = open;
-      input.oninput = () => { active = 0; draw(); };
-      input.onkeydown = (e) => {
-        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-          e.preventDefault();
-          if (shown.length) active = (active + (e.key === "ArrowDown" ? 1 : shown.length - 1)) % shown.length;
-          draw();
-        } else if (e.key === "Enter" && shown[active]) dialog.close();
-      };
-      dialog.onclick = (e) => { if (e.target === dialog) dialog.close(); };
-      document.addEventListener("keydown", (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k" && root.host.isConnected && root.host.matches(":hover, :focus-within")) {
-          e.preventDefault();
-          open();
-        }
-      });
-    },
-  },
-
-  {
-    id: "waveform",
-    nickname: "The Seismograph",
-    name: "Live microphone waveform",
-    tags: ["voice", "animation"],
-    why: "When you talk to a page and nothing moves, you start doubting the page, then the microphone, then yourself. These bars read your actual voice through the Web Audio API, so you know you are being heard. Nothing is recorded or sent.",
-    usedIn: { label: "Voice messages in the phones", href: "/ndiedieng/" },
-    html: `<div class="bars" aria-hidden="true"></div>
-<div class="row">
-  <button class="mic">Use my microphone</button>
-  <button class="fake">Pretend</button>
-</div>
-<p class="note" aria-live="polite">Nothing is recorded or sent anywhere.</p>`,
-    css: `:host { display: grid; justify-items: center; gap: 16px; padding: 30px 12px; }
-.bars { display: flex; align-items: center; gap: 4px; height: 64px; }
-.bars i { width: 5px; height: 6px; border-radius: 3px; transition: height .08s linear;
-  background: linear-gradient(#4285f4, #9b72cb 60%, #d96570); }
-.row { display: flex; gap: 8px; }
-button { padding: 8px 14px; border: 1px solid #dfe5e1; border-radius: 99px; background: #fff; font: inherit; font-size: 14px; cursor: pointer; }
-.note { margin: 0; font-size: 12.5px; color: #6b7a71; }`,
-    js: function setup(root) {
-      const host = root.querySelector(".bars");
-      const bars = Array.from({ length: 24 }, () => host.appendChild(document.createElement("i")));
-      const levels = Array(24).fill(0);
-      let stop = () => {};
-      const show = (v) => {
-        levels.push(v);
-        levels.shift();
-        // Mirrored, loudest in the middle, as a voice looks.
-        bars.forEach((b, i) => (b.style.height = `${6 + levels[Math.abs(23 - Math.abs(2 * i - 23))] * 56}px`));
-      };
-      root.querySelector(".mic").onclick = async () => {
-        stop();
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          const ctx = new AudioContext();
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 512;
-          ctx.createMediaStreamSource(stream).connect(analyser);
-          const data = new Uint8Array(analyser.fftSize);
-          let raf;
-          const tick = () => {
-            analyser.getByteTimeDomainData(data);
-            let sum = 0;
-            for (const x of data) sum += ((x - 128) / 128) ** 2;
-            show(Math.min(1, Math.sqrt(sum / data.length) * 4.5)); // loudness, 0 to 1
-            raf = requestAnimationFrame(tick);
-          };
-          tick();
-          root.querySelector(".note").textContent = "Listening. Say something!";
-          stop = () => { cancelAnimationFrame(raf); stream.getTracks().forEach((t) => t.stop()); ctx.close(); };
-        } catch {
-          root.querySelector(".note").textContent = "No microphone here; try Pretend.";
-        }
-      };
-      root.querySelector(".fake").onclick = () => {
-        stop();
-        let raf;
-        const t0 = performance.now();
-        const tick = (t) => { show(Math.abs(Math.sin((t - t0) / 140)) * Math.random()); raf = requestAnimationFrame(tick); };
-        raf = requestAnimationFrame(tick);
-        stop = () => cancelAnimationFrame(raf);
-      };
-    },
-  },
-
-  {
-    id: "island",
-    nickname: "The Island Hopper",
-    name: "iPhone status bar with Dynamic Island",
-    tags: ["phone", "css"],
-    why: "Our first iPhone had its island parked on the bezel and the clock elbowing it. The fix: put the island inside the screen and split the status bar into a three-column grid, so the time and the icons each get their own \"ear\". No Wi-Fi icon, on purpose: the village has no internet.",
-    usedIn: { label: "iPhone simulator", href: "/ndiedieng/" },
-    html: `<div class="phone">
-  <div class="screen">
-    <div class="island"></div>
-    <div class="status">
-      <span class="ear time">09:41</span>
-      <span></span>
-      <span class="ear">▂▄▆ ▭</span>
-    </div>
-    <p class="hello">*123#</p>
-  </div>
-</div>`,
-    css: `:host { display: grid; place-items: center; padding: 24px 0; }
-.phone { width: 260px; padding: 10px; border-radius: 46px; background: #1c1c1e;
-  box-shadow: inset 0 0 0 1px #6b6b70, inset 0 0 0 4px #2c2c2e, 0 18px 40px rgba(0,0,0,.25); }
-.screen { position: relative; height: 170px; border-radius: 36px; background: #fff; overflow: hidden;
-  font-family: -apple-system, system-ui, sans-serif; }
-.island { position: absolute; top: 8px; left: 50%; translate: -50% 0; width: 84px; height: 25px;
-  border-radius: 13px; background: #000; z-index: 2; }
-.status { display: grid; grid-template-columns: 1fr 92px 1fr; align-items: center; height: 40px; font-size: 14px; font-weight: 600; }
-.ear { display: flex; justify-content: center; letter-spacing: -.02em; }
-.time { padding-left: 8px; }
-.hello { margin: 34px 0 0; text-align: center; font-size: 30px; font-weight: 300; }`,
-    js: function setup(root) {
-      const time = root.querySelector(".time");
-      const tick = () => (time.textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
-      tick();
-      setInterval(tick, 30_000);
-    },
-  },
-
-  {
-    id: "brick",
-    nickname: "The Brick",
-    name: "Keypad phone with USSD",
-    tags: ["phone", "keyboard"],
-    why: "Most phones in the villages look like this, so the demo has to work on this first. A green-grey screen, real keys, and your computer keyboard works too. Dial *123# and press the green key.",
-    usedIn: { label: "Simple phone", href: "/ndiedieng/" },
-    html: `<div class="brick" tabindex="0" aria-label="Keypad phone: type digits, Enter to call">
-  <div class="lcd" aria-live="polite"></div>
-  <div class="keys"></div>
-</div>`,
-    css: `:host { display: grid; place-items: center; padding: 20px 0; }
-.brick { width: 200px; padding: 16px 14px 18px; border-radius: 30px 30px 36px 36px; outline: none;
-  background: linear-gradient(160deg, #3a4048, #20242a); box-shadow: 0 16px 34px rgba(0,0,0,.28); }
-.brick:focus-visible { box-shadow: 0 0 0 3px #b5501b, 0 16px 34px rgba(0,0,0,.28); }
-.lcd { height: 112px; padding: 6px 8px; border-radius: 6px; white-space: pre-wrap; overflow: hidden;
-  background: linear-gradient(#cfe0b4, #b9cf97); color: #1d2a12; font: 12px/1.3 ui-monospace, monospace;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,.25); }
-.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
-.keys button { min-height: 32px; border: 0; border-radius: 10px; background: #e9ecef; font: 600 15px system-ui; cursor: pointer; }
-.keys .call { background: #2f8f4e; color: #fff; }
-.keys .end { background: #b33a3a; color: #fff; }
-.keys button:active { transform: translateY(1px); filter: brightness(.92); }`,
-    js: function setup(root) {
-      const lcd = root.querySelector(".lcd");
-      let typed = "";
-      const MENU = "Mairie de Ndiédieng\n1. Signaler une panne\n2. Naissance\n3. Décès\n4. Suivre";
-      const draw = () => (lcd.textContent = typed ? `\n\n${typed}_` : "▂▄▆ SN        09:41\n\n\n  Composez *123#");
-      const press = (k) => {
-        if (k === "call") { lcd.textContent = typed === "*123#" ? MENU : "Code inconnu.\nEssayez *123#"; typed = ""; return; }
-        if (k === "end") { typed = ""; return draw(); }
-        typed += k;
-        draw();
-      };
-      root.querySelector(".keys").append(
-        ...["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#", "call", "end"].map((k) => {
-          const b = Object.assign(document.createElement("button"), { textContent: k === "call" ? "📞" : k === "end" ? "✕" : k });
-          if (k === "call" || k === "end") b.className = k;
-          b.onclick = () => press(k);
-          return b;
-        }),
-      );
-      root.querySelector(".brick").onkeydown = (e) => {
-        if (/^[0-9*#]$/.test(e.key)) press(e.key);
-        else if (e.key === "Enter") press("call");
-        else if (e.key === "Escape" || e.key === "Backspace") press("end");
-      };
-      draw();
-    },
-  },
-
-  {
-    id: "fit",
-    nickname: "The Shrink Ray",
-    name: "Fit-to-container scaling",
-    tags: ["layout"],
-    why: "A phone is 620 px tall; a laptop screen, after the browser has eaten its share, often isn't. Instead of making the page scroll, the phone shrinks to whatever room is left. Drag the corner of the box to zap it.",
-    usedIn: { label: "Village side", href: "/ndiedieng/" },
-    html: `<div class="stage">
-  <div class="fit"><div class="device">300 × 620</div></div>
-</div>
-<p class="note" aria-live="polite"></p>`,
-    css: `:host { display: grid; justify-items: center; gap: 10px; padding: 18px 12px; }
-.stage { position: relative; width: 300px; height: 230px; min-width: 120px; min-height: 120px; max-width: 100%;
-  resize: both; overflow: hidden; border: 2px dashed #d8cfc1; border-radius: 12px; background: #fff; }
-.fit { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(var(--fit, 1)); }
-.device { width: 300px; height: 620px; border-radius: 44px; display: grid; place-items: center;
-  background: #1c1c1e; color: #fff; font: 600 22px system-ui; box-shadow: inset 0 0 0 10px #2c2c2e; }
-.note { margin: 0; font-size: 13px; color: #6b7a71; font-variant-numeric: tabular-nums; }`,
-    js: function setup(root) {
-      const stage = root.querySelector(".stage");
-      const fit = root.querySelector(".fit");
-      new ResizeObserver(() => {
-        // The largest scale at which the whole device still fits, never above 1.
-        const s = Math.min(1, (stage.clientHeight - 8) / 620, (stage.clientWidth - 8) / 300);
-        fit.style.setProperty("--fit", String(Math.max(0.1, s)));
-        root.querySelector(".note").textContent = `scale ${s.toFixed(2)}`;
-      }).observe(stage);
-    },
-  },
-
-  {
     id: "patience",
     nickname: "The Patience Timer",
-    name: "Dictation watchdog",
+    name: "Dictation that never hangs",
     tags: ["voice", "reliability"],
-    why: "Some browsers offer speech recognition and then simply never start it, leaving you shouting at a page that isn't listening. We give it 5 seconds to show signs of life, then stop politely and say which browsers do work.",
-    usedIn: { label: "Every microphone button", href: "/ndiedieng/assistant/" },
-    html: `<button class="go">Start a dictation that never starts</button>
-<p class="out" aria-live="polite">Waiting for you to press the button.</p>`,
-    css: `:host { display: grid; justify-items: center; gap: 14px; padding: 40px 16px; text-align: center; }
-.go { padding: 10px 16px; border: 1px solid #dfe5e1; border-radius: 99px; background: #fff; font: inherit; cursor: pointer; }
-.out { margin: 0; min-height: 40px; max-width: 340px; font-size: 14px; color: #47564d; }`,
+    why: "The Web Speech API has three traps. Brave, Arc and others offer it and then never start, so the page waits forever. Safari only allows it when started directly from a tap, so any await before start() silently breaks it. And the error codes are not words a person understands. This wrapper starts inside the tap, gives the browser 5 seconds to show signs of life, caps a dictation at 45, and turns every failure into a sentence.",
+    usedIn: { label: "Every microphone in Ndiédieng", href: "/ndiedieng/assistant/" },
+    html: `<div class="row">
+  <button class="real">🎙 Dictate (for real)</button>
+  <button class="broken">Pretend my browser is broken</button>
+</div>
+<p class="out" aria-live="polite">French, by default. Nothing leaves your browser except what your browser itself sends.</p>`,
+    css: `:host { display: grid; justify-items: center; gap: 14px; padding: 34px 16px; text-align: center; }
+.row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+button { padding: 10px 16px; border: 1px solid #dfe5e1; border-radius: 99px; background: #fff; font: inherit; cursor: pointer; }
+.real { background: #0b6b45; border-color: #0b6b45; color: #fff; font-weight: 600; }
+.out { margin: 0; min-height: 44px; max-width: 380px; font-size: 14px; color: #47564d; }`,
     js: function setup(root) {
-      const out = root.querySelector(".out");
-      // The real thing wraps the browser's SpeechRecognition; here, one that hangs.
-      const brokenRecognition = { start() {}, abort() {}, onaudiostart: null };
-      function listenWithTimeout(recognition, ms, onGiveUp) {
-        let started = false;
-        recognition.onaudiostart = () => (started = true);
+      const ERRORS = {
+        "not-allowed": "The microphone is blocked for this site. Allow it in the address bar.",
+        "audio-capture": "No microphone was found.",
+        "no-speech": "I didn't hear anything.",
+        network: "This browser's dictation needs its servers, or isn't really offered (Brave, Arc…). Try Chrome, Edge or Safari.",
+        silent: "This browser shows dictation but doesn't run it. Try Chrome, Edge or Safari.",
+      };
+
+      /** One dictation. Call it inside the click: Safari refuses it later. */
+      function listen(Recognition, { lang = "fr-FR", onText, onDone, onError }) {
+        const r = new Recognition();
+        r.lang = lang;
+        r.interimResults = true;
+        let text = "", started = false, ended = false, failed = false;
+        const finish = () => {
+          if (ended) return;
+          ended = true;
+          clearTimeout(watchdog);
+          clearTimeout(cap);
+          onDone(failed ? "" : text.trim());
+        };
+        // No sign of life in 5 s: stop, and say so, rather than wait forever.
         const watchdog = setTimeout(() => {
           if (started) return;
-          recognition.abort();
-          onGiveUp();
-        }, ms);
-        recognition.start();
-        return () => clearTimeout(watchdog);
+          failed = true;
+          onError(ERRORS.silent);
+          r.abort();
+          finish(); // some browsers never even fire "end"
+        }, 5000);
+        const cap = setTimeout(() => r.stop(), 45_000);
+        r.onaudiostart = () => (started = true);
+        r.onresult = (e) => {
+          text = Array.from(e.results, (res) => res[0].transcript).join("");
+          onText(text);
+        };
+        r.onerror = (e) => {
+          if (e.error === "aborted") return;
+          failed = true;
+          onError(ERRORS[e.error] ?? `Dictation failed (${e.error}).`);
+        };
+        r.onend = finish;
+        r.start(); // first, synchronously, still inside the tap
+        return { stop: () => r.stop() };
       }
-      root.querySelector(".go").onclick = () => {
-        let left = 5;
-        out.textContent = "Listening… 5";
-        const count = setInterval(() => (out.textContent = left > 1 ? `Listening… ${--left}` : out.textContent), 1000);
-        listenWithTimeout(brokenRecognition, 5000, () => {
-          clearInterval(count);
-          out.textContent = "This browser shows dictation but doesn't run it. Try Chrome, Edge or Safari.";
-        });
+
+      const out = root.querySelector(".out");
+      const callbacks = {
+        onText: (t) => (out.textContent = `“${t}”`),
+        onDone: (t) => { if (t) out.textContent = `Heard: “${t}”`; },
+        onError: (m) => (out.textContent = m),
+      };
+      root.querySelector(".real").onclick = () => {
+        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!Recognition) return (out.textContent = "No dictation in this browser. Try Chrome, Edge or Safari.");
+        out.textContent = "Listening… speak French.";
+        listen(Recognition, callbacks);
+      };
+      // A recognizer that never starts, like some browsers ship.
+      class NeverStarts { start() {} stop() {} abort() {} }
+      root.querySelector(".broken").onclick = () => {
+        out.textContent = "Listening… (this one will never start)";
+        listen(NeverStarts, callbacks);
       };
     },
   },
 
   {
-    id: "csv",
-    nickname: "The Spreadsheet Butler",
-    name: "CSV export that opens right in French Excel",
-    tags: ["data"],
-    why: "A CSV with commas opens in French Excel as one sad column, and \"Décès\" turns into \"DÃ©cÃ¨s\". Semicolons and a byte-order mark fix both. Phone numbers stay masked: a spreadsheet travels further than you think.",
-    usedIn: { label: "Exporter button", href: "/ndiedieng/" },
-    html: `<button class="go">Download a sample</button>
-<pre class="peek"></pre>`,
-    css: `:host { display: grid; justify-items: center; gap: 12px; padding: 26px 12px; }
-.go { padding: 10px 16px; border: 0; border-radius: 10px; background: #0b6b45; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
-.peek { margin: 0; max-width: 100%; overflow: auto; padding: 10px 12px; border-radius: 8px; background: #fff;
-  border: 1px solid #e8e2d8; font: 12px/1.5 ui-monospace, monospace; }`,
+    id: "unmuter",
+    nickname: "The Unmuter",
+    name: "Spoken answers that actually play on an iPhone",
+    tags: ["voice", "mobile", "reliability"],
+    why: "On an iPhone, sound that starts after a network call is blocked: the answer arrives three seconds after your tap, and plays in silence. The fix is to unlock a player inside the tap and reuse it. And if you route the audio through an analyser to animate it, a suspended audio context mutes everything, so the analyser is plugged in only once the context is really running. This demo plays a talking-drum phrase (the kalangu that gives the project its name), made in the browser.",
+    usedIn: { label: "Ndiédieng's spoken answers", href: "/ndiedieng/assistant/" },
+    html: `<button class="play">Play the drum</button>
+<div class="meter" aria-hidden="true"><i></i></div>
+<p class="out" aria-live="polite">The bar follows the real sound.</p>`,
+    css: `:host { display: grid; justify-items: center; gap: 14px; padding: 34px 16px; }
+.play { padding: 10px 18px; border: 0; border-radius: 99px; background: #b5501b; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.meter { width: 240px; height: 10px; border-radius: 5px; background: #eee5d8; overflow: hidden; }
+.meter i { display: block; height: 100%; width: calc(var(--level, 0) * 100%); border-radius: 5px; background: linear-gradient(90deg, #e9c22e, #b5501b); transition: width .05s linear; }
+.out { margin: 0; font-size: 13.5px; color: #47564d; }`,
     js: function setup(root) {
-      const rows = [
-        ["Signalement", "Village", "Catégorie", "Statut", "Téléphone (masqué)"],
-        ["S-0042", "Village 12", "Eau", "En cours", "+221 •• ••• •• 12"],
-        ["S-0043", "Village 08", "Décès", "Nouveau", "+221 •• ••• •• 08"],
-      ];
-      const cell = (v) => (/[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-      const csv = rows.map((r) => r.map(cell).join(";")).join("\r\n");
-      root.querySelector(".peek").textContent = csv;
-      root.querySelector(".go").onclick = () => {
-        // "﻿" first: the byte-order mark that tells Excel it is UTF-8.
-        const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
-        const a = Object.assign(document.createElement("a"), { href: url, download: "signalements.csv" });
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      let player = null, ctx = null, analyser = null;
+
+      /** Inside the tap: create and unlock the one player we will reuse. */
+      function unlock() {
+        player ??= Object.assign(new Audio(), { playsInline: true });
+        ctx ??= new AudioContext();
+        ctx.resume().then(() => {
+          // Only once audio really runs: a suspended context would mute the player.
+          if (analyser || ctx.state !== "running") return;
+          analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          ctx.createMediaElementSource(player).connect(analyser);
+          analyser.connect(ctx.destination);
+        });
+      }
+
+      /** A talking drum: pitch bends like a voice, as a WAV made right here. */
+      function drumWav() {
+        const rate = 22050, beats = [[0, 180, 120], [0.32, 240, 150], [0.55, 150, 110], [0.9, 260, 160], [1.2, 200, 120]];
+        const n = Math.floor(rate * 1.7), pcm = new Int16Array(n);
+        for (const [at, from, to] of beats) {
+          for (let i = 0; i < rate * 0.35; i++) {
+            const t = i / rate, j = Math.floor((at + t) * rate);
+            if (j >= n) break;
+            const f = to + (from - to) * Math.exp(-t * 9); // the squeeze of the drum's cords
+            pcm[j] += Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 7) * 12000;
+          }
+        }
+        const head = new DataView(new ArrayBuffer(44));
+        const str = (o, s) => [...s].forEach((c, i) => head.setUint8(o + i, c.charCodeAt(0)));
+        str(0, "RIFF"); head.setUint32(4, 36 + n * 2, true); str(8, "WAVEfmt ");
+        head.setUint32(16, 16, true); head.setUint16(20, 1, true); head.setUint16(22, 1, true);
+        head.setUint32(24, rate, true); head.setUint32(28, rate * 2, true); head.setUint16(32, 2, true); head.setUint16(34, 16, true);
+        str(36, "data"); head.setUint32(40, n * 2, true);
+        return new Blob([head, pcm], { type: "audio/wav" });
+      }
+
+      root.querySelector(".play").onclick = async () => {
+        unlock(); // first, inside the tap
+        // Then the slow part (in Ndiédieng: fetching Gemini's voice, about 3 s).
+        await new Promise((r) => setTimeout(r, 600));
+        const url = URL.createObjectURL(drumWav());
+        player.src = url;
+        await player.play();
+        const bar = root.querySelector(".meter");
+        const data = new Uint8Array(256);
+        const tick = () => {
+          if (analyser) {
+            analyser.getByteTimeDomainData(data);
+            let peak = 0;
+            for (const x of data) peak = Math.max(peak, Math.abs(x - 128) / 128);
+            bar.style.setProperty("--level", Math.min(1, peak * 1.6).toFixed(3));
+          }
+          if (!player.ended) requestAnimationFrame(tick);
+          else { bar.style.setProperty("--level", "0"); URL.revokeObjectURL(url); }
+        };
+        tick();
+        root.querySelector(".out").textContent = analyser ? "Playing, and measured as it plays." : "Playing (no level reading in this browser).";
       };
     },
   },

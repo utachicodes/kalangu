@@ -5,7 +5,7 @@
 // page through textContent, never as HTML (see common.js).
 
 import { $, h, icon, toast, announce, connect, call, canListen, canSpeak, listenUnavailable, listen, speak, stopSpeaking,
-  naturalVoiceAvailable, unlockVoice, speakNatural, stopNatural } from "./common.js";
+  naturalVoiceAvailable, unlockVoice, speakNatural, stopNatural, recordQuestion, transcribe } from "./common.js";
 
 const IDEAS = ["Quels forages sont en panne ?", "Quels villages ont le plus de pannes ?", "Quels signalements urgents sont en attente ?", "Combien de naissances ce mois-ci ?"];
 
@@ -18,7 +18,8 @@ function setOrb(next, line = null, heard = false, { realLevel = false } = {}) {
   const orb = $("orb");
   orb.dataset.state = next;
   orb.setAttribute("aria-label", next === "listening" ? "Arrêter et envoyer" : next === "speaking" ? "Arrêter la lecture" : next === "thinking" ? "L'assistant réfléchit" : "Parler à l'assistant");
-  $("aurora").classList.toggle("on", next === "listening" || next === "speaking");
+  $("aurora").classList.toggle("on", next !== "idle");
+  $("aurora").classList.toggle("thinking", next === "thinking");
   cancelAnimationFrame(speakingWobble);
   if (next === "speaking" && !realLevel) {
     // No level comes from the browser's speech synthesis: a gentle pulse stands in for it.
@@ -45,11 +46,12 @@ function onOrb() {
   if (state.orb === "speaking") return quiet();
   if (state.orb === "thinking") return;
   if (state.natural) unlockVoice(); // inside the tap, so the answer can be heard
+  quiet();
+  if (state.natural) return listenWithGemini();
   if (!canListen) {
     toast(listenUnavailable);
     return showKeyboard(true);
   }
-  quiet();
   setOrb("listening", "Je vous écoute…");
   dictation = listen({
     onText: (t) => setOrb("listening", t || "Je vous écoute…", Boolean(t)),
@@ -60,6 +62,41 @@ function onOrb() {
       else setOrb("idle");
     },
     onError: (m) => toast(m),
+  });
+}
+
+/** Records the question in the page, then Gemini writes it down: works in every browser. */
+function listenWithGemini() {
+  setOrb("listening", "Je vous écoute… touchez l'orbe quand vous avez fini.");
+  let stopped = false;
+  dictation = {
+    stop: () => {
+      stopped = true;
+      recorder?.stop();
+    },
+  };
+  let recorder = null;
+  recordQuestion({
+    onLevel: level,
+    onSpeech: () => state.orb === "listening" && setOrb("listening", "Je vous entends… je m'arrête quand vous faites une pause."),
+    onError: (m) => toast(m),
+    onDone: async (wav) => {
+      dictation = null;
+      if (!wav) return setOrb("idle", stopped ? null : "Je n'ai rien entendu. Touchez l'orbe et parlez.");
+      setOrb("thinking", "Je transcris…");
+      try {
+        const text = await transcribe(wav);
+        if (!text) return setOrb("idle", "Je n'ai pas compris. Réessayez, plus près du micro.");
+        setOrb("thinking", text, true);
+        ask(text, { spoken: true });
+      } catch (err) {
+        toast(`La transcription a échoué : ${err.message}`);
+        setOrb("idle");
+      }
+    },
+  }).then((r) => {
+    recorder = r;
+    if (stopped) r.stop();
   });
 }
 
@@ -131,14 +168,18 @@ function say(m, i) {
     setOrb("speaking");
     return browserVoice();
   }
-  // Gemini's voice, with the orb following it; the browser's if it fails.
+  // Gemini's voice, in the answer's language, with the orb following it.
+  // If it fails: the browser's French voice, or for Wolof, which no browser
+  // speaks, the written answer alone.
   setOrb("thinking", "Je prépare la réponse vocale…");
   speakNatural(spoken(m), {
+    langue: m.langue ?? "fr",
     onStart: () => state.speaking === i && setOrb("speaking", null, false, { realLevel: true }),
     onEnd: ended,
     onLevel: (v) => state.speaking === i && level(v),
   }).catch(() => {
     if (state.speaking !== i) return;
+    if (m.langue === "wo") return ended();
     setOrb("speaking");
     browserVoice();
   });
@@ -167,7 +208,7 @@ async function ask(question, { spoken = false } = {}) {
   let answer;
   try {
     const a = await call("POST", "/api/ask", { question });
-    answer = { role: "bot", text: a.answer, sql: a.sql, columns: a.columns ?? [], rows: a.rows ?? [], suggestions: a.suggestions ?? [] };
+    answer = { role: "bot", text: a.answer, sql: a.sql, columns: a.columns ?? [], rows: a.rows ?? [], suggestions: a.suggestions ?? [], langue: a.langue ?? "fr" };
   } catch (err) {
     answer = { role: "bot", text: `Désolé, je n'ai pas pu répondre : ${err.message}` };
   } finally {
@@ -221,10 +262,6 @@ async function start() {
     $("booting").replaceChildren(h("p", { text: `L'assistant n'a pas pu démarrer : ${err.message}. Vérifiez votre connexion puis rechargez la page.` }));
     return;
   }
-  try {
-    const info = await call("GET", "/api/info");
-    if (/gemini/i.test(info.mode)) $("fine").textContent = "Avec Gemini. Répond à partir des fiches (fictives) de la commune et des signalements, et montre les données utilisées.";
-  } catch {}
   $("booting").hidden = true;
   if (!canListen) showKeyboard(true);
 }

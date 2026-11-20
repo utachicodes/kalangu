@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Ndiédieng's assistant answers in Wolof when asked in Wolof, in writing and
+  aloud: Gemini reports the question's language (from the transcription and
+  the question) and the answer and the voice follow it; otherwise French.
+  The prompt now lists the data's exact values ('en panne', not 'en_panne'),
+  which fixed a wrong "no broken borehole" answer. Spoken answers use two
+  speech requests at most, since the speech quota is tight; if the second
+  fails, the browser's voice finishes a French answer.
+- Ndiédieng's assistant listens through Gemini when it is available: the page
+  records the question, stops by itself at a pause (judged against the
+  room's own noise), and Gemini transcribes it (French or Wolof), so it works
+  in every browser, not only those whose dictation runs. Spoken answers start
+  sooner: the first sentence plays while the next is prepared. The glow at
+  the bottom of the screen is now a full-width band that rises with the
+  voice and breathes while the assistant thinks; the fine print under the
+  orb is gone.
+- The components page keeps only what is not available elsewhere: "The
+  Bouncer", a USSD and SMS screen preview on Kalangu's own budgeter (which
+  characters double an SMS's cost, how a menu splits into screens); "The
+  Triplets", one real Kalangu USSD session on a keypad phone, an Android and
+  an iPhone; the voice orb on your real microphone; Marble Jr.; dictation
+  that never hangs; and spoken answers that play on iPhones. The commodity
+  pieces (select, toast, tabs, quick search, CSV) are gone from it.
 - The website has a components page (`/components/`, linked next to Design,
   Roadmap and Contribute, and in the docs header): the twelve UI components
   built for the Ndiédieng example, each with a live demo running from the

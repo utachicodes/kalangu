@@ -41,7 +41,7 @@ describe("the website's Gemini function", () => {
     const handle = geminiHandler({ apiKey: "k", fetch: g.fetch });
     expect((await handle(post({ task: "plan", question: "q" }, "https://evil.example"))).status).toBe(403);
     expect((await handle(post({ task: "anything", prompt: "write a poem" }))).status).toBe(400);
-    expect((await handle(post("x".repeat(40_000)))).status).toBe(413);
+    expect((await handle(post("x".repeat(1_600_000)))).status).toBe(413);
     expect((await handle(post("{not json"))).status).toBe(400);
     expect(g.calls).toHaveLength(0);
   });
@@ -68,6 +68,21 @@ describe("the website's Gemini function", () => {
     expect(calls[0].body.generationConfig).toMatchObject({ responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } });
     expect(calls[0].body.contents[0].parts[0].text).toMatch(/: 7 forages sont en panne\.$/);
     expect((await geminiHandler({ apiKey: "k", fetch })(post({ task: "speak", text: "x".repeat(800) }))).status).toBe(400);
+  });
+
+  it("transcribes a recorded question, and only WAV within limits", async () => {
+    const calls: any[] = [];
+    const fetch = (async (_url: string, init: RequestInit) => {
+      calls.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ texte: "Quels forages sont en panne ?" }) }] } }] }));
+    }) as unknown as typeof globalThis.fetch;
+    const handle = geminiHandler({ apiKey: "k", fetch });
+    const res = await handle(post({ task: "transcribe", audio: "UklGRiQAAABXQVZF", mimeType: "audio/wav" }));
+    expect(await res.json()).toEqual({ result: { texte: "Quels forages sont en panne ?" } });
+    expect(calls[0].contents[0].parts[0]).toEqual({ inlineData: { mimeType: "audio/wav", data: "UklGRiQAAABXQVZF" } });
+    expect((await handle(post({ task: "transcribe", audio: "abc", mimeType: "video/mp4" }))).status).toBe(400);
+    expect((await handle(post({ task: "transcribe", audio: "<script>", mimeType: "audio/wav" }))).status).toBe(400);
+    expect(calls).toHaveLength(1);
   });
 
   it("reports a Gemini failure without Google's details", async () => {

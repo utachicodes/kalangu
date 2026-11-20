@@ -26,7 +26,8 @@ export interface GeminiFunctionOptions {
 }
 
 const SITE = /^https:\/\/(kalangu\.utachi\.website|kalangu-site[a-z0-9-]*\.vercel\.app)$|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
-const MAX_BODY = 32_000;
+/** A recorded question is the largest request: about 30 s of 16 kHz WAV, as base64. */
+const MAX_BODY = 1_500_000;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
