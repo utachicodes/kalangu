@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deadline, any model, languages, testing without a SIM), an agent in one
   screen of code, the Ndiédieng example, how to install, and a footer. The
   hero's "↓" now leads there.
+- No button or link appears twice on a page any more, each kept where it
+  belongs: on the landing page the hero keeps Quick start, Documentation and
+  Live example and the nav the site's sections; the docs header keeps only
+  what the sidebar doesn't list; the components page names the example once.
+  The Ndiédieng dashboard stays as it was.
 - Ndiédieng's assistant answers in Wolof when asked in Wolof, in writing and
   aloud: Gemini reports the question's language (from the transcription and
   the question) and the answer and the voice follow it; otherwise French.

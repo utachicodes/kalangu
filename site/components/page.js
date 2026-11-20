@@ -85,7 +85,8 @@ function card(c, i) {
       el("p", { class: "real", text: c.name }),
       el("p", { class: "why", text: c.why }),
       el("div", { class: "tags" }, c.tags.map((t) => el("span", { text: t }))),
-      el("p", { class: "used" }, "Used in: ", el("a", { href: c.usedIn.href, text: c.usedIn.label }))),
+      // Plain text: the example is linked once, in the intro.
+      el("p", { class: "used", text: `Used in: ${c.usedIn.label}` })),
     el("div", { class: "side-r" },
       demo,
       el("div", { class: "code" }, el("div", { class: "code-bar" }, tablist, copy), pre)));
