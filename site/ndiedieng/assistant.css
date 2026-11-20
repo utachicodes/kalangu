@@ -1,0 +1,127 @@
+/* The assistant's page: one column of conversation, a greeting, suggestion
+   cards, a large prompt bar and a glow that follows the voice. Gemini was
+   the inspiration; the colours stay the commune's where it matters. */
+
+body.gem {
+  --g-bg: #ffffff;
+  --g-surface: #f0f4f9;
+  --g-surface-2: #e9eef6;
+  --g-ink: #1f1f1f;
+  --g-ink-2: #444746;
+  --g-ink-3: #747775;
+  --g-blue: #4285f4;
+  --g-purple: #9b72cb;
+  --g-pink: #d96570;
+  display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
+  background: var(--g-bg); color: var(--g-ink); font-size: 16px;
+}
+
+/* ---------- Top ---------- */
+.gem-top { flex: none; display: flex; align-items: center; gap: 12px; padding: 10px clamp(12px, 3vw, 24px); }
+.back { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 12px 4px 6px; border-radius: 99px; color: var(--g-ink-2); text-decoration: none; font-size: 14px; font-weight: 500; }
+.back:hover { background: var(--g-surface); }
+.back svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.gem-name { margin: 0 auto 0 4px; display: inline-flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 500; }
+.gem-name .thin { color: var(--g-ink-3); font-weight: 400; }
+.gem-actions { display: flex; gap: 6px; align-items: center; }
+.gem-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 14px; border-radius: 99px; border: 1px solid #c4c7c5; background: transparent; cursor: pointer; font-size: 14px; color: var(--g-ink-2); }
+.gem-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.gem-toggle[aria-pressed="true"] { background: #d3e3fd; border-color: #d3e3fd; color: #041e49; font-weight: 600; }
+.gem-icon { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 50%; border: 0; background: transparent; cursor: pointer; color: var(--g-ink-2); }
+.gem-icon:hover { background: var(--g-surface-2); }
+.gem-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The four-pointed star, in the three colours. */
+.spark { width: 22px; height: 22px; flex: none; display: inline-block; background: conic-gradient(from 200deg, var(--g-blue), var(--g-purple), var(--g-pink), var(--g-blue));
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2c.6 5.4 4.6 9.4 10 10-5.4.6-9.4 4.6-10 10-.6-5.4-4.6-9.4-10-10 5.4-.6 9.4-4.6 10-10z'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2c.6 5.4 4.6 9.4 10 10-5.4.6-9.4 4.6-10 10-.6-5.4-4.6-9.4-10-10 5.4-.6 9.4-4.6 10-10z'/%3E%3C/svg%3E") center / contain no-repeat; }
+.spark.big { width: 44px; height: 44px; animation: spin 2.4s linear infinite; }
+.spark.thinking { animation: spin 1.6s linear infinite; }
+
+/* ---------- Conversation ---------- */
+.gem-main { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; }
+.gem-col { width: min(760px, 100%); margin: 0 auto; padding: 8px clamp(16px, 4vw, 24px) 24px; min-height: 100%; display: flex; flex-direction: column; }
+
+.hello { margin: auto 0; padding: 24px 0 8px; }
+.hello h1 { margin: 0 0 28px; font-size: clamp(30px, 5vw, 44px); line-height: 1.15; font-weight: 500; letter-spacing: -.02em; }
+.grad { background: linear-gradient(74deg, var(--g-blue) 0%, var(--g-purple) 35%, var(--g-pink) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hello-2 { color: #c4c7c5; }
+.ideas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.idea { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; min-height: 132px; padding: 14px; border: 0; border-radius: 16px; background: var(--g-surface); color: var(--g-ink); text-align: left; cursor: pointer; font-size: 15px; line-height: 1.4; transition: background .15s; }
+.idea:hover { background: #dde3ea; }
+.idea .ico { align-self: flex-end; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: #fff; }
+.idea .ico svg { width: 20px; height: 20px; fill: none; stroke: var(--g-ink-2); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 720px) { .ideas { grid-template-columns: repeat(2, minmax(0, 1fr)); } .idea { min-height: 104px; } }
+
+.convo { display: grid; gap: 28px; padding-top: 8px; }
+.turn-user { justify-self: end; max-width: 80%; padding: 12px 18px; border-radius: 24px 4px 24px 24px; background: var(--g-surface); line-height: 1.5; overflow-wrap: anywhere; }
+.turn-bot { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 14px; align-items: start; animation: rise .25s ease-out; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+.turn-bot .spark { width: 26px; height: 26px; margin-top: 2px; }
+.answer { line-height: 1.7; font-size: 16px; overflow-wrap: anywhere; }
+.answer p { margin: 0 0 8px; }
+/* Thinking: the star turns, three shimmering lines. */
+.shimmer { display: grid; gap: 10px; padding-top: 6px; }
+.shimmer i { height: 14px; border-radius: 7px; background: linear-gradient(90deg, #e9eef6 0%, #c9d8f5 30%, #e3d4f2 50%, #e9eef6 80%); background-size: 300% 100%; animation: sheen 1.4s linear infinite; }
+.shimmer i:nth-child(2) { width: 88%; } .shimmer i:nth-child(3) { width: 62%; }
+@keyframes sheen { from { background-position: 100% 0; } to { background-position: -200% 0; } }
+
+.used { margin-top: 12px; border-radius: 14px; background: #f8fafd; border: 1px solid #e3e8ef; overflow: hidden; }
+.used summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; font-size: 14px; font-weight: 500; color: var(--g-ink-2); }
+.used summary::-webkit-details-marker { display: none; }
+.used summary::after { content: ""; margin-left: auto; width: 12px; height: 12px; background: var(--chevron) center / 12px no-repeat; transition: transform .15s; }
+.used[open] summary::after { transform: rotate(180deg); }
+.used summary svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+.used pre { margin: 0; padding: 10px 14px; background: #1f1f1f; color: #e3e3e3; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.used .data { max-height: 260px; overflow: auto; }
+.used table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.used th, .used td { padding: 6px 12px; text-align: left; border-bottom: 1px solid #e3e8ef; white-space: nowrap; }
+.used th { position: sticky; top: 0; background: #f8fafd; font-weight: 600; color: var(--g-ink-3); }
+.used .more { padding: 8px 12px; font-size: 12.5px; color: var(--g-ink-3); margin: 0; }
+.tools { display: flex; gap: 2px; margin-top: 6px; margin-left: -8px; }
+.tools button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 10px; border: 0; border-radius: 99px; background: transparent; color: var(--g-ink-3); cursor: pointer; font-size: 13px; }
+.tools button:hover { background: var(--g-surface); color: var(--g-ink); }
+.tools svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tools button[aria-pressed="true"] { color: var(--g-purple); }
+
+/* ---------- Prompt ---------- */
+.gem-foot { position: relative; flex: none; padding: 6px clamp(12px, 4vw, 24px) 10px; }
+.prompt { position: relative; z-index: 1; width: min(760px, 100%); margin: 0 auto; display: flex; align-items: flex-end; gap: 6px; padding: 8px 8px 8px 22px; border-radius: 32px; background: var(--g-surface); border: 1px solid transparent; transition: background .15s, box-shadow .2s; }
+.prompt:focus-within { background: #fff; box-shadow: 0 1px 3px rgba(60, 64, 67, .2), 0 4px 12px rgba(60, 64, 67, .12); }
+.prompt textarea { flex: 1; min-width: 0; min-height: 40px; max-height: 160px; padding: 9px 0; border: 0; border-radius: 0; background: transparent; resize: none; font-size: 16px; line-height: 1.4; outline: none; }
+.prompt textarea::placeholder { color: var(--g-ink-3); }
+.prompt-tools { display: flex; align-items: center; gap: 4px; }
+.gem-icon.send { background: #1f1f1f; color: #fff; }
+.gem-icon.send:hover { background: #3c3c3c; }
+.fine { margin: 8px auto 0; width: min(760px, 100%); text-align: center; font-size: 12px; color: var(--g-ink-3); }
+
+/* Listening: a turning gradient ring round the prompt, bars, and a glow
+   from the bottom of the screen that grows with the voice (--level). */
+.prompt.listening { background: #fff; border-color: transparent; }
+.prompt.listening::before { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: 34px; padding: 2px;
+  background: conic-gradient(from var(--angle, 0deg), var(--g-blue), var(--g-purple), var(--g-pink), #f6c344, var(--g-blue));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: turn 2.4s linear infinite; }
+@property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes turn { to { --angle: 360deg; } }
+.gem-icon.mic.on { background: #fde7e7; color: #b3261e; }
+.bars { display: flex; align-items: center; gap: 3px; height: 32px; padding: 0 6px; }
+.bars i { width: 4px; height: 6px; border-radius: 2px; background: linear-gradient(var(--g-blue), var(--g-purple) 60%, var(--g-pink)); transition: height .07s linear; }
+.aurora { position: absolute; left: 0; right: 0; bottom: 0; height: 240px; z-index: 0; pointer-events: none; opacity: 0; transition: opacity .3s; overflow: hidden; }
+.aurora.on { opacity: calc(.35 + var(--level, 0) * .65); }
+.aurora i { position: absolute; bottom: -140px; width: 60%; height: 260px; border-radius: 50%; filter: blur(60px); transform: scale(calc(.8 + var(--level, 0) * .5)); transition: transform .1s; }
+.aurora i:nth-child(1) { left: -5%; background: var(--g-blue); animation: sway 4s ease-in-out infinite alternate; }
+.aurora i:nth-child(2) { left: 22%; background: var(--g-purple); animation: sway 3.2s ease-in-out infinite alternate-reverse; }
+.aurora i:nth-child(3) { right: -5%; background: var(--g-pink); animation: sway 3.6s ease-in-out infinite alternate; }
+@keyframes sway { from { translate: -6% 0; } to { translate: 6% 0; } }
+
+.booting-veil { position: fixed; inset: 0; z-index: 30; display: grid; place-content: center; justify-items: center; gap: 14px; background: #fff; color: var(--g-ink-3); font-size: 15px; }
+
+@media (max-width: 640px) {
+  .gem-name .thin { display: none; }
+  .gem-toggle span, .back span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .gem-toggle { padding: 4px 10px; }
+  .turn-user { max-width: 90%; }
+  .turn-bot { grid-template-columns: 26px minmax(0, 1fr); gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; } }

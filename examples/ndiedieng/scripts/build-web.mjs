@@ -3,7 +3,9 @@
  * Builds the website's Ndiédieng demo into site/ndiedieng, served at
  * kalangu.utachi.website/ndiedieng with no build step on the host:
  *
- *   index.html, styles.css, ui.js     the page (web/)
+ *   index.html, ui.js                 the dashboard (web/)
+ *   assistant/index.html, assistant.js the assistant's page
+ *   styles.css, assistant.css, common.js shared by both
  *   app/                              the prototype, compiled for the browser
  *   vendor/core, vendor/sim/phone.js  Kalangu, as built in this repository
  *
@@ -52,7 +54,7 @@ export function build() {
   }
   files.set(join("vendor", "sim", "phone.js"), readFileSync(join(ROOT, "packages", "sim", "dist", "phone.js"), "utf8"));
 
-  for (const file of ["index.html", "styles.css", "ui.js"]) files.set(file, readFileSync(join(HERE, "web", file), "utf8"));
+  for (const file of ["index.html", "styles.css", "common.js", "ui.js", "assistant/index.html", "assistant.css", "assistant.js"]) files.set(file, readFileSync(join(HERE, "web", file), "utf8"));
   // Source maps point at files outside the site; drop the comment.
   for (const [k, v] of files) if (k.endsWith(".js")) files.set(k, v.replace(/\n\/\/# sourceMappingURL=.*$/m, ""));
   return files;

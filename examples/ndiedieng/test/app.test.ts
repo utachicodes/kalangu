@@ -92,3 +92,87 @@ describe("the demo app", () => {
     expect((await setup().call("GET", "/api/info")).body).toEqual({ mode: "test", code: "*123#" });
   });
 });
+
+describe("the Mairie's create, read, update and delete", () => {
+  it("creates a report for a village, telling its chief", async () => {
+    const t = setup();
+    const equip = (await t.call("GET", "/api/equipements?village=12")).body[0];
+    const res = await t.call("POST", "/api/signalements", { villageId: 12, categorie: equip.type, urgence: "haute", description: "Signalé par téléphone", equipementId: equip.id });
+    expect(res.status).toBe(201);
+    expect(res.body.signalement).toMatchObject({ code: "S-0001", village: "Village 12", canal: "mairie", statut: "nouveau", equipementId: equip.id });
+    expect((await t.phone("inbox")).body.inbox.at(-1).text).toMatch(/nous avons enregistré le signalement S-0001/);
+    expect((await t.call("GET", "/api/villages")).body).toHaveLength(58);
+  });
+
+  it("refuses a create with a missing field, an unknown village or another village's equipment", async () => {
+    const t = setup();
+    expect((await t.call("POST", "/api/signalements", { villageId: 12, categorie: "eau", urgence: "haute" })).body.error).toMatch(/nécessaires/);
+    expect((await t.call("POST", "/api/signalements", { villageId: 99, categorie: "eau", urgence: "haute", description: "x" })).body.error).toBe("Village inconnu.");
+    const other = (await t.call("GET", "/api/equipements?village=3")).body[0];
+    expect((await t.call("POST", "/api/signalements", { villageId: 12, categorie: "eau", urgence: "haute", description: "x", equipementId: other.id })).status).toBe(400);
+  });
+
+  it("updates a report, and tells the chief only when its status moves on", async () => {
+    const t = setup();
+    await t.call("POST", "/api/signalements", { villageId: 12, categorie: "eau", urgence: "moyenne", description: "Fuite", notify: false });
+    const before = (await t.phone("inbox")).body.inbox.length;
+    const edit = await t.call("PATCH", "/api/signalements/S-0001", { urgence: "haute", description: "Grosse fuite" });
+    expect(edit.body).toMatchObject({ signalement: { urgence: "haute", description: "Grosse fuite" }, sms: null });
+    expect((await t.phone("inbox")).body.inbox.length).toBe(before);
+    const done = await t.call("PATCH", "/api/signalements/S-0001", { statut: "resolu" });
+    expect(done.body.sms).toMatch(/est résolu/);
+    expect(done.body.signalement.resoluLe).toBeTruthy();
+    expect((await t.call("PATCH", "/api/signalements/S-0001", { urgence: "extreme" })).body.error).toBe("Urgence inconnue.");
+    expect((await t.call("PATCH", "/api/signalements/S-0001", { description: "  " })).status).toBe(400);
+  });
+
+  it("deletes a report, and an equipment with no open report works again", async () => {
+    const t = setup();
+    const equip = (await t.call("GET", "/api/equipements?village=12")).body[0];
+    await t.call("POST", "/api/signalements", { villageId: 12, categorie: equip.type, urgence: "haute", description: "x", equipementId: equip.id, notify: false });
+    const broken = () => (t.commune.readOnly(`SELECT etat FROM equipements WHERE id = ${Number(equip.id)}`).rows[0] as { etat: string }).etat;
+    expect(broken()).toBe("en panne");
+    expect((await t.call("DELETE", "/api/signalements/S-0001")).body).toEqual({ deleted: "S-0001" });
+    expect(t.commune.signalement("S-0001")).toBeNull();
+    expect(broken()).toBe("fonctionnel");
+    expect((await t.call("DELETE", "/api/signalements/S-0001")).status).toBe(404);
+    expect((await t.call("GET", "/api/signalements/S-0001")).status).toBe(404);
+  });
+
+  it("reopening a resolved report marks its equipment broken again", async () => {
+    const t = setup();
+    const equip = (await t.call("GET", "/api/equipements?village=12")).body[0];
+    await t.call("POST", "/api/signalements", { villageId: 12, categorie: equip.type, urgence: "haute", description: "x", equipementId: equip.id, notify: false });
+    await t.call("PATCH", "/api/signalements/S-0001", { statut: "resolu" });
+    const etat = () => (t.commune.readOnly(`SELECT etat FROM equipements WHERE id = ${Number(equip.id)}`).rows[0] as { etat: string }).etat;
+    expect(etat()).toBe("fonctionnel");
+    await t.call("PATCH", "/api/signalements/S-0001", { statut: "en_cours" });
+    expect(etat()).toBe("en panne");
+  });
+});
+
+describe("a saved demo", () => {
+  it("reopens a commune's database as it was, without seeding it again", () => {
+    const first = openCommune({ history: false });
+    const created = first.addSignalement({ villageId: 3, telephone: chefPhone(3), categorie: "eau", urgence: "haute", description: "fuite", canal: "mairie" });
+    first.close();
+    const again = openCommune({ path: first.path, existing: true });
+    open.push(again);
+    expect(again.villages()).toHaveLength(58);
+    expect(again.signalement(created.code)).toMatchObject({ description: "fuite" });
+    expect(again.counts().nouveau).toBe(1);
+  });
+
+  it("delivers saved inboxes and keeps each phone's inbox live in the map", async () => {
+    const commune = openCommune({ history: false });
+    open.push(commune);
+    const tel = chefPhone(5);
+    const inboxes = new Map([[tel, [{ from: "MAIRIE", text: "déjà là", at: new Date("2026-01-01") }]]]);
+    const app = createApp({ commune, agent: createNdiediengAgent({ commune, classifier: keywordClassifier(), channels: [], logger: silentLogger }), assistant: ruleAssistant(commune), classifier: keywordClassifier(), mode: "test", inboxes });
+    const res = await app(new Request("http://localhost/api/phone", { method: "POST", body: JSON.stringify({ telephone: tel, action: "sms", text: "bonjour" }) }));
+    const body = (await res.json()) as { inbox: Array<{ text: string }> };
+    expect(body.inbox[0]!.text).toBe("déjà là");
+    expect(inboxes.get(tel)!.length).toBe(body.inbox.length);
+    expect(body.inbox.length).toBeGreaterThan(1);
+  });
+});

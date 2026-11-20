@@ -38,9 +38,11 @@ function rows(db, sql, params) {
         stmt.free();
     }
 }
-export function sqlJsDb(SQL) {
-    const db = new SQL.Database();
+/** A database in memory, empty or opened from a saved copy; `bytes` saves it. */
+export function sqlJsDb(SQL, data) {
+    const db = new SQL.Database(data);
     return {
+        bytes: () => db.export(),
         exec: (sql) => void db.exec(sql),
         all: (sql, ...params) => rows(db, sql, params).rows,
         get: (sql, ...params) => rows(db, sql, params).rows[0],

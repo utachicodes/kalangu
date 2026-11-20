@@ -59,9 +59,11 @@ function rows(db: Database, sql: string, params: SqlValue[]): { columns: string[
   }
 }
 
-export function sqlJsDb(SQL: SqlJs): SqlDb {
-  const db = new SQL.Database();
+/** A database in memory, empty or opened from a saved copy; `bytes` saves it. */
+export function sqlJsDb(SQL: SqlJs, data?: Uint8Array): SqlDb & { bytes(): Uint8Array } {
+  const db = new SQL.Database(data);
   return {
+    bytes: () => db.export(),
     exec: (sql) => void db.exec(sql),
     all: (sql, ...params) => rows(db, sql, params).rows,
     get: (sql, ...params) => rows(db, sql, params).rows[0],

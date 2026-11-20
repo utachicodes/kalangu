@@ -79,7 +79,8 @@ const TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 async function staticFile(path: string): Promise<Response> {
-  const file = resolve(SITE, `.${path === "/" ? "/index.html" : decodeURIComponent(path)}`);
+  // A folder serves its index.html: / is the dashboard, /assistant/ the assistant.
+  const file = resolve(SITE, `.${decodeURIComponent(path)}${path.endsWith("/") ? "index.html" : ""}`);
   // Nothing outside the page's own folder.
   if (!file.startsWith(SITE.endsWith(sep) ? SITE : SITE + sep)) return new Response("Not found", { status: 404 });
   try {

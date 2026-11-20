@@ -11,7 +11,8 @@ import type { SqlDb, SqlRow } from "./sql.js";
 export type Categorie = EquipmentType | "naissance" | "deces" | "autre";
 export type Urgence = "haute" | "moyenne" | "basse";
 export type Statut = "nouveau" | "a_verifier" | "en_cours" | "resolu";
-export type Canal = "ussd" | "sms" | "vocal";
+/** How a report came in; "mairie" is one typed in by an agent, after a phone call for example. */
+export type Canal = "ussd" | "sms" | "vocal" | "mairie";
 
 export interface Signalement {
   code: string;
@@ -67,7 +68,7 @@ CREATE TABLE signalements (
   equipement_id INTEGER REFERENCES equipements(id),
   urgence TEXT NOT NULL,      -- haute, moyenne, basse
   description TEXT NOT NULL,
-  canal TEXT NOT NULL,        -- ussd, sms, vocal
+  canal TEXT NOT NULL,        -- ussd, sms, vocal, mairie
   statut TEXT NOT NULL,       -- nouveau, a_verifier, en_cours, resolu
   confiance REAL NOT NULL,    -- 1 for a USSD menu choice; the classifier's own for SMS
   cree_le TEXT NOT NULL,      -- ISO date and time
@@ -92,6 +93,16 @@ export interface CommuneOptions {
   now?: () => Date;
   /** A month of past reports, so the dashboard is not empty. Default true. */
   history?: boolean;
+  /** The database already holds a commune (a saved copy): use it as it is, create and seed nothing. */
+  existing?: boolean;
+}
+
+export interface SignalementChange {
+  categorie?: Categorie;
+  urgence?: Urgence;
+  statut?: Statut;
+  description?: string;
+  equipementId?: number | null;
 }
 
 export interface Commune {
@@ -105,6 +116,11 @@ export interface Commune {
   signalement(code: string): Signalement | null;
   signalements(filter?: { statut?: Statut; categorie?: Categorie }): Signalement[];
   setStatut(code: string, statut: Statut, change?: { categorie?: Categorie; urgence?: Urgence }): Signalement | null;
+  /** Changes what the Mairie may edit. The equipment's state follows its open reports. */
+  updateSignalement(code: string, change: SignalementChange): Signalement | null;
+  /** Removes a report (an error, a duplicate). False if there was none. */
+  deleteSignalement(code: string): boolean;
+  villages(): Array<{ id: number; nom: string }>;
   counts(): Record<Statut, number> & { haute: number };
   close(): void;
 }
@@ -147,12 +163,9 @@ const toSignalement = (r: Row): Signalement => ({
   resoluLe: r.resolu_le,
 });
 
-/** Fills `db` with the fictitious territory and, by default, a month of past reports. */
-export function createCommune(db: SqlDb, options: CommuneOptions = {}): Commune {
-  const now = options.now ?? (() => new Date());
+/** The schema and the fictitious territory, in one transaction. */
+function seed(db: SqlDb, t: Territory): void {
   db.exec(SCHEMA);
-  const t = options.territory ?? generateTerritory();
-
   db.exec("BEGIN");
   for (const v of t.villages) db.run("INSERT INTO villages (id, nom, population) VALUES (?, ?, ?)", v.id, v.nom, v.population);
   for (const c of t.chefs) db.run("INSERT INTO chefs (telephone, nom, village_id) VALUES (?, ?, ?)", c.telephone, c.nom, c.villageId);
@@ -166,6 +179,13 @@ export function createCommune(db: SqlDb, options: CommuneOptions = {}): Commune 
     );
   }
   db.exec("COMMIT");
+}
+
+/** Fills `db` with the fictitious territory and, by default, a month of past reports. */
+export function createCommune(db: SqlDb, options: CommuneOptions = {}): Commune {
+  const now = options.now ?? (() => new Date());
+  const t = options.existing ? null : (options.territory ?? generateTerritory());
+  if (t) seed(db, t);
 
   const commune: Commune = {
     readOnly: (sql) => db.readOnly(sql),
@@ -242,20 +262,36 @@ export function createCommune(db: SqlDb, options: CommuneOptions = {}): Commune 
       return (db.all(sql, ...params) as unknown as Row[]).map(toSignalement);
     },
     setStatut(code, statut, change = {}) {
+      return commune.updateSignalement(code, { ...change, statut });
+    },
+    updateSignalement(code, change) {
       const current = commune.signalement(code);
       if (!current) return null;
+      const statut = change.statut ?? current.statut;
+      const resoluLe = statut === "resolu" ? (current.statut === "resolu" ? current.resoluLe : now().toISOString()) : null;
+      const equipementId = change.equipementId === undefined ? current.equipementId : change.equipementId;
       db.run(
-        "UPDATE signalements SET statut = ?, categorie = COALESCE(?, categorie), urgence = COALESCE(?, urgence), resolu_le = ? WHERE code = ?",
+        "UPDATE signalements SET statut = ?, categorie = ?, urgence = ?, description = ?, equipement_id = ?, resolu_le = ? WHERE code = ?",
         statut,
-        change.categorie ?? null,
-        change.urgence ?? null,
-        statut === "resolu" ? now().toISOString() : null,
+        change.categorie ?? current.categorie,
+        change.urgence ?? current.urgence,
+        change.description ?? current.description,
+        equipementId,
+        resoluLe,
         current.code,
       );
-      if (statut === "resolu" && current.equipementId) {
-        db.run("UPDATE equipements SET etat = 'fonctionnel' WHERE id = ?", current.equipementId);
-      }
+      for (const id of new Set([current.equipementId, equipementId])) if (id) syncEquipment(id);
       return commune.signalement(current.code);
+    },
+    deleteSignalement(code) {
+      const current = commune.signalement(code);
+      if (!current) return false;
+      db.run("DELETE FROM signalements WHERE code = ?", current.code);
+      if (current.equipementId) syncEquipment(current.equipementId);
+      return true;
+    },
+    villages() {
+      return db.all("SELECT id, nom FROM villages ORDER BY id") as Array<{ id: number; nom: string }>;
     },
     counts() {
       const rows = db.all("SELECT statut, COUNT(*) AS n FROM signalements GROUP BY statut") as Array<{ statut: Statut; n: number }>;
@@ -269,7 +305,13 @@ export function createCommune(db: SqlDb, options: CommuneOptions = {}): Commune 
     },
   };
 
-  if (options.history !== false) seedHistory(commune, t, now());
+  /** An equipment is broken while a report on it is still open, and working otherwise. */
+  function syncEquipment(id: number): void {
+    const open = (db.get("SELECT COUNT(*) AS n FROM signalements WHERE equipement_id = ? AND statut != 'resolu'", id) as { n: number }).n;
+    db.run("UPDATE equipements SET etat = ? WHERE id = ?", open ? "en panne" : "fonctionnel", id);
+  }
+
+  if (t && options.history !== false) seedHistory(commune, t, now());
   return commune;
 }
 

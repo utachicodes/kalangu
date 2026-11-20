@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+<base href="/ndiedieng/">
+<meta name="ndiedieng-mode" content="local">
+<title>Assistant · Ndiédieng</title>
+<meta name="description" content="L'assistant de la Mairie de Ndiédieng : des questions sur les fiches de la commune et les signalements des villages, à l'écrit ou à la voix, avec les données utilisées. Construit avec Kalangu.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="assistant.css">
+<script type="importmap">{ "imports": { "@kalangu/core": "./vendor/core/index.js", "@kalangu/sim": "./vendor/sim/phone.js" } }</script>
+<script type="module" src="assistant.js"></script>
+</head>
+<body class="gem">
+<header class="gem-top">
+  <a class="back" href="./" aria-label="Retour au tableau de bord">
+    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+    <span>Tableau de bord</span>
+  </a>
+  <p class="gem-name"><span class="spark" aria-hidden="true"></span>Assistant <span class="thin">· Ndiédieng</span></p>
+  <div class="gem-actions">
+    <button type="button" class="gem-toggle" id="speak" aria-pressed="false" title="Lire les réponses à voix haute">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+      <span>Lire à voix haute</span>
+    </button>
+    <button type="button" class="gem-icon" id="restart" aria-label="Nouvelle conversation" title="Nouvelle conversation" hidden>
+      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="gem-main" id="scroller">
+  <div class="gem-col">
+    <section class="hello" id="hello" aria-labelledby="hello-title">
+      <h1 id="hello-title"><span class="grad">Bonjour,</span><br><span class="hello-2">que voulez-vous savoir sur la commune&nbsp;?</span></h1>
+      <div class="ideas" id="ideas" aria-label="Suggestions"></div>
+    </section>
+    <div class="convo" id="thread" aria-live="polite"></div>
+  </div>
+</main>
+
+<footer class="gem-foot">
+  <div class="aurora" id="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <form class="prompt" id="ask-form">
+    <label class="visually-hidden" for="question">Votre question</label>
+    <textarea id="question" rows="1" placeholder="Demandez à l'assistant" autocomplete="off" enterkeyhint="send"></textarea>
+    <div class="prompt-tools">
+      <div class="bars" id="bars" aria-hidden="true" hidden></div>
+      <button type="button" class="gem-icon mic" id="mic" aria-label="Dicter la question">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <button type="submit" class="gem-icon send" id="send" aria-label="Envoyer" hidden>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      </button>
+    </div>
+  </form>
+  <p class="fine" id="fine">Répond à partir des 499 fiches (fictives) et des signalements, et montre les données utilisées.</p>
+</footer>
+
+<div class="booting-veil" id="booting" role="status"><span class="spark big" aria-hidden="true"></span><p>Chargement des fiches de la commune…</p></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<p class="visually-hidden" id="announce" aria-live="polite"></p>
+</body>
+</html>
