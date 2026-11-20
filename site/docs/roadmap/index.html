@@ -99,7 +99,23 @@ only, limited per visitor, the rules whenever it fails</li>
 <li><input disabled="" type="checkbox"> Set a quota on the Gemini key in Google AI Studio</li>
 <li><input disabled="" type="checkbox"> Run Ndiédieng on the Africa&#39;s Talking sandbox with their phone
 simulator (needs an account and a public URL for the callbacks)</li>
-<li><input disabled="" type="checkbox"> Menus and voice messages in Wolof and Sérère, reviewed by speakers</li>
+<li><input disabled="" type="checkbox"> Wolof in the example (Gemini already sorts Wolof SMS; everything else
+is French). Step 1, buildable now, with drafts clearly marked unreviewed:<ul>
+<li><input disabled="" type="checkbox"> Language choice at <code>*123#</code> (1. Français / 2. Wolof), remembered per
+number, with Kalangu&#39;s language menu</li>
+<li><input disabled="" type="checkbox"> The Ndiédieng menus and SMS replies in Wolof (about 40 strings),
+drafted with Gemini</li>
+<li><input disabled="" type="checkbox"> Français / Wolof choice on the assistant page; Gemini answers in the
+chosen language</li>
+<li><input disabled="" type="checkbox"> Wolof voice messages through Gemini audio transcription (browsers do
+not dictate Wolof); quality unknown, test with speakers</li>
+<li><input disabled="" type="checkbox"> A review sheet (French | Wolof draft | correction) for a speaker</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"> Step 2: a Wolof speaker reviews every string (and <code>locales/wo.draft.json</code>,
+where some entries already look wrong) before the field tests on 19 Dec</li>
+<li><input disabled="" type="checkbox"> Then Sérère, the same way; a speaker matters even more there</li>
+<li><input disabled="" type="checkbox"> Check whether Gemini&#39;s speech model can speak Wolof</li>
 <li><input disabled="" type="checkbox"> Try <code>/ndiedieng</code> on real phones (Android and iPhone, Safari and Chrome),
 dictation included</li>
 <li><input disabled="" type="checkbox"> Hackathon JDL 2026: application due 8 Dec 2026; field tests with the
@@ -110,8 +126,8 @@ village chiefs on 19 Dec, final on 20 Dec, in Ndiédieng</li>
 <li><input checked="" disabled="" type="checkbox"> Documentation on the website: quick start, agents, guides, design,
 contributing, roadmap, changelog; generated from the markdown and checked
 in CI (<code>pnpm site:check</code>)</li>
-<li><input checked="" disabled="" type="checkbox"> Landing page and docs overview link the live example (<code>/ndiedieng</code>),
-and the sitemap lists it</li>
+<li><input checked="" disabled="" type="checkbox"> Landing page (&quot;Live example&quot; button) and docs overview link the live
+example (<code>/ndiedieng</code>), and the sitemap lists it</li>
 <li><input checked="" disabled="" type="checkbox"> Components page (<code>/components/</code>): the example&#39;s hand-built UI pieces,
 live, with their code, nicknames and reasons</li>
 <li><input disabled="" type="checkbox"> Look over the docs pages on a real phone and a desktop after the next
