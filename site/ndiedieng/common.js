@@ -44,12 +44,20 @@ export function icon(name) {
   return span.firstElementChild;
 }
 
-export function toast(text) {
+/** A short message at the bottom; with `action`, a button in it (such as Undo) and a longer stay. */
+export function toast(text, { action = null, duration = action ? 8000 : 5000 } = {}) {
   const t = $("toast");
-  t.textContent = text;
+  const button = action
+    ? h("button", {
+        type: "button", class: "toast-action",
+        onclick: () => { t.hidden = true; clearTimeout(toast.timer); action.run(); },
+      }, action.label)
+    : null;
+  t.replaceChildren(...[h("span", { text }), button].filter(Boolean));
   t.hidden = false;
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.hidden = true), 5000);
+  toast.timer = setTimeout(() => (t.hidden = true), duration);
+  if (button && document.activeElement === document.body) button.focus({ preventScroll: true });
 }
 export const announce = (text) => {
   $("announce").textContent = "";

@@ -150,7 +150,9 @@ used to reach the town hall on foot.
   to "to check" when the confidence is low.
 - **The town hall side.** The reports arrive on a dashboard, sorted by
   urgency. Click one to change its category, equipment, urgency, status or
-  description, or to delete it; "+ Nouveau" records one taken by phone. When
+  description, or to delete it (with Undo); "+ Nouveau" records one taken by
+  phone; "Exporter" downloads the list as a spreadsheet, and Ctrl/Cmd + K
+  finds any report, village or action. When
   a report is taken on or resolved, the chief gets an SMS, and it lands in the
   simulated phone.
 - **The assistant** ([its own page](https://kalangu.utachi.website/ndiedieng/assistant/)):

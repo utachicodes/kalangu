@@ -54,6 +54,8 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
   dictation without running it; live waveform and glow
 - [x] The in-browser demo kept in IndexedDB, shared by both pages; "start
   over" in Help
+- [x] Undo after deleting a report, CSV export of the list, and a quick search
+  (Ctrl/Cmd + K) over reports, villages and actions
 - [x] Linked from the README, the docs overview and the landing page
 - [x] Gemini on the website: a serverless function (`/api/ndiedieng/gemini`,
   built from `src/geminiFunction.ts`) holds `GEMINI_API_KEY`; fixed tasks

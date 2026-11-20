@@ -119,6 +119,17 @@ export function createCommune(db, options = {}) {
                 syncEquipment(current.equipementId);
             return true;
         },
+        restoreSignalement(r) {
+            const id = Number(/^S-(\d+)$/.exec(r.code)?.[1]);
+            if (!Number.isInteger(id) || commune.signalement(r.code) || db.get("SELECT 1 AS x FROM signalements WHERE id = ?", id))
+                return null;
+            db.run(`INSERT INTO signalements
+    (id, code, village_id, telephone, categorie, equipement_id, urgence, description, canal, statut, confiance, cree_le, resolu_le)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, r.code, r.villageId, r.telephone, r.categorie, r.equipementId, r.urgence, r.description, r.canal, r.statut, r.confiance, r.creeLe, r.resoluLe);
+            if (r.equipementId)
+                syncEquipment(r.equipementId);
+            return commune.signalement(r.code);
+        },
         villages() {
             return db.all("SELECT id, nom FROM villages ORDER BY id");
         },

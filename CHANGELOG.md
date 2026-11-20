@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Ndiédieng's dashboard: deleting a report is immediate, with "Annuler" in
+  the toast to bring it back under its own number (`POST
+  /api/signalements/S-xxxx/restaurer`, for ten minutes, refused if the number
+  was given out again); "Exporter" downloads the reports shown as a CSV for
+  Excel (semicolons, accents kept, phone numbers masked); and Ctrl/Cmd + K
+  opens a quick search over reports, villages and actions, driven from the
+  keyboard.
 - Ndiédieng on the website can use Gemini: a serverless function
   (`/api/ndiedieng/gemini`, generated from `src/geminiFunction.ts`) holds
   `GEMINI_API_KEY` and runs only the prototype's fixed tasks (write a query,

@@ -532,11 +532,6 @@ function formError(text) {
   $("rd-error").textContent = text ?? "";
   $("rd-error").hidden = !text;
 }
-function showConfirm(on) {
-  $("rd-confirm").hidden = !on;
-  $("rd-delete").hidden = on;
-  if (on) $("rd-confirm-no").focus();
-}
 function prepareForm(r) {
   $("rd-categorie").replaceChildren(...Object.entries(LABEL).map(([k, v]) => h("option", { value: k, text: v })));
   $("rd-categorie").value = r?.categorie ?? "eau";
@@ -546,7 +541,6 @@ function prepareForm(r) {
   $("rd-description").value = r?.description ?? "";
   $("rd-notify").checked = true;
   formError(null);
-  showConfirm(false);
 }
 async function openReport(code) {
   let r;
@@ -639,17 +633,156 @@ async function saveReport(e) {
     save.disabled = false;
   }
 }
+// Delete at once, with Undo in the toast: faster than "are you sure?", and safe.
 async function deleteReport() {
   if (!editing) return;
+  const code = editing.code;
   try {
-    await call("DELETE", `/api/signalements/${editing.code}`);
-    toast(`${editing.code} supprimé.`);
+    const res = await call("DELETE", `/api/signalements/${code}`);
     dlg().close();
     await refreshReports();
+    announce(`${code} supprimé.`);
+    toast(`${code} supprimé.`, {
+      action: {
+        label: "Annuler",
+        run: async () => {
+          try {
+            await call("POST", res.undo);
+            toast(`${code} est revenu.`);
+            await refreshReports();
+          } catch (err) {
+            toast(err.message);
+          }
+        },
+      },
+    });
   } catch (err) {
     formError(err.message);
   }
 }
+
+// ---------- Export: what the list shows, as a spreadsheet ----------
+function exportCsv() {
+  const rows = state.reports.filter(matches);
+  if (!rows.length) return toast("Rien à exporter : aucun signalement ne correspond aux filtres.");
+  // Semicolons and a BOM: what Excel expects in French, accents included.
+  const cell = (v) => {
+    const t = String(v ?? "");
+    return /[;"\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  const day = (iso) => (iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "");
+  const head = ["Signalement", "Village", "Catégorie", "Équipement", "Urgence", "Statut", "Canal", "Description", "Créé le", "Résolu le", "Téléphone (masqué)", "Confiance"];
+  const lines = rows.map((r) => [
+    r.code, r.village, LABEL[r.categorie] ?? r.categorie, r.equipement?.split(",")[0] ?? "", URGENCE[r.urgence], STATUT[r.statut],
+    CANAL[r.canal] ?? r.canal, r.description, day(r.creeLe), day(r.resoluLe), r.telephone, `${Math.round(r.confiance * 100)} %`,
+  ]);
+  const csv = "\ufeff" + [head, ...lines].map((l) => l.map(cell).join(";")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = h("a", { href: url, download: `ndiedieng-signalements-${new Date().toISOString().slice(0, 10)}.csv` });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast(`${rows.length} signalement${rows.length > 1 ? "s" : ""} exporté${rows.length > 1 ? "s" : ""} (CSV).`);
+}
+
+// ---------- Quick search: Ctrl or Cmd + K ----------
+const PI = {
+  report: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>',
+  village: '<svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  alert: '<svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17v.5"/></svg>',
+  download: '<svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  spark: '<svg viewBox="0 0 24 24"><path d="M12 3c.5 4.6 3.9 8 8.5 8.5-4.6.5-8 3.9-8.5 8.5-.5-4.6-3.9-8-8.5-8.5C8.1 11 11.5 7.6 12 3z"/></svg>',
+  phone: '<svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
+};
+const fold = (t) => String(t ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+const palette = { all: [], items: [], active: 0 };
+
+function highlight(text, q) {
+  // The matched part in <mark>, built with text nodes: never HTML from data.
+  const i = q ? fold(text).indexOf(q) : -1;
+  if (i < 0) return [text];
+  return [text.slice(0, i), h("mark", { text: text.slice(i, i + q.length) }), text.slice(i + q.length)];
+}
+function paletteItems(q) {
+  const actions = [
+    { kind: "action", icon: "plus", title: "Nouveau signalement", sub: "Saisi par la Mairie", run: () => openNew().catch((e) => toast(e.message)) },
+    { kind: "action", icon: "alert", title: "Voir les urgents", sub: "Urgence haute, non résolus", run: () => { state.filter = { statut: "", urgent: true, categorie: "", q: "" }; $("q").value = ""; $("categorie").value = ""; showPane("mairie"); refreshReports(); } },
+    { kind: "action", icon: "download", title: "Exporter en CSV", sub: "Les signalements affichés", run: exportCsv },
+    { kind: "action", icon: "spark", title: "Ouvrir l'assistant", sub: "Poser une question, à la voix", run: () => (location.href = "assistant/") },
+    { kind: "action", icon: "phone", title: "Changer de téléphone", sub: "Simple, Android, iPhone", run: () => { showPane("village"); document.querySelector('#devices [aria-checked="true"]')?.focus(); } },
+  ];
+  const reports = palette.all.map((r) => ({
+    kind: "report", icon: "report", code: r.code,
+    title: `${r.code} · ${LABEL[r.categorie] ?? r.categorie}${r.equipement ? ` · ${r.equipement.split(",")[0]}` : ""}`,
+    sub: `${r.village} · ${STATUT[r.statut]} · urgence ${URGENCE[r.urgence].toLowerCase()} · ${r.description}`,
+    hay: fold([r.code, r.village, LABEL[r.categorie], r.equipement, r.description, STATUT[r.statut]].join(" ")),
+    run: () => { showPane("mairie"); openReport(r.code); },
+  }));
+  const villages = [...new Set(palette.all.map((r) => r.village))].map((v) => ({
+    kind: "village", icon: "village", title: v, sub: "Voir ses signalements",
+    run: () => { state.filter = { statut: "", urgent: false, categorie: "", q: v }; $("q").value = v; $("categorie").value = ""; showPane("mairie"); refreshReports(); },
+  }));
+  if (!q) return [["Actions", actions], ["Derniers signalements", reports.slice(0, 5)]];
+  const words = q.split(/\s+/).filter(Boolean);
+  const hit = (hay) => words.every((w) => hay.includes(w));
+  return [
+    ["Signalements", reports.filter((r) => hit(r.hay)).slice(0, 8)],
+    ["Villages", villages.filter((v) => hit(fold(v.title))).slice(0, 4)],
+    ["Actions", actions.filter((a) => hit(fold(`${a.title} ${a.sub}`)))],
+  ];
+}
+function renderPalette() {
+  const q = fold($("pal-q").value.trim());
+  const groups = paletteItems(q).filter(([, list]) => list.length);
+  palette.items = groups.flatMap(([, list]) => list);
+  palette.active = Math.min(palette.active, Math.max(0, palette.items.length - 1));
+  let n = 0;
+  const icon = (name) => { const s = h("span", { class: "pi", "aria-hidden": "true" }); s.innerHTML = PI[name]; return s; }; // constant markup
+  $("pal-list").replaceChildren(
+    ...(groups.length
+      ? groups.flatMap(([label, list]) => [
+          h("li", { class: "pal-group", role: "presentation", text: label }),
+          ...list.map((item) => {
+            const i = n++;
+            return h("li", {
+              class: "pal-item", role: "option", id: `pal-${i}`, "aria-selected": String(i === palette.active),
+              onclick: () => runPalette(i),
+              onmousemove: () => { if (palette.active !== i) { palette.active = i; markActive(); } },
+            }, icon(item.icon), h("span", { class: "pt" }, h("b", {}, highlight(item.title, q)), h("small", {}, highlight(item.sub, q))), item.kind === "report" ? h("kbd", { text: "↵" }) : null);
+          }),
+        ])
+      : [h("li", { class: "pal-empty", text: "Aucun résultat. Essayez un numéro (S-0012), un village ou « forage »." })]),
+  );
+  markActive();
+}
+function markActive() {
+  for (const el of $("pal-list").querySelectorAll(".pal-item")) el.setAttribute("aria-selected", String(el.id === `pal-${palette.active}`));
+  const active = $(`pal-${palette.active}`);
+  $("pal-q").setAttribute("aria-activedescendant", active ? active.id : "");
+  active?.scrollIntoView({ block: "nearest" });
+}
+function runPalette(i) {
+  const item = palette.items[i];
+  if (!item) return;
+  $("palette").close();
+  item.run();
+}
+async function openPalette() {
+  if ($("palette").open) return;
+  $("pal-q").value = "";
+  palette.active = 0;
+  try {
+    palette.all = (await call("GET", "/api/signalements")).signalements;
+  } catch {
+    palette.all = state.reports;
+  }
+  renderPalette();
+  $("palette").showModal();
+  $("pal-q").focus();
+}
+const showPane = (pane) => document.querySelector(`#panes [data-pane="${pane}"]`)?.click();
 
 // ---------- Start ----------
 async function start() {
@@ -723,9 +856,32 @@ async function start() {
   // The report dialog
   $("report-form").onsubmit = saveReport;
   $("rd-village").onchange = (e) => fillEquipements(Number(e.target.value), null).catch((err) => formError(err.message));
-  $("rd-delete").onclick = () => showConfirm(true);
-  $("rd-confirm-no").onclick = () => { showConfirm(false); $("rd-delete").focus(); };
-  $("rd-confirm-yes").onclick = deleteReport;
+  $("rd-delete").onclick = deleteReport;
+
+  // Export and quick search
+  $("export").onclick = exportCsv;
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  $("palette-kbd").textContent = mac ? "⌘K" : "Ctrl K";
+  $("palette-open").onclick = openPalette;
+  $("pal-q").oninput = () => { palette.active = 0; renderPalette(); };
+  $("pal-q").onkeydown = (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const n = palette.items.length;
+      if (n) palette.active = (palette.active + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+      markActive();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      runPalette(palette.active);
+    }
+  };
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      if ($("palette").open) $("palette").close();
+      else openPalette();
+    }
+  });
   for (const d of document.querySelectorAll("dialog")) {
     for (const b of d.querySelectorAll("[data-close]")) b.onclick = () => d.close();
     // A click on the backdrop closes, as people expect.

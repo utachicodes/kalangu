@@ -79,6 +79,8 @@ export interface Commune {
   updateSignalement(code: string, change: SignalementChange): Signalement | null;
   /** Removes a report (an error, a duplicate). False if there was none. */
   deleteSignalement(code: string): boolean;
+  /** Puts a deleted report back as it was, under its own code. Null if that code is taken again. */
+  restoreSignalement(s: Signalement): Signalement | null;
   villages(): Array<{ id: number; nom: string }>;
   counts(): Record<Statut, number> & { haute: number };
   close(): void;
@@ -248,6 +250,18 @@ export function createCommune(db: SqlDb, options: CommuneOptions = {}): Commune 
       db.run("DELETE FROM signalements WHERE code = ?", current.code);
       if (current.equipementId) syncEquipment(current.equipementId);
       return true;
+    },
+    restoreSignalement(r) {
+      const id = Number(/^S-(\d+)$/.exec(r.code)?.[1]);
+      if (!Number.isInteger(id) || commune.signalement(r.code) || db.get("SELECT 1 AS x FROM signalements WHERE id = ?", id)) return null;
+      db.run(
+        `INSERT INTO signalements
+    (id, code, village_id, telephone, categorie, equipement_id, urgence, description, canal, statut, confiance, cree_le, resolu_le)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, r.code, r.villageId, r.telephone, r.categorie, r.equipementId, r.urgence, r.description, r.canal, r.statut, r.confiance, r.creeLe, r.resoluLe,
+      );
+      if (r.equipementId) syncEquipment(r.equipementId);
+      return commune.signalement(r.code);
     },
     villages() {
       return db.all("SELECT id, nom FROM villages ORDER BY id") as Array<{ id: number; nom: string }>;

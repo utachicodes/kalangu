@@ -41,6 +41,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="n
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>Ndiédieng&#39;s dashboard: deleting a report is immediate, with &quot;Annuler&quot; in
+the toast to bring it back under its own number (<code>POST /api/signalements/S-xxxx/restaurer</code>, for ten minutes, refused if the number
+was given out again); &quot;Exporter&quot; downloads the reports shown as a CSV for
+Excel (semicolons, accents kept, phone numbers masked); and Ctrl/Cmd + K
+opens a quick search over reports, villages and actions, driven from the
+keyboard.</li>
 <li>Ndiédieng on the website can use Gemini: a serverless function
 (<code>/api/ndiedieng/gemini</code>, generated from <code>src/geminiFunction.ts</code>) holds
 <code>GEMINI_API_KEY</code> and runs only the prototype&#39;s fixed tasks (write a query,
