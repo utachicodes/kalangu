@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `examples/ndiedieng`: a prototype for the commune of Ndiédieng (Senegal), in
+  French, on fictitious data (58 villages, 200 equipments, 499 records). Village
+  chiefs report breakdowns, births and deaths by USSD or SMS; free SMS are
+  sorted by keywords or Gemini, unclear ones sent to be checked; the town
+  hall's dashboard answers each report by SMS; and a territorial assistant
+  answers questions from the data, showing its SQL, with Gemini's queries
+  checked and run read-only. A demo page puts a simulated chief's phone beside
+  the dashboard.
+
 ## [0.1.0-alpha.9] - 2026-11-19
 
 ### Added

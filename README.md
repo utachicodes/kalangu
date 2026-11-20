@@ -41,6 +41,7 @@ operators, real costs) is not done.
 | `@kalangu/sms` | Africa's Talking SMS: send, incoming messages, delivery reports |
 | `@kalangu/sim` | Terminal keypad-phone simulator, and a scriptable phone for tests |
 | `examples/clinic` | The example agent behind `pnpm demo` |
+| `examples/ndiedieng` | A prototype for a commune in Senegal: village chiefs report breakdowns, births and deaths by USSD or SMS; the town hall sorts them and asks questions of its records (in French, fictitious data) |
 
 ## The problem
 

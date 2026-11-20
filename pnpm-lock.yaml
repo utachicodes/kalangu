@@ -194,6 +194,21 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ussd
 
+  examples/ndiedieng:
+    dependencies:
+      '@kalangu/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@kalangu/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
+      '@kalangu/sms':
+        specifier: workspace:*
+        version: link:../../packages/sms
+      '@kalangu/ussd':
+        specifier: workspace:*
+        version: link:../../packages/ussd
+
   packages/core: {}
 
   packages/sim:

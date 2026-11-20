@@ -1,0 +1,23 @@
+{
+  "name": "@kalangu/example-ndiedieng",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "Prototype for the commune of Ndiédieng: village chiefs report breakdowns, births and deaths by USSD or SMS; the Mairie sees them sorted and asks questions of its records.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@kalangu/core": "workspace:*",
+    "@kalangu/sim": "workspace:*",
+    "@kalangu/sms": "workspace:*",
+    "@kalangu/ussd": "workspace:*"
+  }
+}
