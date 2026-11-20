@@ -97,6 +97,10 @@ only, limited per visitor, the rules whenever it fails</li>
 <li><input checked="" disabled="" type="checkbox"> Confirm the function answers on the live site: it did on 20 Nov 2026
 (questions, greetings and the spoken answers)</li>
 <li><input disabled="" type="checkbox"> Set a quota on the Gemini key in Google AI Studio</li>
+<li><input disabled="" type="checkbox"> The free tier&#39;s speech quota runs out after a few spoken answers
+(Gemini answers 429): then French falls back to the browser&#39;s voice and
+Wolof is only written. Enable billing on the key for the demo days, or
+accept the fallback</li>
 <li><input disabled="" type="checkbox"> Run Ndiédieng on the Africa&#39;s Talking sandbox with their phone
 simulator (needs an account and a public URL for the callbacks)</li>
 <li><input disabled="" type="checkbox"> Wolof in the example (Gemini already sorts Wolof SMS; everything else
@@ -105,12 +109,15 @@ is French). Step 1, buildable now, with drafts clearly marked unreviewed:<ul>
 number, with Kalangu&#39;s language menu</li>
 <li><input disabled="" type="checkbox"> The Ndiédieng menus and SMS replies in Wolof (about 40 strings),
 drafted with Gemini</li>
-<li><input disabled="" type="checkbox"> Français / Wolof choice on the assistant page; Gemini answers in the
-chosen language</li>
+<li><input checked="" disabled="" type="checkbox"> The assistant answers in Wolof when asked in Wolof, written and
+spoken: Gemini reports the question&#39;s language and the answer and voice
+follow it. Tested with a question spoken by Gemini&#39;s own voice (&quot;ñaata
+foraj ñoo yaqu…&quot; → the 8 broken boreholes, answered in Wolof); not yet
+with a real speaker</li>
 <li><input disabled="" type="checkbox"> Wolof voice messages through Gemini audio transcription (browsers do
 not dictate Wolof). The assistant already listens through Gemini, and its
 transcription prompt accepts French or Wolof; quality to test with speakers</li>
-<li><input disabled="" type="checkbox"> Spoken answers in Wolof (the &quot;speak&quot; task&#39;s prompt says French today)</li>
+<li><input checked="" disabled="" type="checkbox"> Spoken answers in Wolof (the &quot;speak&quot; task takes the language)</li>
 <li><input disabled="" type="checkbox"> A review sheet (French | Wolof draft | correction) for a speaker</li>
 </ul>
 </li>

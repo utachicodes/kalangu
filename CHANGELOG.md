@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Ndiédieng's assistant answers in Wolof when asked in Wolof, in writing and
+  aloud: Gemini reports the question's language (from the transcription and
+  the question) and the answer and the voice follow it; otherwise French.
+  The prompt now lists the data's exact values ('en panne', not 'en_panne'),
+  which fixed a wrong "no broken borehole" answer. Spoken answers use two
+  speech requests at most, since the speech quota is tight; if the second
+  fails, the browser's voice finishes a French answer.
 - Ndiédieng's assistant listens through Gemini when it is available: the page
   records the question, stops by itself at a pause (judged against the
   room's own noise), and Gemini transcribes it (French or Wolof), so it works

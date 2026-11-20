@@ -42,6 +42,13 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="n
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>Ndiédieng&#39;s assistant answers in Wolof when asked in Wolof, in writing and
+aloud: Gemini reports the question&#39;s language (from the transcription and
+the question) and the answer and the voice follow it; otherwise French.
+The prompt now lists the data&#39;s exact values (&#39;en panne&#39;, not &#39;en_panne&#39;),
+which fixed a wrong &quot;no broken borehole&quot; answer. Spoken answers use two
+speech requests at most, since the speech quota is tight; if the second
+fails, the browser&#39;s voice finishes a French answer.</li>
 <li>Ndiédieng&#39;s assistant listens through Gemini when it is available: the page
 records the question, stops by itself at a pause (judged against the
 room&#39;s own noise), and Gemini transcribes it (French or Wolof), so it works

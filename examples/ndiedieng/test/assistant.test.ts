@@ -111,6 +111,28 @@ describe("Gemini assistant", () => {
   });
 });
 
+describe("answering in the question's language", () => {
+  it("passes Wolof from the question to the answer", async () => {
+    const tasks: any[] = [];
+    const call = async (t: any) => {
+      tasks.push(t);
+      return t.task === "plan" ? { langue: "wo", sql: "SELECT COUNT(*) AS n FROM villages", reponse: "" } : { reponse: "58 dëkk ñoo am." };
+    };
+    const a = await geminiAssistant(commune(), { call }).ask("Ñaata dëkk ñoo am ?");
+    expect(tasks[1]).toMatchObject({ task: "answer", langue: "wo" });
+    expect(a).toMatchObject({ langue: "wo", answer: "58 dëkk ñoo am." });
+  });
+
+  it("asks for Wolof in the prompts, and refuses another language", () => {
+    const answer = promptFor({ task: "answer", question: "q", sql: "SELECT 1", rows: [], langue: "wo" });
+    expect(typeof answer === "object" && answer.system).toMatch(/en wolof du Sénégal/);
+    const spoken = promptFor({ task: "speak", text: "Jërëjëf", langue: "wo" });
+    expect(typeof spoken === "object" && spoken.user).toMatch(/^Lis ceci en wolof/);
+    expect(promptFor({ task: "speak", text: "Hello", langue: "en" })).toBe("langue must be fr or wo");
+    expect(promptFor({ task: "answer", question: "q", sql: "SELECT 1", rows: [] })).toMatchObject({ system: expect.stringMatching(/en français correct/) });
+  });
+});
+
 describe("rule assistant small talk", () => {
   it("greets back, thanks back, and offers questions", async () => {
     const r = ruleAssistant(commune());

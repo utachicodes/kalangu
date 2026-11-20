@@ -334,22 +334,19 @@ export function unlockVoice() {
 
 /** The answer in short pieces, sentence by sentence, so the first can play while the next is prepared. */
 function speechChunks(text) {
+  // Two pieces at most: a short first sentence, so the voice starts soon, and
+  // the rest in one go. Every piece is a request, and speech has a tight quota.
   const sentences = text.match(/[^.!?;:]+[.!?;:]*\s*/g) ?? [text];
-  const chunks = [];
-  for (const s of sentences) {
-    const last = chunks.length - 1;
-    // The first piece stays short (it decides how soon the voice starts); later ones may grow.
-    if (last >= 0 && chunks[last].length + s.length < (last === 0 ? 90 : 260)) chunks[last] += s;
-    else chunks.push(s);
-  }
-  return chunks.map((c) => c.trim()).filter(Boolean);
+  const first = sentences.shift().trim();
+  const rest = sentences.join("").trim();
+  return rest ? [first, rest] : [first];
 }
 
-async function fetchSpeech(text) {
+async function fetchSpeech(text, langue = "fr") {
   const res = await fetch(SPEECH_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ task: "speak", text: text.slice(0, 700) }),
+    body: JSON.stringify({ task: "speak", text: text.slice(0, 700), langue }),
     signal: AbortSignal.timeout(25_000),
   });
   const body = await res.json().catch(() => ({}));
@@ -363,13 +360,13 @@ async function fetchSpeech(text) {
  * as soon as it is ready while the next is fetched. Resolves once it starts
  * (or throws, so the caller can use the browser's voice); onLevel gets 0..1.
  */
-export async function speakNatural(text, { onStart, onEnd, onLevel } = {}) {
+export async function speakNatural(text, { onStart, onEnd, onLevel, langue = "fr" } = {}) {
   stopNatural();
   const chunks = speechChunks(text);
   const current = { raf: 0, done: false, urls: [] };
   playing = current;
   const pending = chunks.map(() => null);
-  const get = (i) => (pending[i] ??= fetchSpeech(chunks[i]).then((url) => (current.urls.push(url), url)));
+  const get = (i) => (pending[i] ??= fetchSpeech(chunks[i], langue).then((url) => (current.urls.push(url), url)));
   const finish = () => {
     if (current.done) return;
     current.done = true;
@@ -394,7 +391,11 @@ export async function speakNatural(text, { onStart, onEnd, onLevel } = {}) {
       try {
         playAt(i + 1, await get(i + 1));
       } catch {
-        finish(); // a later piece failed: stop cleanly rather than half a sentence
+        // The rest failed (often the speech quota): the browser's voice finishes
+        // it in French; Wolof, which browsers don't speak, stops cleanly.
+        if (langue !== "fr" || !canSpeak) return finish();
+        cancelAnimationFrame(current.raf);
+        speak(chunks.slice(i + 1).join(" "), { onEnd: finish });
       }
     };
     player.onerror = finish;

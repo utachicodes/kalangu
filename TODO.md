@@ -63,6 +63,10 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
 - [x] Confirm the function answers on the live site: it did on 20 Nov 2026
   (questions, greetings and the spoken answers)
 - [ ] Set a quota on the Gemini key in Google AI Studio
+- [ ] The free tier's speech quota runs out after a few spoken answers
+  (Gemini answers 429): then French falls back to the browser's voice and
+  Wolof is only written. Enable billing on the key for the demo days, or
+  accept the fallback
 - [ ] Run Ndiédieng on the Africa's Talking sandbox with their phone
   simulator (needs an account and a public URL for the callbacks)
 - [ ] Wolof in the example (Gemini already sorts Wolof SMS; everything else
@@ -71,12 +75,15 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
     number, with Kalangu's language menu
   - [ ] The Ndiédieng menus and SMS replies in Wolof (about 40 strings),
     drafted with Gemini
-  - [ ] Français / Wolof choice on the assistant page; Gemini answers in the
-    chosen language
+  - [x] The assistant answers in Wolof when asked in Wolof, written and
+    spoken: Gemini reports the question's language and the answer and voice
+    follow it. Tested with a question spoken by Gemini's own voice ("ñaata
+    foraj ñoo yaqu…" → the 8 broken boreholes, answered in Wolof); not yet
+    with a real speaker
   - [ ] Wolof voice messages through Gemini audio transcription (browsers do
     not dictate Wolof). The assistant already listens through Gemini, and its
     transcription prompt accepts French or Wolof; quality to test with speakers
-  - [ ] Spoken answers in Wolof (the "speak" task's prompt says French today)
+  - [x] Spoken answers in Wolof (the "speak" task takes the language)
   - [ ] A review sheet (French | Wolof draft | correction) for a speaker
 - [ ] Step 2: a Wolof speaker reviews every string (and `locales/wo.draft.json`,
   where some entries already look wrong) before the field tests on 19 Dec

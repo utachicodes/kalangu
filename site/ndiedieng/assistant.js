@@ -168,14 +168,18 @@ function say(m, i) {
     setOrb("speaking");
     return browserVoice();
   }
-  // Gemini's voice, with the orb following it; the browser's if it fails.
+  // Gemini's voice, in the answer's language, with the orb following it.
+  // If it fails: the browser's French voice, or for Wolof, which no browser
+  // speaks, the written answer alone.
   setOrb("thinking", "Je prépare la réponse vocale…");
   speakNatural(spoken(m), {
+    langue: m.langue ?? "fr",
     onStart: () => state.speaking === i && setOrb("speaking", null, false, { realLevel: true }),
     onEnd: ended,
     onLevel: (v) => state.speaking === i && level(v),
   }).catch(() => {
     if (state.speaking !== i) return;
+    if (m.langue === "wo") return ended();
     setOrb("speaking");
     browserVoice();
   });
@@ -204,7 +208,7 @@ async function ask(question, { spoken = false } = {}) {
   let answer;
   try {
     const a = await call("POST", "/api/ask", { question });
-    answer = { role: "bot", text: a.answer, sql: a.sql, columns: a.columns ?? [], rows: a.rows ?? [], suggestions: a.suggestions ?? [] };
+    answer = { role: "bot", text: a.answer, sql: a.sql, columns: a.columns ?? [], rows: a.rows ?? [], suggestions: a.suggestions ?? [], langue: a.langue ?? "fr" };
   } catch (err) {
     answer = { role: "bot", text: `Désolé, je n'ai pas pu répondre : ${err.message}` };
   } finally {
