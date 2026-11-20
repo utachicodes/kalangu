@@ -1,19 +1,17 @@
 /**
  * The commune's database: villages, chiefs, equipments, territorial records
- * and the reports that come in by USSD or SMS. SQLite through Node's built-in
- * `node:sqlite` (Node 22.13+), in a file so that the assistant can open a
- * second, read-only connection to it.
+ * and the reports that come in by USSD, SMS or voice. Plain SQL over `SqlDb`,
+ * so the same code runs on Node's SQLite (nodeSql.ts) and in the browser
+ * (web/sqljs.ts).
  */
 
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { generateTerritory, type EquipmentType, type Territory } from "./data.js";
+import type { SqlDb, SqlRow } from "./sql.js";
 
 export type Categorie = EquipmentType | "naissance" | "deces" | "autre";
 export type Urgence = "haute" | "moyenne" | "basse";
 export type Statut = "nouveau" | "a_verifier" | "en_cours" | "resolu";
+export type Canal = "ussd" | "sms" | "vocal";
 
 export interface Signalement {
   code: string;
@@ -25,7 +23,7 @@ export interface Signalement {
   equipement: string | null;
   urgence: Urgence;
   description: string;
-  canal: "ussd" | "sms";
+  canal: Canal;
   statut: Statut;
   confiance: number;
   creeLe: string;
@@ -69,7 +67,7 @@ CREATE TABLE signalements (
   equipement_id INTEGER REFERENCES equipements(id),
   urgence TEXT NOT NULL,      -- haute, moyenne, basse
   description TEXT NOT NULL,
-  canal TEXT NOT NULL,        -- ussd, sms
+  canal TEXT NOT NULL,        -- ussd, sms, vocal
   statut TEXT NOT NULL,       -- nouveau, a_verifier, en_cours, resolu
   confiance REAL NOT NULL,    -- 1 for a USSD menu choice; the classifier's own for SMS
   cree_le TEXT NOT NULL,      -- ISO date and time
@@ -83,14 +81,22 @@ export interface NewSignalement {
   equipementId?: number | null;
   urgence: Urgence;
   description: string;
-  canal: "ussd" | "sms";
+  canal: Canal;
   statut?: Statut;
   confiance?: number;
   creeLe?: string;
 }
 
+export interface CommuneOptions {
+  territory?: Territory;
+  now?: () => Date;
+  /** A month of past reports, so the dashboard is not empty. Default true. */
+  history?: boolean;
+}
+
 export interface Commune {
-  readonly path: string;
+  /** Runs a query that cannot change anything, for the assistant. */
+  readOnly(sql: string): { columns: string[]; rows: SqlRow[] };
   chefByPhone(telephone: string): { telephone: string; nom: string; villageId: number; village: string } | null;
   chefs(): Array<{ telephone: string; village: string }>;
   equipementFor(villageId: number, nature: string): { id: number; nom: string } | null;
@@ -117,7 +123,7 @@ interface Row {
   equipement: string | null;
   urgence: Urgence;
   description: string;
-  canal: "ussd" | "sms";
+  canal: Canal;
   statut: Statut;
   confiance: number;
   cree_le: string;
@@ -141,58 +147,51 @@ const toSignalement = (r: Row): Signalement => ({
   resoluLe: r.resolu_le,
 });
 
-/**
- * Creates the database, filled with the fictitious territory and a month of
- * past reports. `path` defaults to a new file in the system's temp folder.
- */
-export function openCommune(options: { path?: string; territory?: Territory; now?: () => Date; history?: boolean } = {}): Commune {
-  const path = options.path ?? join(mkdtempSync(join(tmpdir(), "ndiedieng-")), "commune.db");
+/** Fills `db` with the fictitious territory and, by default, a month of past reports. */
+export function createCommune(db: SqlDb, options: CommuneOptions = {}): Commune {
   const now = options.now ?? (() => new Date());
-  const db = new DatabaseSync(path);
   db.exec(SCHEMA);
   const t = options.territory ?? generateTerritory();
 
-  const insertVillage = db.prepare("INSERT INTO villages (id, nom, population) VALUES (?, ?, ?)");
-  const insertChef = db.prepare("INSERT INTO chefs (telephone, nom, village_id) VALUES (?, ?, ?)");
-  const insertEquip = db.prepare("INSERT INTO equipements (id, village_id, type, nature, nom, etat) VALUES (?, ?, ?, ?, ?, ?)");
-  const insertFiche = db.prepare(
-    "INSERT INTO fiches (id, village_id, categorie, intitule, etat, population_desservie, derniere_visite) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  );
   db.exec("BEGIN");
-  for (const v of t.villages) insertVillage.run(v.id, v.nom, v.population);
-  for (const c of t.chefs) insertChef.run(c.telephone, c.nom, c.villageId);
-  for (const e of t.equipements) insertEquip.run(e.id, e.villageId, e.type, e.nature, e.nom, e.etat);
-  for (const f of t.fiches) insertFiche.run(f.id, f.villageId, f.categorie, f.intitule, f.etat, f.populationDesservie, f.derniereVisite);
+  for (const v of t.villages) db.run("INSERT INTO villages (id, nom, population) VALUES (?, ?, ?)", v.id, v.nom, v.population);
+  for (const c of t.chefs) db.run("INSERT INTO chefs (telephone, nom, village_id) VALUES (?, ?, ?)", c.telephone, c.nom, c.villageId);
+  for (const e of t.equipements) {
+    db.run("INSERT INTO equipements (id, village_id, type, nature, nom, etat) VALUES (?, ?, ?, ?, ?, ?)", e.id, e.villageId, e.type, e.nature, e.nom, e.etat);
+  }
+  for (const f of t.fiches) {
+    db.run(
+      "INSERT INTO fiches (id, village_id, categorie, intitule, etat, population_desservie, derniere_visite) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      f.id, f.villageId, f.categorie, f.intitule, f.etat, f.populationDesservie, f.derniereVisite,
+    );
+  }
   db.exec("COMMIT");
 
-  const insertSignalement = db.prepare(`INSERT INTO signalements
-    (code, village_id, telephone, categorie, equipement_id, urgence, description, canal, statut, confiance, cree_le)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const nextId = db.prepare("SELECT COALESCE(MAX(id), 0) + 1 AS n FROM signalements");
-  const byCode = db.prepare(`${ROW} WHERE s.code = ?`);
-
   const commune: Commune = {
-    path,
+    readOnly: (sql) => db.readOnly(sql),
     chefByPhone(telephone) {
-      const row = db
-        .prepare("SELECT c.telephone, c.nom, c.village_id AS villageId, v.nom AS village FROM chefs c JOIN villages v ON v.id = c.village_id WHERE c.telephone = ?")
-        .get(telephone) as { telephone: string; nom: string; villageId: number; village: string } | undefined;
+      const row = db.get(
+        "SELECT c.telephone, c.nom, c.village_id AS villageId, v.nom AS village FROM chefs c JOIN villages v ON v.id = c.village_id WHERE c.telephone = ?",
+        telephone,
+      ) as { telephone: string; nom: string; villageId: number; village: string } | undefined;
       return row ?? null;
     },
     chefs() {
-      return db.prepare("SELECT c.telephone, v.nom AS village FROM chefs c JOIN villages v ON v.id = c.village_id ORDER BY v.id").all() as Array<{
+      return db.all("SELECT c.telephone, v.nom AS village FROM chefs c JOIN villages v ON v.id = c.village_id ORDER BY v.id") as Array<{
         telephone: string;
         village: string;
       }>;
     },
     equipementFor(villageId, nature) {
-      const row = db
-        .prepare("SELECT id, nom FROM equipements WHERE village_id = ? AND nature = ? ORDER BY etat = 'en panne' DESC, id LIMIT 1")
-        .get(villageId, nature) as { id: number; nom: string } | undefined;
+      const row = db.get(
+        "SELECT id, nom FROM equipements WHERE village_id = ? AND nature = ? ORDER BY etat = 'en panne' DESC, id LIMIT 1",
+        villageId,
+        nature,
+      ) as { id: number; nom: string } | undefined;
       return row ?? null;
     },
     equipementsOf(villageId) {
-      return db.prepare("SELECT id, type, nature, nom FROM equipements WHERE village_id = ? ORDER BY id").all(villageId) as Array<{
+      return db.all("SELECT id, type, nature, nom FROM equipements WHERE village_id = ? ORDER BY id", villageId) as Array<{
         id: number;
         type: string;
         nature: string;
@@ -200,9 +199,12 @@ export function openCommune(options: { path?: string; territory?: Territory; now
       }>;
     },
     addSignalement(s) {
-      const id = (nextId.get() as { n: number }).n;
+      const id = (db.get("SELECT COALESCE(MAX(id), 0) + 1 AS n FROM signalements") as { n: number }).n;
       const code = `S-${String(id).padStart(4, "0")}`;
-      insertSignalement.run(
+      db.run(
+        `INSERT INTO signalements
+    (code, village_id, telephone, categorie, equipement_id, urgence, description, canal, statut, confiance, cree_le)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         code,
         s.villageId,
         s.telephone,
@@ -216,12 +218,12 @@ export function openCommune(options: { path?: string; territory?: Territory; now
         s.creeLe ?? now().toISOString(),
       );
       if (s.equipementId && (s.statut ?? "nouveau") !== "resolu") {
-        db.prepare("UPDATE equipements SET etat = 'en panne' WHERE id = ?").run(s.equipementId);
+        db.run("UPDATE equipements SET etat = 'en panne' WHERE id = ?", s.equipementId);
       }
       return commune.signalement(code)!;
     },
     signalement(code) {
-      const row = byCode.get(code.trim().toUpperCase()) as Row | undefined;
+      const row = db.get(`${ROW} WHERE s.code = ?`, code.trim().toUpperCase()) as Row | undefined;
       return row ? toSignalement(row) : null;
     },
     signalements(filter = {}) {
@@ -237,24 +239,29 @@ export function openCommune(options: { path?: string; territory?: Territory; now
       }
       const sql = `${ROW} ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
         ORDER BY s.statut = 'resolu', CASE s.urgence WHEN 'haute' THEN 0 WHEN 'moyenne' THEN 1 ELSE 2 END, s.cree_le DESC`;
-      return (db.prepare(sql).all(...params) as Row[]).map(toSignalement);
+      return (db.all(sql, ...params) as unknown as Row[]).map(toSignalement);
     },
     setStatut(code, statut, change = {}) {
       const current = commune.signalement(code);
       if (!current) return null;
-      db.prepare(
+      db.run(
         "UPDATE signalements SET statut = ?, categorie = COALESCE(?, categorie), urgence = COALESCE(?, urgence), resolu_le = ? WHERE code = ?",
-      ).run(statut, change.categorie ?? null, change.urgence ?? null, statut === "resolu" ? now().toISOString() : null, current.code);
+        statut,
+        change.categorie ?? null,
+        change.urgence ?? null,
+        statut === "resolu" ? now().toISOString() : null,
+        current.code,
+      );
       if (statut === "resolu" && current.equipementId) {
-        db.prepare("UPDATE equipements SET etat = 'fonctionnel' WHERE id = ?").run(current.equipementId);
+        db.run("UPDATE equipements SET etat = 'fonctionnel' WHERE id = ?", current.equipementId);
       }
       return commune.signalement(current.code);
     },
     counts() {
-      const rows = db.prepare("SELECT statut, COUNT(*) AS n FROM signalements GROUP BY statut").all() as Array<{ statut: Statut; n: number }>;
+      const rows = db.all("SELECT statut, COUNT(*) AS n FROM signalements GROUP BY statut") as Array<{ statut: Statut; n: number }>;
       const out = { nouveau: 0, a_verifier: 0, en_cours: 0, resolu: 0, haute: 0 };
       for (const r of rows) out[r.statut] = r.n;
-      out.haute = (db.prepare("SELECT COUNT(*) AS n FROM signalements WHERE urgence = 'haute' AND statut != 'resolu'").get() as { n: number }).n;
+      out.haute = (db.get("SELECT COUNT(*) AS n FROM signalements WHERE urgence = 'haute' AND statut != 'resolu'") as { n: number }).n;
       return out;
     },
     close() {

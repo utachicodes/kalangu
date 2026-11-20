@@ -5,7 +5,8 @@ import { createApp, maskPhone } from "../src/app.js";
 import { ruleAssistant } from "../src/assistant.js";
 import { keywordClassifier } from "../src/classify.js";
 import { chefPhone } from "../src/data.js";
-import { openCommune, type Commune } from "../src/db.js";
+import type { Commune } from "../src/db.js";
+import { openCommune } from "../src/nodeSql.js";
 
 const open: Commune[] = [];
 afterEach(() => open.splice(0).forEach((c) => c.close()));
@@ -14,7 +15,7 @@ function setup() {
   const commune = openCommune({ history: false });
   open.push(commune);
   const agent = createNdiediengAgent({ commune, classifier: keywordClassifier(), channels: [], logger: silentLogger });
-  const app = createApp({ commune, agent, assistant: ruleAssistant(commune), mode: "test" });
+  const app = createApp({ commune, agent, assistant: ruleAssistant(commune), classifier: keywordClassifier(), mode: "test" });
   const call = async (method: string, path: string, body?: unknown) => {
     const res = await app(new Request(`http://localhost${path}`, { method, ...(body ? { body: JSON.stringify(body), headers: { "content-type": "application/json" } } : {}) }));
     // The API's JSON, read loosely: the assertions below say what each response holds.
@@ -77,12 +78,17 @@ describe("the demo app", () => {
     expect((await t.call("GET", "/nope")).status).toBe(404);
   });
 
-  it("serves the page with no data in its HTML", async () => {
+  it("records a transcribed voice message and confirms it by SMS", async () => {
     const t = setup();
-    const page = (await t.call("GET", "/")).body as string;
-    expect(page).toMatch(/^<!doctype html>/);
-    expect(page).toContain("Données fictives");
-    expect(page).not.toContain(chefPhone(1));
-    expect(page).not.toMatch(/innerHTML/);
+    const res = (await t.phone("vocal", "Le lampadaire solaire de la place ne s'allume plus")).body;
+    expect(res.inbox.at(-1).text).toMatch(/^Message reçu \(S-0001\) : énergie, lampadaire solaire/);
+    expect(t.commune.signalement("S-0001")).toMatchObject({ canal: "vocal", categorie: "energie" });
+    expect((await t.phone("vocal", "  ")).status).toBe(400);
+    const stranger = (await t.phone("vocal", "forage en panne", "+221000000999")).body;
+    expect(stranger.inbox.at(-1).text).toMatch(/n'est pas enregistré/);
+  });
+
+  it("says which mode it runs in", async () => {
+    expect((await setup().call("GET", "/api/info")).body).toEqual({ mode: "test", code: "*123#" });
   });
 });

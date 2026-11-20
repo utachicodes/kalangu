@@ -10,7 +10,6 @@
  * never from memory.
  */
 
-import { DatabaseSync } from "node:sqlite";
 import { fold } from "./classify.js";
 import { SCHEMA, type Commune } from "./db.js";
 
@@ -37,18 +36,12 @@ export function checkQuery(sql: string): string | null {
   return null;
 }
 
-/** Runs a checked query on a connection that cannot write. */
-function runReadOnly(path: string, sql: string, limit = 200): { columns: string[]; rows: Array<Record<string, unknown>> } {
+/** Runs a checked query where it cannot change anything. */
+function runReadOnly(commune: Commune, sql: string, limit = 200): { columns: string[]; rows: Array<Record<string, unknown>> } {
   const problem = checkQuery(sql);
   if (problem) throw new Error(problem);
-  const db = new DatabaseSync(path, { readOnly: true });
-  try {
-    const stmt = db.prepare(sql.trim().replace(/;\s*$/, ""));
-    const rows = (stmt.all() as Array<Record<string, unknown>>).slice(0, limit);
-    return { columns: stmt.columns().map((c) => c.name), rows };
-  } finally {
-    db.close();
-  }
+  const { columns, rows } = commune.readOnly(sql.trim().replace(/;\s*$/, ""));
+  return { columns, rows: rows.slice(0, limit) };
 }
 
 interface Intent {
@@ -161,7 +154,7 @@ export function ruleAssistant(commune: Commune): Assistant {
           par: "regles",
         };
       }
-      const { columns, rows } = runReadOnly(commune.path, intent.sql);
+      const { columns, rows } = runReadOnly(commune, intent.sql);
       return { answer: intent.say(rows), sql: intent.sql, columns, rows, par: "regles" };
     },
   };
@@ -209,7 +202,7 @@ export function geminiAssistant(commune: Commune, options: { apiKey: string; mod
         if (!plan.sql.trim()) {
           return { answer: "Les fiches et signalements ne contiennent pas de quoi répondre à cette question.", sql: null, columns: [], rows: [], par: "gemini" };
         }
-        const { columns, rows } = runReadOnly(commune.path, plan.sql);
+        const { columns, rows } = runReadOnly(commune, plan.sql);
         const written = (await gemini(
           options.apiKey,
           model,

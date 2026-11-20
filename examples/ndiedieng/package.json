@@ -12,7 +12,9 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "build:web": "node scripts/build-web.mjs",
+    "check:web": "node scripts/build-web.mjs --check"
   },
   "dependencies": {
     "@kalangu/core": "workspace:*",

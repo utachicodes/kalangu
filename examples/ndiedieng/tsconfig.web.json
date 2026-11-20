@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "lib": ["ES2022", "DOM"],
+    "types": [],
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "paths": {
+      "@kalangu/core": ["../../packages/core/dist/index.d.ts"],
+      "@kalangu/sim": ["../../packages/sim/dist/phone.d.ts"]
+    }
+  },
+  "files": ["web/local.ts"]
+}

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The Ndiédieng prototype is online at kalangu.utachi.website/ndiedieng,
+  running entirely in the visitor's browser (Kalangu, SQLite through sql.js,
+  and the API), with a new interface: three phones (a simple keypad phone,
+  Android and iPhone, each with its own USSD dialog), voice messages and a
+  spoken assistant (the browser's dictation and speech), and a reworked
+  dashboard (search, status filters, relative times, cards on phones). The
+  example's data layer now runs on both Node's SQLite and sql.js; CI checks
+  the published page is built from source.
 - `examples/ndiedieng`: a prototype for the commune of Ndiédieng (Senegal), in
   French, on fictitious data (58 villages, 200 equipments, 499 records). Village
   chiefs report breakdowns, births and deaths by USSD or SMS; free SMS are
