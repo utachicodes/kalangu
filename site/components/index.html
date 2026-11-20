@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Components · Kalangu</title>
+<meta name="description" content="The UI components we built from scratch for Kalangu's Ndiédieng example: a voice orb, phone simulators, a quick search, undo toasts and more. Live demos, the code, and why each exists.">
+<link rel="canonical" href="https://kalangu.utachi.website/components/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Components · Kalangu">
+<meta property="og:description" content="Hand-built UI components with live demos, their code, and the reasons behind them.">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+<link rel="stylesheet" href="components.css">
+<script type="module" src="page.js"></script>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <a href="/docs/design/">Design</a>
+    <a href="/docs/roadmap/">Roadmap</a>
+    <a href="/components/" aria-current="true">Components</a>
+    <a href="/contributing/">Contributing</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+
+<main id="content">
+  <section class="intro">
+    <div class="intro-text">
+      <p class="eyebrow">Built from scratch, no UI library</p>
+      <h1>The components</h1>
+      <p class="lead">Everything in the <a href="/ndiedieng/">Ndiédieng example</a> is hand-made in plain HTML, CSS and JavaScript: no framework, no build step. Here is each piece, running live, with its code, its nickname, and why it exists.</p>
+      <p class="small">Every demo below runs from exactly the code shown under it. Copy freely: MIT, like the rest of Kalangu.</p>
+    </div>
+    <div class="mascot-wrap">
+      <button class="mascot" id="marble" type="button" aria-label="Marble, the orb. Click to say hi.">
+        <span class="m-glow"></span>
+        <span class="m-core"><i></i><i></i><i></i><i></i></span>
+        <span class="m-shine"></span>
+        <span class="eyes" aria-hidden="true"><span class="eye"><b></b></span><span class="eye"><b></b></span></span>
+      </button>
+      <p class="bubble" id="bubble" aria-live="polite">Hi, I'm Marble. Poke me.</p>
+    </div>
+  </section>
+
+  <nav class="chips" id="chips" aria-label="Jump to a component"></nav>
+  <div class="cards" id="cards"></div>
+
+  <p class="outro">Want them in your project? The full versions live in <a href="https://github.com/utachicodes/kalangu/tree/main/examples/ndiedieng/web"><code>examples/ndiedieng/web</code></a>. And if one of them made you smile, <a href="/contributing/">come build the next one</a>.</p>
+</main>
+</body>
+</html>

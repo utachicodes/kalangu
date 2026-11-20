@@ -1,0 +1,96 @@
+/* The components page: an intro with Marble the mascot, then one card per
+   component (live demo, code, nickname and reason). Uses docs.css for the
+   header, fonts and colours. */
+
+main { max-width: 1180px; margin: 0 auto; padding: 32px 32px 80px; }
+.small { font-size: 14px; color: var(--ink-56); }
+
+/* ---------- Intro and Marble ---------- */
+.intro { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; align-items: center; margin-bottom: 28px; }
+.eyebrow { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.intro h1 { margin: 0 0 14px; font-size: 56px; line-height: 1.02; letter-spacing: -.035em; font-weight: 600; }
+.lead { margin: 0 0 10px; font-size: 19px; line-height: 1.5; color: var(--ink-70); max-width: 640px; }
+.mascot-wrap { position: relative; display: grid; justify-items: center; gap: 18px; padding-top: 10px; }
+.mascot { --level: 0; --speed: 1; position: relative; width: 168px; height: 168px; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer;
+  animation: float 5s ease-in-out infinite; }
+.mascot > span { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+.m-glow { inset: -28% !important; filter: blur(12px); opacity: calc(.55 + var(--level) * .45);
+  background: radial-gradient(circle, rgba(155,114,203,.45), rgba(66,133,244,.22) 40%, transparent 70%); }
+.m-core { overflow: hidden; background: radial-gradient(circle at 50% 45%, #fff, #f1f0ff 55%, #e4e6fb);
+  box-shadow: inset 0 -8px 22px rgba(66,133,244,.22), inset 0 8px 18px #fff, 0 14px 36px rgba(110,90,200,.3);
+  scale: calc(1 + var(--level) * .12); transition: scale .1s linear; }
+.m-core i { position: absolute; left: 18%; top: 18%; width: 64%; height: 64%; border-radius: 50%; filter: blur(16px); opacity: .9;
+  animation: m-drift calc(var(--d) * var(--speed)) linear infinite; }
+.m-core i:nth-child(1) { --d: 9s; --r: 22%; background: #4285f4; }
+.m-core i:nth-child(2) { --d: 12s; --r: 26%; background: #a06ee0; animation-direction: reverse; }
+.m-core i:nth-child(3) { --d: 14s; --r: 20%; background: #f06a8a; animation-delay: -5s; }
+.m-core i:nth-child(4) { --d: 7s; --r: 16%; background: #3cc6f2; width: 46%; height: 46%; left: 27%; top: 27%; }
+@keyframes m-drift { from { transform: rotate(0) translateX(var(--r)) rotate(0); } to { transform: rotate(360deg) translateX(var(--r)) rotate(-360deg); } }
+.m-shine { background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.95), rgba(255,255,255,.4) 9%, transparent 26%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.55); }
+@keyframes float { 50% { translate: 0 -8px; } }
+/* Googly eyes that follow your pointer (page.js moves the pupils). */
+.eyes { position: absolute !important; inset: 42% auto auto 50% !important; translate: -50% -50%; display: flex; gap: 14px; border-radius: 0 !important; }
+.eye { position: relative; width: 30px; height: 34px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(40,30,90,.25), inset 0 -2px 4px rgba(0,0,0,.06);
+  display: grid; place-items: center; overflow: hidden; transform-origin: center; }
+.eye b { width: 13px; height: 13px; border-radius: 50%; background: #1b1b2e; transition: translate .08s linear; box-shadow: inset 3px -3px 0 -1px rgba(255,255,255,.0); position: relative; }
+.eye b::after { content: ""; position: absolute; left: 3px; top: 2px; width: 4px; height: 4px; border-radius: 50%; background: #fff; }
+.mascot.blink .eye { animation: blink .18s ease-in-out; }
+@keyframes blink { 50% { scale: 1 .08; } }
+.mascot.boop { animation: boop .5s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes boop { 30% { scale: 1.18 .82; } 60% { scale: .92 1.1; } }
+.mascot.dizzy .m-core { animation: spin-fast .9s linear 2; }
+@keyframes spin-fast { to { rotate: 360deg; } }
+.bubble { position: relative; margin: 0; max-width: 280px; padding: 10px 14px; border-radius: 16px; background: var(--paper); border: 1px solid var(--hair);
+  font-size: 15px; text-align: center; box-shadow: 0 6px 18px rgba(13,13,12,.06); }
+.bubble::before { content: ""; position: absolute; top: -7px; left: 50%; width: 12px; height: 12px; translate: -50% 0; rotate: 45deg;
+  background: var(--paper); border-left: 1px solid var(--hair); border-top: 1px solid var(--hair); }
+.bubble.pop { animation: pop .3s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes pop { from { scale: .85; opacity: .4; } }
+
+/* ---------- Jump chips ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 32px; }
+.chips a { padding: 6px 12px; border-radius: 99px; border: 1px solid var(--hair); background: var(--paper); text-decoration: none; font-size: 14px; }
+.chips a:hover { border-color: var(--ink); }
+
+/* ---------- Cards ---------- */
+.cards { display: grid; gap: 28px; }
+.card { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); border: 1px solid var(--hair); border-radius: 22px; background: var(--paper); overflow: hidden; scroll-margin-top: 84px; }
+.card.reveal { opacity: 0; translate: 0 24px; transition: opacity .5s ease, translate .5s cubic-bezier(.2, .8, .2, 1); }
+.card.reveal.in { opacity: 1; translate: 0 0; }
+.info { padding: 26px 26px 22px; display: flex; flex-direction: column; gap: 12px; border-right: 1px solid var(--hair); }
+.num { font-size: 13px; font-weight: 600; color: var(--ink-56); font-variant-numeric: tabular-nums; }
+.info h2 { margin: 0; font-size: 30px; line-height: 1.1; letter-spacing: -.02em; font-weight: 600; }
+.real { margin: -4px 0 0; font-size: 15px; color: var(--ink-56); }
+.why { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-70); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags span { padding: 2px 10px; border-radius: 99px; background: var(--code); font-size: 12.5px; font-weight: 500; }
+.used { margin-top: auto; font-size: 14px; }
+.used a { font-weight: 600; }
+.demo { background: var(--cream); border-bottom: 1px solid var(--hair); min-height: 120px; }
+.side-r { display: flex; flex-direction: column; min-width: 0; }
+.code { display: flex; flex-direction: column; min-height: 0; }
+.code-bar { display: flex; align-items: center; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--hair); }
+.code-bar [role="tab"] { border: 0; background: none; padding: 6px 12px; border-radius: 8px; font: inherit; font-size: 14px; cursor: pointer; color: var(--ink-56); }
+.code-bar [role="tab"][aria-selected="true"] { background: var(--code); color: var(--ink); font-weight: 600; }
+.copy { margin-left: auto; border: 1px solid var(--hair); background: #fff; padding: 5px 12px; border-radius: 8px; font: inherit; font-size: 13px; cursor: pointer; }
+.copy.done { border-color: #0b6b45; color: #0b6b45; }
+.code pre { margin: 0; max-height: 300px; overflow: auto; padding: 14px 16px; background: #1d1b18; color: #ece6dc; font: 12.5px/1.55 ui-monospace, "SF Mono", Menlo, monospace; tab-size: 2; }
+.code pre:focus-visible { outline-offset: -3px; }
+.outro { margin: 48px 0 0; font-size: 17px; color: var(--ink-70); text-align: center; }
+
+@media (max-width: 900px) {
+  main { padding: 20px 16px 64px; }
+  .intro { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .intro h1 { font-size: 42px; }
+  .mascot { width: 136px; height: 136px; }
+  .card { grid-template-columns: minmax(0, 1fr); }
+  .info { border-right: 0; border-bottom: 1px solid var(--hair); }
+  .top { padding: 0 16px; }
+  .top-r { gap: 16px; font-size: 14px; }
+  .top-r a:nth-child(1), .top-r a:nth-child(2), .top-r a:nth-child(5) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+  .card.reveal { opacity: 1; translate: 0 0; }
+}

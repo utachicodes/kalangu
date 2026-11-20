@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The website has a components page (`/components/`, linked next to Design,
+  Roadmap and Contribute, and in the docs header): the twelve UI components
+  built for the Ndiédieng example, each with a live demo running from the
+  exact code shown (HTML, CSS, JS, copyable), a nickname, and the reason it
+  exists, plus Marble, a mascot orb with googly eyes that follow the pointer.
 - Ndiédieng's dashboard: deleting a report is immediate, with "Annuler" in
   the toast to bring it back under its own number (`POST
   /api/signalements/S-xxxx/restaurer`, for ten minutes, refused if the number

@@ -1,7 +1,7 @@
 // Run with: node --test "scripts/**/*.test.mjs"
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { FAVICON, PAGES, ROBOTS, SITE_URL, build, checkLinks, notFoundHtml, renderMarkdown, rewriteLink, sitemap, slugify } from "./build-site.mjs";
+import { FAVICON, PAGES, ROBOTS, SITE_URL, STATIC_PAGES, build, checkLinks, notFoundHtml, renderMarkdown, rewriteLink, sitemap, slugify } from "./build-site.mjs";
 
 const pageBySrc = new Map(PAGES.map((p) => [p.src, p]));
 const exists = (p) => ["examples/clinic/src/server.ts", "packages"].includes(p);
@@ -73,8 +73,8 @@ describe("discoverability", () => {
     const xml = sitemap(PAGES);
     assert.match(xml, new RegExp(`<loc>${SITE_URL}/</loc>`));
     for (const page of PAGES) assert.ok(xml.includes(`<loc>${SITE_URL}${page.url}</loc>`), `${page.url} missing from the sitemap`);
-    for (const url of ["/ndiedieng/", "/ndiedieng/assistant/"]) assert.ok(xml.includes(`<loc>${SITE_URL}${url}</loc>`), `${url} missing from the sitemap`);
-    assert.equal((xml.match(/<url>/g) ?? []).length, PAGES.length + 3);
+    for (const url of STATIC_PAGES) assert.ok(xml.includes(`<loc>${SITE_URL}${url}</loc>`), `${url} missing from the sitemap`);
+    assert.equal((xml.match(/<url>/g) ?? []).length, PAGES.length + 1 + STATIC_PAGES.length);
   });
 
   it("points robots.txt at the sitemap", () => {
@@ -98,7 +98,7 @@ describe("the 404 page", () => {
     const html = notFoundHtml();
     assert.match(html, /<meta name="robots" content="noindex">/);
     const internal = [...html.matchAll(/href="(\/[^"#]*)"/g)].map((m) => m[1]).filter((h) => !/\.(css|svg|woff2)$/.test(h));
-    const known = new Set(["/", ...PAGES.map((p) => p.url)]);
+    const known = new Set(["/", ...PAGES.map((p) => p.url), ...STATIC_PAGES]);
     for (const link of internal) assert.ok(known.has(link), `the 404 page links to ${link}, which is not a page`);
   });
 });

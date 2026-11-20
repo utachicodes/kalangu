@@ -77,6 +77,8 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
   in CI (`pnpm site:check`)
 - [x] Landing page and docs overview link the live example (`/ndiedieng`),
   and the sitemap lists it
+- [x] Components page (`/components/`): the example's hand-built UI pieces,
+  live, with their code, nicknames and reasons
 - [ ] Look over the docs pages on a real phone and a desktop after the next
   deploy
 
