@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The landing page scrolls past the hero to a short "Why Kalangu?": six
+  reasons (keypad phones, screens counted before sending, the 4-second
+  deadline, any model, languages, testing without a SIM), an agent in one
+  screen of code, the Ndiédieng example, how to install, and a footer. The
+  hero's "↓" now leads there.
 - Ndiédieng's assistant answers in Wolof when asked in Wolof, in writing and
   aloud: Gemini reports the question's language (from the transcription and
   the question) and the answer and the voice follow it; otherwise French.

@@ -38,7 +38,7 @@ body {
   font-family: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color: var(--ink);
   background: var(--cream);
-  overflow: hidden;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 a { color: inherit; text-decoration: none; }
@@ -222,6 +222,68 @@ a { color: inherit; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .btn { transition: none; }
 }
+
+/* ---------- Below the fold: why, code, the example, install ---------- */
+html { scroll-behavior: smooth; }
+.more { max-width: 1216px; margin: 0 auto; padding: 0 32px; }
+.sec { padding: 96px 0 0; scroll-margin-top: 24px; }
+.eyebrow { font-size: 14px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #B5501B; margin-bottom: 12px; }
+.sec h2 { font-size: clamp(36px, 4.6vw, 60px); line-height: 1.02; letter-spacing: -.035em; font-weight: 500; max-width: 15ch; }
+.sec-lead { margin-top: 18px; font-size: 20px; line-height: 1.45; color: var(--ink-56); font-weight: 500; max-width: 60ch; }
+.why-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 44px; }
+.why-card { position: relative; padding: 26px 24px 24px; border: 1px solid var(--hair); border-radius: 16px; background: #FFFDF9; transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s; }
+.why-card:hover { transform: translateY(-4px) rotate(-.4deg); box-shadow: 0 14px 30px rgba(13, 13, 12, .07); }
+.why-card:nth-child(even):hover { transform: translateY(-4px) rotate(.4deg); }
+.why-card svg { width: 30px; height: 30px; color: #B5501B; }
+.why-card h3 { margin-top: 18px; font-size: 22px; line-height: 1.15; letter-spacing: -.02em; font-weight: 600; }
+.why-card p { margin-top: 8px; font-size: 16px; line-height: 1.5; color: var(--ink-56); font-weight: 500; }
+.more code { font: 500 .92em ui-monospace, SFMono-Regular, Menlo, monospace; background: rgba(13, 13, 12, .06); padding: 1px 5px; border-radius: 5px; }
+.more pre code { background: none; padding: 0; font: inherit; }
+.code-sec { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; }
+.code-side ul { margin-top: 22px; list-style: none; display: grid; gap: 12px; font-size: 17px; font-weight: 500; }
+.code-side li { position: relative; padding-left: 26px; line-height: 1.45; }
+.code-side li::before { content: "→"; position: absolute; left: 0; color: #B5501B; font-weight: 600; }
+.code-side code { white-space: nowrap; }
+.codebox { min-width: 0; background: var(--ink); color: var(--cream); border-radius: 14px; overflow: hidden; box-shadow: 0 24px 50px rgba(13, 13, 12, .18); }
+.codebox .qs-bar { font-size: 13px; }
+.codebox pre { margin: 0; padding: 20px 22px 22px; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.tk-k { color: #F2A65A; } .tk-s { color: #A8D58A; } .tk-c { color: rgba(251, 246, 239, .45); } .tk-f { color: #8CC8F2; }
+.example { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: center; margin-top: 40px; padding: 36px 40px; border-radius: 22px;
+  background: radial-gradient(60% 120% at 100% 100%, rgba(246, 222, 104, .7), transparent 70%), linear-gradient(135deg, #F4EBC6, #F9CBA9); }
+.example h3 { font-size: 34px; letter-spacing: -.03em; font-weight: 500; line-height: 1.05; }
+.example p { margin-top: 10px; font-size: 17px; line-height: 1.5; color: rgba(13, 13, 12, .7); font-weight: 500; max-width: 54ch; }
+.example .btns { display: flex; flex-direction: column; gap: 10px; }
+.btn-lg { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 54px; padding: 0 22px; border: 1.4px solid var(--ink); border-radius: 8px; font-size: 16px; font-weight: 500; transition: background .2s, color .2s; white-space: nowrap; }
+.btn-lg:hover, .btn-lg.solid { background: var(--ink); color: var(--cream); }
+.btn-lg.solid:hover { background: transparent; color: var(--ink); }
+.install { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 32px; }
+.install .codebox { flex: 1 1 520px; box-shadow: none; }
+.install .codebox pre { padding: 16px 20px; font-size: 14.5px; white-space: pre-wrap; word-break: break-word; }
+.alpha { margin-top: 18px; font-size: 15px; line-height: 1.5; color: var(--ink-56); font-weight: 500; }
+.alpha a { text-decoration: underline; text-underline-offset: 3px; }
+.foot { margin-top: 120px; padding: 36px 0 44px; border-top: 1px solid var(--hair); display: flex; flex-wrap: wrap; gap: 18px 32px; align-items: center; font-size: 15px; font-weight: 500; color: var(--ink-56); }
+.foot nav { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.foot a { color: var(--ink); }
+.foot a:hover { opacity: .6; }
+.foot .drum-mini { width: 26px; height: 32px; color: var(--ink); transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+.foot .drum-mini:hover { transform: rotate(-12deg) scale(1.15); }
+.foot .fine { margin-left: auto; }
+@media (max-width: 960px) {
+  .why-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .code-sec { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .example { grid-template-columns: minmax(0, 1fr); padding: 28px 24px; }
+  .example .btns { flex-direction: row; flex-wrap: wrap; }
+}
+@media (max-width: 600px) {
+  .more { padding: 0 16px; }
+  .sec { padding-top: 64px; }
+  .why-grid { grid-template-columns: minmax(0, 1fr); }
+  .sec-lead { font-size: 17px; }
+  .codebox pre { font-size: 12px; }
+  .install .codebox { flex-basis: 100%; }
+  .foot .fine { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .why-card, .foot .drum-mini { transition: none; } }
 </style>
 </head>
 <body>
@@ -276,7 +338,7 @@ a { color: inherit; text-decoration: none; }
 
   <section class="strip">
     <svg class="notch" viewBox="0 0 1440 62" preserveAspectRatio="none" aria-hidden="true"><path d="M0 62 H1062 C1092 62 1098 54 1116 34 C1138 9 1146 1 1178 1 H1440 V62 Z"/></svg>
-    <a class="hint" href="/docs/roadmap/">↓ Status: alpha, on npm</a>
+    <a class="hint" href="#why">↓ Why Kalangu?</a>
     <div class="strip-in">
       <p class="lead">Built in the open,<br>reviewed by you</p>
       <div class="stats">
@@ -298,6 +360,89 @@ a { color: inherit; text-decoration: none; }
     </div>
   </section>
 </div>
+
+<main class="more">
+  <section class="sec" id="why" aria-labelledby="why-title">
+    <p class="eyebrow">Why Kalangu?</p>
+    <h2 id="why-title">Because not every phone has an app store.</h2>
+    <p class="sec-lead">Millions of people reach services by dialing codes like <code>*123#</code> and by plain SMS. Kalangu lets you put an AI agent there, without fighting 160-character screens and session timers yourself.</p>
+    <div class="why-grid">
+      <article class="why-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M9 6.5h6v4H9zM9 14h.01M12 14h.01M15 14h.01M9 17h.01M12 17h.01M15 17h.01"/></svg><h3>Works on a keypad phone</h3><p>USSD menus and SMS replies reach any phone on the network. No app to install, no data plan, no smartphone.</p></article>
+      <article class="why-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6 8v3M9 8v2M12 8v3M15 8v2M18 8v3"/></svg><h3>Never cut off mid-sentence</h3><p>Every screen is counted before it's sent: 160 characters on USSD, 70 per SMS once a single <code>ç</code> sneaks in. Long text is paged, never chopped.</p></article>
+      <article class="why-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><h3>Slow model? No dropped call.</h3><p>A USSD session waits seconds, not minutes. Past the 4-second deadline, Kalangu closes the screen kindly and texts the answer when it's ready.</p></article>
+      <article class="why-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5a3 3 0 0 0-5.6 1.4A3 3 0 0 0 4 11a3 3 0 0 0 2 4.5A3 3 0 0 0 12 18zM12 5a3 3 0 0 1 5.6 1.4A3 3 0 0 1 20 11a3 3 0 0 1-2 4.5A3 3 0 0 1 12 18z"/></svg><h3>Bring your own brain</h3><p>Gemini, Claude, a local Ollama model, anything that speaks the OpenAI format, or a plain function. Kalangu doesn't mind who does the thinking.</p></article>
+      <article class="why-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h11v8H8l-4 3zM15 9h5v8l-3-2h-6v-2"/></svg><h3>Speaks the user's language</h3><p>A language menu on first contact, remembered per number. English and French built in; Wolof, Hausa and Swahili drafts are waiting for native speakers.</p></article>
+      <article class="why-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 2.5h7l4 4V21.5H7z"/><path d="M4 4l16 16"/></svg><h3>Test without a SIM card</h3><p>A keypad phone opens in your terminal. No operator, no account, no API key. Dial, type, hang up, try again.</p></article>
+    </div>
+  </section>
+
+  <section class="sec code-sec" aria-labelledby="code-title">
+    <div class="code-side">
+      <p class="eyebrow">Write it once</p>
+      <h2 id="code-title">An agent fits on one screen.</h2>
+      <p class="sec-lead">Describe the conversation as steps. Kalangu turns them into numbered USSD menus and SMS replies, and remembers where each person is.</p>
+      <ul>
+        <li>TypeScript, no runtime dependencies in the core</li>
+        <li>A standard <code>Request → Response</code> handler: Node, serverless, edge</li>
+        <li>Africa's Talking for USSD and SMS today</li>
+      </ul>
+    </div>
+    <div class="codebox">
+      <div class="qs-bar"><span>agent.ts</span><button class="qs-copy" type="button" data-copy="code-agent">Copy</button></div>
+      <pre><code id="code-agent"><span class="tk-k">import</span> { ask, createAgent, menu, say } <span class="tk-k">from</span> <span class="tk-s">"@kalangu/core"</span>;
+<span class="tk-k">import</span> { africasTalkingUssd } <span class="tk-k">from</span> <span class="tk-s">"@kalangu/ussd"</span>;
+
+<span class="tk-k">const</span> agent = <span class="tk-f">createAgent</span>({
+  model: myModel, <span class="tk-c">// any model, or a plain function</span>
+  channels: [<span class="tk-f">africasTalkingUssd</span>({ code: <span class="tk-s">"*384*1#"</span>, path: <span class="tk-s">"/ussd"</span> })],
+  start: <span class="tk-f">menu</span>(<span class="tk-s">"Clinic line"</span>, {
+    <span class="tk-s">"Opening hours"</span>: <span class="tk-f">say</span>(<span class="tk-s">"Open Monday to Saturday, 8:00 to 18:00."</span>),
+    <span class="tk-s">"Ask a nurse"</span>: <span class="tk-f">ask</span>(<span class="tk-s">"Type your question"</span>, (q, ctx) =&gt; ctx.model.<span class="tk-f">answer</span>(q)),
+  }),
+});
+
+<span class="tk-k">export default</span> agent.requestHandler; <span class="tk-c">// Request → Response</span></code></pre>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="ex-title">
+    <p class="eyebrow">See it working</p>
+    <h2 id="ex-title">A whole commune, in your browser.</h2>
+    <div class="example">
+      <div>
+        <h3>Ndiédieng, Senegal</h3>
+        <p>Village chiefs dial <code>*123#</code> on a keypad phone, an Android or an iPhone to report a broken borehole. The town hall sees it, fixes it, and the chief gets an SMS. Ask the assistant out loud. 58 fictional villages, nothing to install.</p>
+      </div>
+      <div class="btns">
+        <a class="btn-lg solid" href="/ndiedieng/">Try the live example</a>
+        <a class="btn-lg" href="/components/">See the components</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="go-title">
+    <p class="eyebrow">Get started</p>
+    <h2 id="go-title">Two minutes, no account.</h2>
+    <div class="install">
+      <div class="codebox">
+        <div class="qs-bar"><span>Terminal</span><button class="qs-copy" type="button" data-copy="code-install">Copy</button></div>
+        <pre><code id="code-install">npm install @kalangu/core @kalangu/ussd @kalangu/sms</code></pre>
+      </div>
+      <a class="btn-lg solid" href="/docs/quick-start/" data-open-qs>Quick start</a>
+      <a class="btn-lg" href="/docs/">Read the docs</a>
+    </div>
+    <p class="alpha">Alpha: on npm and tested, but the API may still change before 1.0, and it hasn't met a real operator yet. <a href="/docs/roadmap/">See the roadmap</a>.</p>
+  </section>
+
+  <footer class="foot">
+    <svg class="drum-mini" viewBox="0 0 96 120" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="40" cy="20" rx="24" ry="6"/><ellipse cx="40" cy="96" rx="24" ry="6"/><path d="M16 20c0 14 14 22 14 38s-14 24-14 38M64 20c0 14-14 22-14 38s14 24 14 38"/><path d="M70 10c10 6 16 16 14 30"/></svg>
+    <span>Named after the Hausa talking drum, which carried messages between towns long before phones.</span>
+    <nav aria-label="Footer">
+      <a href="/docs/">Docs</a><a href="/components/">Components</a><a href="/docs/changelog/">Changelog</a><a href="/contributing/">Contribute</a><a href="https://github.com/utachicodes/kalangu">GitHub</a>
+    </nav>
+    <span class="fine">MIT licensed · built in the open</span>
+  </footer>
+</main>
 
 <dialog class="qs" id="qs" aria-labelledby="qs-title">
   <div class="qs-head">
@@ -463,13 +608,14 @@ node agent.mjs</code></pre>
 // Quick start: open the popup instead of the page (the link still works without JS).
 (() => {
   const dialog = document.getElementById('qs');
-  const open = document.getElementById('flash');
-  if (!dialog || !open || typeof dialog.showModal !== 'function') return;
-  open.addEventListener('click', (e) => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
-    e.preventDefault();
-    dialog.showModal();
-  });
+  if (!dialog || typeof dialog.showModal !== 'function') return;
+  for (const open of document.querySelectorAll('#flash, [data-open-qs]')) {
+    open.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+      e.preventDefault();
+      dialog.showModal();
+    });
+  }
   dialog.addEventListener('click', (e) => {
     if (e.target.closest('[data-close]')) return dialog.close();
     if (e.target !== dialog) return;
@@ -477,7 +623,7 @@ node agent.mjs</code></pre>
     const r = dialog.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dialog.close();
   });
-  for (const button of dialog.querySelectorAll('[data-copy]')) {
+  for (const button of document.querySelectorAll('[data-copy]')) {
     button.addEventListener('click', async () => {
       const code = document.getElementById(button.dataset.copy);
       try {
