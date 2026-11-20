@@ -690,7 +690,11 @@ function exportCsv() {
 const PI = {
   report: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>',
   village: '<svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>',
-  filter: '<svg viewBox="0 0 24 24"><path d="M4 5h16l-6 7.5V19l-4-2v-4.5z"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  alert: '<svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17v.5"/></svg>',
+  download: '<svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  spark: '<svg viewBox="0 0 24 24"><path d="M12 3c.5 4.6 3.9 8 8.5 8.5-4.6.5-8 3.9-8.5 8.5-.5-4.6-3.9-8-8.5-8.5C8.1 11 11.5 7.6 12 3z"/></svg>',
+  phone: '<svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
 };
 const fold = (t) => String(t ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 const palette = { all: [], items: [], active: 0 };
@@ -701,16 +705,14 @@ function highlight(text, q) {
   if (i < 0) return [text];
   return [text.slice(0, i), h("mark", { text: text.slice(i, i + q.length) }), text.slice(i + q.length)];
 }
-/** The text filter on the list, shown in the search field itself. */
-function setTextFilter(q) {
-  state.filter.q = q;
-  const trigger = $("palette-open");
-  trigger.classList.toggle("filtered", Boolean(q));
-  $("q-label").textContent = q ? `Filtre : « ${q} »` : "Rechercher un signalement, un village…";
-  renderReports();
-}
-function paletteItems(q, raw) {
-  // Search only: every other action already has its own button on the page.
+function paletteItems(q) {
+  const actions = [
+    { kind: "action", icon: "plus", title: "Nouveau signalement", sub: "Saisi par la Mairie", run: () => openNew().catch((e) => toast(e.message)) },
+    { kind: "action", icon: "alert", title: "Voir les urgents", sub: "Urgence haute, non résolus", run: () => { state.filter = { statut: "", urgent: true, categorie: "", q: "" }; $("q").value = ""; $("categorie").value = ""; showPane("mairie"); refreshReports(); } },
+    { kind: "action", icon: "download", title: "Exporter en CSV", sub: "Les signalements affichés", run: exportCsv },
+    { kind: "action", icon: "spark", title: "Ouvrir l'assistant", sub: "Poser une question, à la voix", run: () => (location.href = "assistant/") },
+    { kind: "action", icon: "phone", title: "Changer de téléphone", sub: "Simple, Android, iPhone", run: () => { showPane("village"); document.querySelector('#devices [aria-checked="true"]')?.focus(); } },
+  ];
   const reports = palette.all.map((r) => ({
     kind: "report", icon: "report", code: r.code,
     title: `${r.code} · ${LABEL[r.categorie] ?? r.categorie}${r.equipement ? ` · ${r.equipement.split(",")[0]}` : ""}`,
@@ -719,27 +721,21 @@ function paletteItems(q, raw) {
     run: () => { showPane("mairie"); openReport(r.code); },
   }));
   const villages = [...new Set(palette.all.map((r) => r.village))].map((v) => ({
-    kind: "village", icon: "village", title: v, sub: "Voir ses signalements dans la liste",
-    run: () => { showPane("mairie"); setTextFilter(v); },
+    kind: "village", icon: "village", title: v, sub: "Voir ses signalements",
+    run: () => { state.filter = { statut: "", urgent: false, categorie: "", q: v }; $("q").value = v; $("categorie").value = ""; showPane("mairie"); refreshReports(); },
   }));
-  if (!q) {
-    const clear = state.filter.q
-      ? [["Filtre", [{ kind: "filter", icon: "filter", title: `Retirer le filtre « ${state.filter.q} »`, sub: "Revoir toute la liste", run: () => setTextFilter("") }]]]
-      : [];
-    return [...clear, ["Derniers signalements", reports.slice(0, 5)]];
-  }
+  if (!q) return [["Actions", actions], ["Derniers signalements", reports.slice(0, 5)]];
   const words = q.split(/\s+/).filter(Boolean);
   const hit = (hay) => words.every((w) => hay.includes(w));
   return [
-    ["Filtrer", [{ kind: "filter", icon: "filter", title: `Filtrer la liste : « ${raw} »`, sub: "Tous les signalements qui contiennent ce texte", run: () => { showPane("mairie"); setTextFilter(raw); } }]],
     ["Signalements", reports.filter((r) => hit(r.hay)).slice(0, 8)],
     ["Villages", villages.filter((v) => hit(fold(v.title))).slice(0, 4)],
+    ["Actions", actions.filter((a) => hit(fold(`${a.title} ${a.sub}`)))],
   ];
 }
 function renderPalette() {
-  const raw = $("pal-q").value.trim();
-  const q = fold(raw);
-  const groups = paletteItems(q, raw).filter(([, list]) => list.length);
+  const q = fold($("pal-q").value.trim());
+  const groups = paletteItems(q).filter(([, list]) => list.length);
   palette.items = groups.flatMap(([, list]) => list);
   palette.active = Math.min(palette.active, Math.max(0, palette.items.length - 1));
   let n = 0;
@@ -852,8 +848,9 @@ async function start() {
     state.filter.statut = order[(order.indexOf(state.filter.statut) + (e.key === "ArrowRight" ? 1 : 4)) % 5];
     refreshReports();
   };
+  $("q").oninput = (e) => { state.filter.q = e.target.value.trim(); renderReports(); };
   $("categorie").onchange = (e) => { state.filter.categorie = e.target.value; refreshReports(); };
-  $("clear").onclick = () => { state.filter = { statut: "", urgent: false, categorie: "", q: "" }; setTextFilter(""); $("categorie").value = ""; refreshReports(); };
+  $("clear").onclick = () => { state.filter = { statut: "", urgent: false, categorie: "", q: "" }; $("q").value = ""; $("categorie").value = ""; refreshReports(); };
   $("new").onclick = () => openNew().catch((err) => toast(err.message));
 
   // The report dialog

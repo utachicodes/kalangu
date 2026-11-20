@@ -18,10 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   belongs: on the landing page the hero keeps Quick start, Documentation and
   Live example and the nav the site's sections; the docs header keeps only
   what the sidebar doesn't list; the components page names the example once.
-  In Ndiédieng's dashboard there is one search, above the list (it opens the
-  quick search, which can filter the list), the quick search no longer
-  repeats the page's buttons, and the report dialog's footer drops "Fermer"
-  (the × closes it).
+  The Ndiédieng dashboard stays as it was.
 - Ndiédieng's assistant answers in Wolof when asked in Wolof, in writing and
   aloud: Gemini reports the question's language (from the transcription and
   the question) and the answer and the voice follow it; otherwise French.
