@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Ndiédieng on the website can use Gemini: a serverless function
+  (`/api/ndiedieng/gemini`, generated from `src/geminiFunction.ts`) holds
+  `GEMINI_API_KEY` and runs only the prototype's fixed tasks (write a query,
+  word an answer, sort a message), with size limits, an origin check and a
+  per-visitor rate limit. The page uses it when it is there, and the rules
+  otherwise. All Gemini prompts now live in `src/gemini.ts`; greetings and
+  thanks get a proper answer, with or without Gemini. The assistant's orb is
+  now a glassy sphere with colour drifting inside; a spoken question gets a
+  spoken answer and a typed one a written answer, so the separate Voix/Texte
+  switch is gone. With Gemini, answers are read by Gemini's speech model (a
+  `speak` task in the same function), and the orb follows the voice's real
+  level; the browser's own voice, now the most natural French one the system
+  has, is the fallback.
 - The README, the docs overview and the landing page present the Ndiédieng
   example as Kalangu's live use case (`/ndiedieng`, a "Live example" button
   and an "Example" link), and the sitemap lists its two pages. TODO.md tracks

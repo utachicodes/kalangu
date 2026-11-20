@@ -55,8 +55,11 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
 - [x] The in-browser demo kept in IndexedDB, shared by both pages; "start
   over" in Help
 - [x] Linked from the README, the docs overview and the landing page
-- [ ] Gemini on the website: a Vercel function holding `GEMINI_API_KEY`
-  (rate-limited, falls back to the rules); needs a fresh key in Vercel first
+- [x] Gemini on the website: a serverless function (`/api/ndiedieng/gemini`,
+  built from `src/geminiFunction.ts`) holds `GEMINI_API_KEY`; fixed tasks
+  only, limited per visitor, the rules whenever it fails
+- [ ] Confirm the function answers on the live site after the merge, and set a
+  quota on the key in Google AI Studio
 - [ ] Run Ndiédieng on the Africa's Talking sandbox with their phone
   simulator (needs an account and a public URL for the callbacks)
 - [ ] Menus and voice messages in Wolof and Sérère, reviewed by speakers

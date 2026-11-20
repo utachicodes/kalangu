@@ -11,7 +11,8 @@
  */
 
 import { fold } from "./classify.js";
-import { SCHEMA, type Commune } from "./db.js";
+import type { Commune } from "./db.js";
+import { directGemini, type GeminiCall } from "./gemini.js";
 
 export interface Answer {
   answer: string;
@@ -141,11 +142,26 @@ export const EXAMPLES = [
   "Combien de fiches sont à mettre à jour ?",
 ];
 
+/** Greetings, thanks and "what can you do": answered warmly, with questions to try. */
+const SMALL_TALK: Array<{ match: RegExp; say: string }> = [
+  { match: /\b(merci|jerejef|thanks?|thank you)\b/, say: "Avec plaisir. Une autre question sur la commune ?" },
+  {
+    match: /\b(aide|help|que (sais|peux)|qui es|tu fais quoi|comment ca marche)\b/,
+    say: "Je réponds aux questions sur la commune : les pannes et les signalements, les naissances et les décès, la population et les fiches des villages. Chaque réponse montre les données utilisées. Par exemple :",
+  },
+  {
+    match: /\b(bonjour|bonsoir|salut|hello|hi|hey|coucou|salam|salamalekum|nanga def|na nga def)\b/,
+    say: "Bonjour ! Je suis l'assistant de la Mairie de Ndiédieng. Posez-moi une question sur les villages, par exemple :",
+  },
+];
+
 /** Common questions, answered by queries written in advance. No network. */
 export function ruleAssistant(commune: Commune): Assistant {
   return {
     async ask(question) {
       const q = fold(question);
+      const talk = SMALL_TALK.find((t) => t.match.test(q) && q.split(" ").length <= 6);
+      if (talk) return { answer: talk.say, sql: null, columns: [], rows: [], par: "regles", suggestions: EXAMPLES.slice(0, 4) };
       const intent = INTENTS.find((i) => i.match.every((re) => re.test(q)));
       if (!intent) {
         return {
@@ -165,62 +181,40 @@ export function ruleAssistant(commune: Commune): Assistant {
   };
 }
 
-async function gemini(apiKey: string, model: string, doFetch: typeof fetch, system: string, user: string, schema: object): Promise<unknown> {
-  const res = await doFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: "user", parts: [{ text: user }] }],
-      generationConfig: { responseMimeType: "application/json", responseJsonSchema: schema },
-    }),
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!res.ok) throw new Error(`Gemini answered ${res.status}`);
-  const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> };
-  return JSON.parse((data.candidates?.[0]?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? "").join(""));
-}
-
 /**
  * Free questions through Gemini: it writes a query from the schema, the query
  * is checked and run read-only, then Gemini answers from the rows. Falls back
  * to the rules when anything fails.
  */
-export function geminiAssistant(commune: Commune, options: { apiKey: string; model?: string; fetch?: typeof fetch }): Assistant {
+export function geminiAssistant(
+  commune: Commune,
+  options: { call: GeminiCall } | { apiKey: string; model?: string; fetch?: typeof fetch },
+): Assistant {
   const rules = ruleAssistant(commune);
-  const model = options.model ?? "gemini-3.5-flash-lite";
-  const doFetch = options.fetch ?? fetch;
+  const call = "call" in options ? options.call : directGemini(options);
   return {
     async ask(question) {
       try {
-        const plan = (await gemini(
-          options.apiKey,
-          model,
-          doFetch,
-          "Tu traduis des questions sur la commune de Ndiedieng en une requete SQLite. Une seule requete SELECT, en lecture seule. " +
-            "Utilise uniquement ces tables (les valeurs texte sont en minuscules, sans accents) :\n" +
-            SCHEMA +
-            "\nDate du jour : date('now'). Limite a 200 lignes. Si la question ne peut pas etre traitee avec ces donnees, sql = \"\".",
-          question,
-          { type: "object", properties: { sql: { type: "string" } }, required: ["sql"] },
-        )) as { sql: string };
-        if (!plan.sql.trim()) {
-          return { answer: "Les fiches et signalements ne contiennent pas de quoi répondre à cette question.", sql: null, columns: [], rows: [], par: "gemini" };
+        const plan = (await call({ task: "plan", question })) as { sql?: string; reponse?: string };
+        const sql = String(plan.sql ?? "").trim();
+        if (!sql) {
+          const reponse = String(plan.reponse ?? "").trim();
+          return {
+            answer: reponse || "Les fiches et signalements ne contiennent pas de quoi répondre à cette question.",
+            sql: null,
+            columns: [],
+            rows: [],
+            par: "gemini",
+            ...(reponse ? {} : { suggestions: EXAMPLES.slice(0, 4) }),
+          };
         }
-        const { columns, rows } = runReadOnly(commune, plan.sql);
-        const written = (await gemini(
-          options.apiKey,
-          model,
-          doFetch,
-          "Tu reponds au Maire en francais, en une ou deux phrases, uniquement a partir des resultats fournis. N'invente aucun chiffre. " +
-            "Si les resultats sont vides, dis-le.",
-          `Question : ${question}\nRequete : ${plan.sql}\nResultats (JSON, au plus 50 lignes) : ${JSON.stringify(rows.slice(0, 50))}`,
-          { type: "object", properties: { reponse: { type: "string" } }, required: ["reponse"] },
-        )) as { reponse: string };
-        return { answer: written.reponse, sql: plan.sql, columns, rows, par: "gemini" };
+        const { columns, rows } = runReadOnly(commune, sql);
+        const written = (await call({ task: "answer", question, sql, rows: rows.slice(0, 50) })) as { reponse?: string };
+        return { answer: String(written.reponse ?? "").trim() || "Voici les données trouvées.", sql, columns, rows, par: "gemini" };
       } catch (err) {
-        const fallback = await rules.ask(question);
-        return { ...fallback, answer: `${fallback.answer} (Gemini indisponible : ${err instanceof Error ? err.message : String(err)})` };
+        // The rules answer instead; the reason stays in the console, not in front of the Mayor.
+        console.warn(`[ndiedieng] Gemini unavailable (${err instanceof Error ? err.message : String(err)}); answering by rules`);
+        return rules.ask(question);
       }
     },
   };

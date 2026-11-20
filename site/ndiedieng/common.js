@@ -243,9 +243,14 @@ export function listen({ onText, onLevel, onDone, onError }) {
 // answers are read sentence by sentence (Chrome stops long utterances).
 let frVoice = null;
 const pickVoice = () => {
-  const voices = canSpeak ? speechSynthesis.getVoices() : [];
-  frVoice = voices.find((v) => v.lang?.toLowerCase() === "fr-fr" && /google|natural|premium|enhanced/i.test(v.name))
-    ?? voices.find((v) => v.lang?.toLowerCase().startsWith("fr")) ?? null;
+  const voices = (canSpeak ? speechSynthesis.getVoices() : []).filter((v) => v.lang?.toLowerCase().replace("_", "-").startsWith("fr"));
+  // The most natural French voice the system has: neural and premium ones first, France before others.
+  const score = (v) =>
+    (/natural|neural|online|premium|enhanced|google/i.test(v.name) ? 4 : 0) +
+    (/^fr-fr$/i.test(v.lang.replace("_", "-")) ? 2 : 0) +
+    (/amélie|amelie|audrey|denise|vivienne|thomas|google français/i.test(v.name) ? 1 : 0) +
+    (v.localService ? 0 : 1);
+  frVoice = voices.sort((a, b) => score(b) - score(a))[0] ?? null;
 };
 if (canSpeak) {
   pickVoice();
@@ -259,7 +264,8 @@ export function speak(text, { onStart, onEnd } = {}) {
     const u = new SpeechSynthesisUtterance(part.trim());
     u.lang = "fr-FR";
     if (frVoice) u.voice = frVoice;
-    u.rate = 1.02;
+    u.rate = 0.98;
+    u.pitch = 1;
     if (i === 0) u.onstart = () => onStart?.();
     if (i === parts.length - 1) {
       u.onend = () => onEnd?.();
@@ -269,3 +275,113 @@ export function speak(text, { onStart, onEnd } = {}) {
   });
 }
 export const stopSpeaking = () => canSpeak && speechSynthesis.cancel();
+
+// ---------- A natural voice: Gemini's speech model, through the website's function ----------
+// Used when the function is there (it holds the key); the browser's voice
+// otherwise, or whenever it fails. The player is unlocked inside the tap,
+// since phones refuse sound that starts later without one.
+const SPEECH_URL = "/api/ndiedieng/gemini";
+const SILENCE = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+let player = null;
+let playerCtx = null;
+let playerAnalyser = null;
+let playing = null; // { url, raf, done }
+
+/** Whether this site can read answers with Gemini's voice. */
+export async function naturalVoiceAvailable() {
+  if (MODE !== "local") return false;
+  try {
+    const res = await fetch(SPEECH_URL, { signal: AbortSignal.timeout(2500) });
+    const body = await res.json();
+    return res.ok && body.speech === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Call inside a tap or click, before any natural speech that follows it. */
+export function unlockVoice() {
+  try {
+    player ??= Object.assign(new Audio(), { playsInline: true, preload: "auto" });
+    playerCtx ??= new (window.AudioContext || window.webkitAudioContext)();
+    // Routed through the analyser only once the context runs: a suspended
+    // context would silence the voice, so without it the voice plays as is.
+    playerCtx.resume().then(() => {
+      if (playerAnalyser || playerCtx.state !== "running") return;
+      const analyser = playerCtx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.7;
+      playerCtx.createMediaElementSource(player).connect(analyser);
+      analyser.connect(playerCtx.destination);
+      playerAnalyser = analyser;
+    }).catch(() => {});
+    if (!playing) {
+      player.src = SILENCE;
+      player.play().catch(() => {});
+    }
+  } catch {
+    // no Web Audio: the natural voice still plays, without its level
+  }
+}
+
+/**
+ * Reads `text` with Gemini's voice. Resolves once it starts (or throws, so
+ * the caller can use the browser's voice); onLevel gets 0..1 as it speaks.
+ */
+export async function speakNatural(text, { onStart, onEnd, onLevel } = {}) {
+  stopNatural();
+  const res = await fetch(SPEECH_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ task: "speak", text: text.slice(0, 700) }),
+    signal: AbortSignal.timeout(25_000),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.result?.data) throw new Error(body.error ?? `speech ${res.status}`);
+  const bytes = Uint8Array.from(atob(body.result.data), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: body.result.mimeType || "audio/wav" }));
+  player ??= Object.assign(new Audio(), { playsInline: true });
+  const current = { url, raf: 0, done: false };
+  playing = current;
+  const finish = () => {
+    if (current.done) return;
+    current.done = true;
+    cancelAnimationFrame(current.raf);
+    URL.revokeObjectURL(url);
+    if (playing === current) playing = null;
+    onLevel?.(0);
+    onEnd?.();
+  };
+  player.onended = finish;
+  player.onerror = finish;
+  player.src = url;
+  await player.play();
+  onStart?.();
+  if (onLevel && !playerAnalyser) {
+    // No level to read: a gentle pulse while it speaks.
+    const t0 = performance.now();
+    const tick = (t) => {
+      onLevel(0.25 + 0.3 * Math.abs(Math.sin((t - t0) / 170)) * (0.6 + 0.4 * Math.sin((t - t0) / 520)));
+      current.raf = requestAnimationFrame(tick);
+    };
+    current.raf = requestAnimationFrame(tick);
+  } else if (playerAnalyser && onLevel) {
+    const data = new Uint8Array(playerAnalyser.fftSize);
+    const tick = () => {
+      playerAnalyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (const v of data) sum += ((v - 128) / 128) ** 2;
+      onLevel(Math.min(1, Math.sqrt(sum / data.length) * 2.2));
+      current.raf = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+  current.stop = finish;
+}
+
+export function stopNatural() {
+  if (!playing) return;
+  const p = playing;
+  player?.pause();
+  p.stop?.();
+}

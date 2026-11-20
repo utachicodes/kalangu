@@ -12,5 +12,5 @@
       "@kalangu/sim": ["../../packages/sim/dist/phone.d.ts"]
     }
   },
-  "files": ["web/local.ts"]
+  "files": ["web/local.ts", "src/geminiFunction.ts"]
 }

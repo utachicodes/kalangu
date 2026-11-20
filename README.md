@@ -154,10 +154,14 @@ used to reach the town hall on foot.
   a report is taken on or resolved, the chief gets an SMS, and it lands in the
   simulated phone.
 - **The assistant** ([its own page](https://kalangu.utachi.website/ndiedieng/assistant/)):
-  touch the orb and ask "Quels forages sont en panne ?". The answer is read
-  aloud or written, and always shows the query and the rows behind it. Its
-  queries are read-only. Without a model it answers the common questions by
-  rule; with `GEMINI_API_KEY` on the server, Gemini writes the query.
+  touch the orb and ask "Quels forages sont en panne ?". A spoken question is
+  answered aloud (with Gemini's voice when it is on), a typed one in writing,
+  and every answer shows the query and the rows behind it. Its
+  queries are read-only. With Gemini it answers free questions (Gemini
+  writes the query, then the answer from the rows); without it, the common
+  questions by rule. On the website the key stays on the server, in a small
+  function at `/api/ndiedieng/gemini` that only runs the prototype's fixed
+  tasks and limits each visitor.
 
 How it is built: the agent is ordinary Kalangu (`createAgent`, `menu`, `ask`,
 `say`), the phones are `@kalangu/sim`'s scriptable phone, and the API is a

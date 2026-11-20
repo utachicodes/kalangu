@@ -11,8 +11,9 @@
 import { silentLogger } from "@kalangu/core";
 import { createNdiediengAgent } from "../src/agent.js";
 import { createApp } from "../src/app.js";
-import { ruleAssistant } from "../src/assistant.js";
-import { keywordClassifier } from "../src/classify.js";
+import { geminiAssistant, ruleAssistant } from "../src/assistant.js";
+import { geminiClassifier, keywordClassifier } from "../src/classify.js";
+import { remoteGemini } from "../src/gemini.js";
 import { createCommune } from "../src/db.js";
 import { loadSqlJs, sqlJsDb } from "./sqljs.js";
 
@@ -65,6 +66,20 @@ async function load(): Promise<Saved | null> {
   }
 }
 
+/** The website's serverless function, which holds the Gemini key. */
+const GEMINI_URL = "/api/ndiedieng/gemini";
+
+/** True when the function answers and has a key; never waits long. */
+async function geminiAvailable(): Promise<boolean> {
+  try {
+    const res = await fetch(GEMINI_URL, { signal: AbortSignal.timeout(2500) });
+    const body = (await res.json()) as { available?: boolean };
+    return res.ok && body.available === true;
+  } catch {
+    return false; // no function here (a copy of the page, a local server): the rules
+  }
+}
+
 /** Forgets this browser's copy of the demo; the next page load starts fresh. */
 export async function reset(): Promise<void> {
   try {
@@ -88,15 +103,21 @@ export async function boot(): Promise<{ api: Api; restored: boolean }> {
   const inboxes = new Map<string, Inbox>(
     (saved?.inboxes ?? []).map(([tel, msgs]) => [tel, msgs.map((m) => ({ ...m, at: new Date(m.at) }))]),
   );
-  const classifier = keywordClassifier();
+  // Gemini when the website's function has a key; the rules otherwise, and
+  // whenever a call fails.
+  const gemini = await geminiAvailable();
+  const call = gemini ? remoteGemini(GEMINI_URL) : null;
+  const classifier = call ? geminiClassifier({ call, warn: () => {} }) : keywordClassifier();
   const agent = createNdiediengAgent({ commune, classifier, channels: [], logger: silentLogger });
   const app = createApp({
     commune,
     agent,
     classifier,
     inboxes,
-    assistant: ruleAssistant(commune),
-    mode: "dans votre navigateur · classement par mots-clés · assistant par règles",
+    assistant: call ? geminiAssistant(commune, { call }) : ruleAssistant(commune),
+    mode: call
+      ? "dans votre navigateur · classement et assistant par Gemini"
+      : "dans votre navigateur · classement par mots-clés · assistant par règles",
   });
 
   const save = async () => {

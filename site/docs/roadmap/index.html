@@ -88,8 +88,11 @@ dictation without running it; live waveform and glow</li>
 <li><input checked="" disabled="" type="checkbox"> The in-browser demo kept in IndexedDB, shared by both pages; &quot;start
 over&quot; in Help</li>
 <li><input checked="" disabled="" type="checkbox"> Linked from the README, the docs overview and the landing page</li>
-<li><input disabled="" type="checkbox"> Gemini on the website: a Vercel function holding <code>GEMINI_API_KEY</code>
-(rate-limited, falls back to the rules); needs a fresh key in Vercel first</li>
+<li><input checked="" disabled="" type="checkbox"> Gemini on the website: a serverless function (<code>/api/ndiedieng/gemini</code>,
+built from <code>src/geminiFunction.ts</code>) holds <code>GEMINI_API_KEY</code>; fixed tasks
+only, limited per visitor, the rules whenever it fails</li>
+<li><input disabled="" type="checkbox"> Confirm the function answers on the live site after the merge, and set a
+quota on the key in Google AI Studio</li>
 <li><input disabled="" type="checkbox"> Run Ndiédieng on the Africa&#39;s Talking sandbox with their phone
 simulator (needs an account and a public URL for the callbacks)</li>
 <li><input disabled="" type="checkbox"> Menus and voice messages in Wolof and Sérère, reviewed by speakers</li>
