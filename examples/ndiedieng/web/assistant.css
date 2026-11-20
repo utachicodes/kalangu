@@ -86,34 +86,60 @@ body.gem {
 
 /* ---------- Prompt ---------- */
 .gem-foot { position: relative; flex: none; padding: 6px clamp(12px, 4vw, 24px) 10px; }
-.prompt { position: relative; z-index: 1; width: min(760px, 100%); margin: 0 auto; display: flex; align-items: flex-end; gap: 6px; padding: 8px 8px 8px 22px; border-radius: 32px; background: var(--g-surface); border: 1px solid transparent; transition: background .15s, box-shadow .2s; }
+.prompt { position: relative; z-index: 1; width: min(640px, 100%); margin: 0 auto 10px; display: flex; align-items: flex-end; gap: 6px; padding: 8px 8px 8px 22px; border-radius: 32px; background: var(--g-surface); border: 1px solid transparent; transition: background .15s, box-shadow .2s; }
 .prompt:focus-within { background: #fff; box-shadow: 0 1px 3px rgba(60, 64, 67, .2), 0 4px 12px rgba(60, 64, 67, .12); }
 .prompt textarea { flex: 1; min-width: 0; min-height: 40px; max-height: 160px; padding: 9px 0; border: 0; border-radius: 0; background: transparent; resize: none; font-size: 16px; line-height: 1.4; outline: none; }
 .prompt textarea::placeholder { color: var(--g-ink-3); }
-.prompt-tools { display: flex; align-items: center; gap: 4px; }
 .gem-icon.send { background: #1f1f1f; color: #fff; }
 .gem-icon.send:hover { background: #3c3c3c; }
-.fine { margin: 8px auto 0; width: min(760px, 100%); text-align: center; font-size: 12px; color: var(--g-ink-3); }
-
-/* Listening: a turning gradient ring round the prompt, bars, and a glow
-   from the bottom of the screen that grows with the voice (--level). */
-.prompt.listening { background: #fff; border-color: transparent; }
-.prompt.listening::before { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: 34px; padding: 2px;
-  background: conic-gradient(from var(--angle, 0deg), var(--g-blue), var(--g-purple), var(--g-pink), #f6c344, var(--g-blue));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
-  animation: turn 2.4s linear infinite; }
-@property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
-@keyframes turn { to { --angle: 360deg; } }
-.gem-icon.mic.on { background: #fde7e7; color: #b3261e; }
-.bars { display: flex; align-items: center; gap: 3px; height: 32px; padding: 0 6px; }
-.bars i { width: 4px; height: 6px; border-radius: 2px; background: linear-gradient(var(--g-blue), var(--g-purple) 60%, var(--g-pink)); transition: height .07s linear; }
+.fine { position: relative; z-index: 1; margin: 6px auto 0; width: min(760px, 100%); text-align: center; font-size: 12px; color: var(--g-ink-3); }
 .aurora { position: absolute; left: 0; right: 0; bottom: 0; height: 240px; z-index: 0; pointer-events: none; opacity: 0; transition: opacity .3s; overflow: hidden; }
-.aurora.on { opacity: calc(.35 + var(--level, 0) * .65); }
+.aurora.on { opacity: calc(.3 + var(--level, 0) * .7); }
 .aurora i { position: absolute; bottom: -140px; width: 60%; height: 260px; border-radius: 50%; filter: blur(60px); transform: scale(calc(.8 + var(--level, 0) * .5)); transition: transform .1s; }
 .aurora i:nth-child(1) { left: -5%; background: var(--g-blue); animation: sway 4s ease-in-out infinite alternate; }
 .aurora i:nth-child(2) { left: 22%; background: var(--g-purple); animation: sway 3.2s ease-in-out infinite alternate-reverse; }
 .aurora i:nth-child(3) { right: -5%; background: var(--g-pink); animation: sway 3.6s ease-in-out infinite alternate; }
 @keyframes sway { from { translate: -6% 0; } to { translate: 6% 0; } }
+
+/* ---------- The orb ----------
+   idle: breathes slowly; listening: grows with the voice (--level);
+   thinking: turns fast; speaking: pulses while the answer is read. */
+@property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes turn { to { --angle: 360deg; } }
+@keyframes breathe { 0%, 100% { scale: 1; } 50% { scale: 1.05; } }
+@keyframes wobble { 0%, 100% { border-radius: 50%; } 33% { border-radius: 46% 54% 52% 48% / 52% 46% 54% 48%; } 66% { border-radius: 54% 46% 48% 52% / 48% 54% 46% 52%; } }
+.dock { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: min(640px, 100%); margin: 0 auto; }
+.dock .side { justify-self: end; margin-right: 24px; }
+.gem-icon.side { border: 1px solid #c4c7c5; }
+.gem-icon.side[aria-pressed="true"] { background: #d3e3fd; border-color: #d3e3fd; color: #041e49; }
+.orb { --size: 80px; position: relative; width: var(--size); height: var(--size); padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; transition: width .4s cubic-bezier(.2, .8, .2, 1), height .4s cubic-bezier(.2, .8, .2, 1); -webkit-tap-highlight-color: transparent; }
+body.fresh .orb { --size: 124px; }
+.orb > span { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+.orb-core { background:
+    radial-gradient(circle at 50% 115%, rgba(255, 255, 255, .5), transparent 55%),
+    conic-gradient(from var(--angle), #4285f4, #9b72cb, #d96570, #f6c344, #34a0f4, #4285f4);
+  animation: turn 12s linear infinite, wobble 9s ease-in-out infinite;
+  transform: scale(calc(1 + var(--level, 0) * .22)); transition: transform .08s linear; }
+.orb-glow { inset: -16%; background: conic-gradient(from var(--angle), #4285f4, #9b72cb, #d96570, #4285f4); filter: blur(22px); opacity: calc(.4 + var(--level, 0) * .6); animation: turn 12s linear infinite, breathe 4.5s ease-in-out infinite; }
+.orb-shine { background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, .8) 0, rgba(255, 255, 255, .12) 22%, transparent 40%), radial-gradient(circle at 50% 50%, transparent 60%, rgba(255, 255, 255, .22) 72%, transparent 77%); }
+.orb:hover .orb-glow { opacity: .85; }
+.orb:focus-visible { outline: 3px solid var(--focus); outline-offset: 12px; }
+.orb[data-state="listening"] .orb-core { animation-duration: 3s, 2.2s; }
+.orb[data-state="listening"] .orb-glow { animation-duration: 3s, 1.4s; }
+.orb[data-state="thinking"] .orb-core, .orb[data-state="thinking"] .orb-glow { animation-duration: 1s, 1.3s; }
+.orb[data-state="thinking"] .orb-core { filter: brightness(1.08) saturate(.85); }
+.orb[data-state="speaking"] .orb-core { animation-duration: 5s, 1.6s; }
+.live { position: relative; z-index: 1; min-height: 24px; margin: 0 auto 12px; width: min(640px, 100%); text-align: center; font-size: 14px; color: var(--g-ink-3); }
+.live.heard { font-size: 19px; line-height: 1.35; color: var(--g-ink); }
+.orb-mini { width: 56px; height: 56px; border-radius: 50%; background: conic-gradient(from var(--angle), #4285f4, #9b72cb, #d96570, #f6c344, #4285f4); animation: turn 1.2s linear infinite; box-shadow: 0 0 36px rgba(155, 114, 203, .5); }
+.chip-q { min-height: 40px; padding: 8px 16px; border-radius: 99px; border: 1px solid #c4c7c5; background: #fff; cursor: pointer; font-size: 14px; color: var(--g-ink-2); text-align: left; }
+.chip-q:hover { background: var(--g-surface); color: var(--g-ink); }
+.suggest { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.reply-mode { display: inline-flex; gap: 2px; padding: 3px; border-radius: 99px; background: var(--g-surface); }
+.reply-mode button { min-height: 34px; padding: 4px 14px; border: 0; border-radius: 99px; background: transparent; color: var(--g-ink-2); cursor: pointer; font-size: 14px; }
+.reply-mode button[aria-checked="true"] { background: #fff; color: var(--g-ink); font-weight: 600; box-shadow: 0 1px 2px rgba(60, 64, 67, .2); }
+body.fresh .hello { text-align: center; }
+body.fresh .ideas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 
 .booting-veil { position: fixed; inset: 0; z-index: 30; display: grid; place-content: center; justify-items: center; gap: 14px; background: #fff; color: var(--g-ink-3); font-size: 15px; }
 

@@ -74,8 +74,8 @@ input:hover, select:hover, textarea:hover { border-color: #c5d0ca; }
 select {
   appearance: none; -webkit-appearance: none;
   width: 100%; max-width: 100%;
-  padding-right: 38px; /* the arrow's own lane: 12px + 12px + 14px */
-  background-image: var(--chevron); background-repeat: no-repeat; background-size: 12px 12px; background-position: right 14px center;
+  padding-right: 44px; /* the arrow's own lane: 18px inset + 12px arrow + 14px gap */
+  background-image: var(--chevron); background-repeat: no-repeat; background-size: 12px 12px; background-position: right 18px center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
 }
 select::-ms-expand { display: none; }
@@ -99,6 +99,12 @@ select:disabled { opacity: .6; cursor: not-allowed; }
 .btn-gemini { border: 1.5px solid transparent; background: linear-gradient(#fff, #fff) padding-box, var(--gem) border-box; border-radius: 99px; }
 .btn-gemini:hover { background: linear-gradient(#f7f5fd, #f7f5fd) padding-box, var(--gem) border-box; }
 .btn-gemini svg { width: 16px; height: 16px; fill: #8b6fd0; }
+/* The way to the assistant: a small version of its orb. */
+@property --orb-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes orb-turn { to { --orb-angle: 360deg; } }
+.btn-orb { gap: 8px; padding-left: 8px; border-radius: 99px; }
+.mini-orb { width: 22px; height: 22px; border-radius: 50%; background: conic-gradient(from var(--orb-angle), #4285f4, #9b72cb, #d96570, #f6c344, #4285f4); box-shadow: 0 0 10px rgba(155, 114, 203, .55); animation: orb-turn 6s linear infinite; }
+.btn-orb:hover .mini-orb { box-shadow: 0 0 16px rgba(155, 114, 203, .8); animation-duration: 2s; }
 .link { border: 0; background: none; color: var(--brand); text-decoration: underline; cursor: pointer; padding: 0; font-weight: 600; }
 
 /* ---------- Village side ---------- */
@@ -235,94 +241,166 @@ dialog.modal::backdrop { background: rgba(15, 25, 20, .42); backdrop-filter: blu
 .device svg { display: block; }
 .icon { width: 1em; height: 1em; }
 
-/* ---- Shared smartphone parts ---- */
-.smart { position: relative; width: 300px; height: 620px; border-radius: 48px; padding: 12px; background: #0f1115; box-shadow: 0 0 0 2px #2b2f36, 0 24px 48px rgba(16, 24, 20, .25); }
-.smart .screen { position: relative; height: 100%; border-radius: 37px; overflow: hidden; display: flex; flex-direction: column; }
-.statusbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 26px 6px; font-size: 14px; font-weight: 600; flex: none; }
-.statusbar .sys { display: inline-flex; gap: 5px; align-items: center; }
-.statusbar svg { height: 12px; width: auto; }
+/* ---- Shared smartphone parts ----
+   Sizes follow the real screens scaled to 276 px wide (iPhone: 393 pt, so
+   0.70; the Dynamic Island 126 x 37 pt sits 11 pt below the top). */
+.smart { position: relative; width: 300px; height: 622px; padding: 12px; }
+.smart .screen { position: relative; height: 100%; overflow: hidden; display: flex; flex-direction: column; isolation: isolate; }
+.statusbar { flex: none; position: relative; z-index: 7; }
+.statusbar svg { height: 11px; width: auto; display: block; }
 .app { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.tabs { display: grid; grid-template-columns: 1fr 1fr; flex: none; border-top: 1px solid rgba(0, 0, 0, .08); }
-.tabs button { min-height: 52px; border: 0; background: none; font-size: 11px; display: grid; justify-items: center; align-content: center; gap: 2px; cursor: pointer; color: #8e8e93; }
-.tabs button svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.tabs button[aria-current="page"] { color: var(--tab-on, #007aff); }
-.homebar { height: 22px; flex: none; display: grid; place-items: center; }
-.homebar::after { content: ""; width: 110px; height: 5px; border-radius: 3px; background: currentColor; opacity: .85; }
+.tabs { flex: none; display: grid; grid-template-columns: 1fr 1fr; }
+.tabs button { border: 0; background: none; display: grid; justify-items: center; align-content: center; gap: 2px; cursor: pointer; }
+.tab-ico { display: grid; place-items: center; }
+.tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.homebar { flex: none; height: 20px; display: grid; place-items: center; }
+.homebar::after { content: ""; width: 104px; height: 4px; border-radius: 3px; background: #000; }
 
-.dial-number { min-height: 52px; display: grid; place-items: end center; padding: 0 16px; font-size: 32px; font-weight: 400; letter-spacing: .02em; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.dial-hint { text-align: center; font-size: 12.5px; opacity: .6; min-height: 20px; margin-bottom: 4px; }
-.pad { display: grid; grid-template-columns: repeat(3, 64px); justify-content: center; gap: 10px 22px; padding: 4px 0; }
-.pad button { width: 64px; height: 64px; border-radius: 50%; border: 0; display: grid; align-content: center; justify-items: center; cursor: pointer; font-size: 27px; line-height: 1; }
-.pad button small { font-size: 9.5px; letter-spacing: .14em; font-weight: 600; margin-top: 2px; }
-.call-row { display: grid; grid-template-columns: repeat(3, 64px); justify-content: center; gap: 22px; padding: 10px 0 6px; align-items: center; }
-.call { width: 64px; height: 64px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: #34c759; }
-.call svg { width: 30px; height: 30px; fill: #fff; }
-.erase { border: 0; background: none; cursor: pointer; display: grid; place-items: center; height: 64px; }
-.erase svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.dialer { justify-content: flex-end; padding-bottom: 6px; }
+.dial-top { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 0 16px 10px; min-height: 0; }
+.dial-number { min-height: 40px; max-width: 100%; font-size: 30px; line-height: 40px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.dial-hint { min-height: 18px; font-size: 12px; opacity: .6; text-align: center; }
+.pad { display: grid; grid-template-columns: repeat(3, 58px); justify-content: center; gap: 12px 20px; }
+.pad button { width: 58px; height: 58px; border: 0; border-radius: 50%; display: grid; align-content: center; justify-items: center; cursor: pointer; padding: 0; line-height: 1; }
+.pad .digit { font-size: 27px; }
+.pad small { font-size: 7.5px; font-weight: 700; letter-spacing: .18em; margin: 2px 0 0 .18em; min-height: 8px; }
+.call-row { display: grid; grid-template-columns: repeat(3, 58px); justify-content: center; gap: 20px; padding-top: 14px; align-items: center; justify-items: center; }
+.call { width: 58px; height: 58px; border: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer; }
+.call svg { width: 26px; height: 26px; fill: #fff; }
+.erase { width: 44px; height: 44px; border: 0; background: none; cursor: pointer; display: grid; place-items: center; color: inherit; }
+.erase svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 
-.chat { flex: 1; overflow: auto; padding: 12px 12px 4px; display: flex; flex-direction: column; gap: 6px; }
-.chat-head { flex: none; display: grid; justify-items: center; gap: 2px; padding: 4px 0 10px; border-bottom: 1px solid rgba(0, 0, 0, .08); font-size: 12px; }
-.avatar { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; background: linear-gradient(#a3a9b3, #858b95); font-size: 16px; }
-.bubble { max-width: 78%; padding: 8px 12px; border-radius: 18px; font-size: 14.5px; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat { flex: 1; overflow: auto; padding: 10px 12px 6px; display: flex; flex-direction: column; gap: 3px; scrollbar-width: none; }
+.chat::-webkit-scrollbar { display: none; }
+.chat-head { flex: none; position: relative; z-index: 2; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; color: #fff; font-size: 17px; flex: none; }
+.bubble { position: relative; max-width: 76%; padding: 7px 12px; font-size: 14px; line-height: 1.32; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bubble.in { align-self: flex-start; }
 .bubble.out { align-self: flex-end; }
-.bubble .voice-tag { display: flex; align-items: center; gap: 4px; font-size: 11.5px; opacity: .85; margin-bottom: 2px; }
+.bubble.tail { margin-bottom: 6px; }
+.bubble .voice-tag { display: flex; align-items: center; gap: 4px; font-size: 11px; opacity: .85; margin-bottom: 2px; }
 .bubble .voice-tag svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
-.chat-empty { margin: auto; text-align: center; font-size: 13px; opacity: .6; padding: 0 24px; }
-.chat-time { align-self: center; font-size: 11px; opacity: .5; margin: 6px 0 2px; }
-.compose { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
-.compose input { flex: 1; min-width: 0; min-height: 36px; padding: 6px 14px; border-radius: 18px; border: 1px solid rgba(0, 0, 0, .14); background: #fff; font-size: 14.5px; }
-.round { width: 36px; height: 36px; flex: none; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; }
-.round svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.chat-empty { margin: auto; text-align: center; font-size: 12.5px; opacity: .6; padding: 0 22px; }
+.chat-time { align-self: center; font-size: 10.5px; opacity: .55; margin: 8px 0 4px; }
+.compose { flex: none; position: relative; z-index: 5; display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px; }
+.compose .plus { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 300; line-height: 1; }
+.compose .field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; padding: 2px 3px 2px 12px; min-height: 34px; }
+.compose input { flex: 1; min-width: 0; min-height: 30px; padding: 4px 0; border: 0; background: transparent; font-size: 14px; outline: none; }
+.round { width: 28px; height: 28px; flex: none; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.round svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .round.mic { background: transparent; }
-.round.mic svg { stroke: #8e8e93; }
-.round.mic.listening { background: #ff3b30; animation: pulse 1.4s infinite; }
-.round.mic.listening svg { stroke: #fff; }
-.listening-note { flex: none; text-align: center; font-size: 12px; color: #ff3b30; padding: 2px 0; }
+.round.mic svg { width: 19px; height: 19px; stroke-width: 2; }
+.rec .round { width: 34px; height: 34px; }
 
 /* Running a USSD code, and its dialog. */
-.scrim { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 14px; background: rgba(0, 0, 0, .32); }
+.scrim { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; padding: 14px; background: rgba(0, 0, 0, .3); }
+.ring { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(0, 0, 0, .12); border-top-color: currentColor; animation: spin 1s linear infinite; flex: none; }
 
-/* ---- iPhone ---- */
-.iphone .screen { background: #fff; color: #000; font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; }
-.iphone .island { position: absolute; top: 11px; left: 50%; width: 92px; height: 27px; transform: translateX(-50%); background: #000; border-radius: 20px; z-index: 6; }
+/* ---- iPhone (iOS) ---- */
+.iphone { border-radius: 54px; background: #1c1c1e;
+  /* titanium band, then the black bezel */
+  box-shadow: inset 0 0 0 1px #6b6b70, inset 0 0 0 4px #2c2c2e, 0 0 0 1px #48484a, 0 30px 60px rgba(16, 24, 20, .28), 0 8px 16px rgba(16, 24, 20, .12); }
+.iphone .screen { border-radius: 42px; background: #fff; color: #000; font-family: -apple-system, "SF Pro Text", "SF Pro", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.iphone .hw { position: absolute; width: 3px; border-radius: 2px; background: linear-gradient(90deg, #3a3a3c, #6b6b70); }
+.iphone .hw-1 { left: -3px; top: 112px; height: 22px; }  /* action button */
+.iphone .hw-2 { left: -3px; top: 152px; height: 44px; box-shadow: 0 58px 0 #4a4a4e; }  /* volume up, down */
+.iphone .hw-3 { right: -3px; top: 170px; height: 70px; background: linear-gradient(270deg, #3a3a3c, #6b6b70); }  /* side button */
+.iphone .island { position: absolute; z-index: 9; top: 8px; left: 50%; width: 88px; height: 26px; transform: translateX(-50%); border-radius: 13px; background: #000; }
+.iphone .island::after { content: ""; position: absolute; right: 10px; top: 8px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #2a3550 0, #0b0d14 60%); }
+.ios-status { display: grid; grid-template-columns: 1fr 96px 1fr; align-items: center; height: 42px; padding-top: 1px; font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+.ios-status .ear { display: flex; justify-content: center; align-items: center; gap: 5px; }
+.ios-status .ear:first-child { padding-left: 10px; }
+.ios-status .sys { padding-right: 10px; }
+.ios-status .sys svg:last-child { height: 11.5px; }
+.iphone .tabs { background: rgba(249, 249, 249, .94); border-top: .5px solid rgba(0, 0, 0, .18); padding-top: 4px; }
+.iphone .tabs button { min-height: 44px; font-size: 10px; font-weight: 500; color: #999; }
+.iphone .tabs button[aria-current="page"] { color: #007aff; }
+.iphone .tabs button[aria-current="page"] svg { fill: currentColor; stroke: currentColor; }
+.iphone .homebar { background: rgba(249, 249, 249, .94); }
+.iphone .dial-number { font-weight: 400; letter-spacing: .01em; }
 .iphone .pad button { background: #e5e5ea; color: #000; }
-.iphone .pad button:active { background: #c7c7cc; }
-.iphone .bubble.in { background: #e9e9eb; color: #000; border-bottom-left-radius: 6px; }
-.iphone .bubble.out { background: #007aff; color: #fff; border-bottom-right-radius: 6px; }
-.iphone .round.send { background: #007aff; }
-.iphone .ios-alert { width: 100%; max-width: 270px; border-radius: 14px; background: rgba(242, 242, 247, .97); text-align: center; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); }
-.iphone .ios-alert .body { padding: 18px 16px 14px; font-size: 13.5px; line-height: 1.4; white-space: pre-wrap; text-align: left; max-height: 300px; overflow: auto; }
-.iphone .ios-alert input { width: calc(100% - 32px); margin: 0 16px 14px; min-height: 32px; padding: 4px 8px; border: 1px solid #c6c6c8; border-radius: 7px; background: #fff; font-size: 14px; }
-.iphone .ios-alert .buttons { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-top: 1px solid #c6c6c8; }
+.iphone .pad button:active { background: #bcbcc0; }
+.iphone .pad .digit { font-weight: 400; font-size: 28px; }
+.iphone .call { background: #34c759; }
+.iphone .call:active { background: #2aa147; }
+.iphone .erase { color: #c7c7cc; }
+.iphone .ios-head { display: grid; grid-template-columns: 40px 1fr 40px; align-items: start; padding: 0 8px 8px; background: rgba(247, 247, 247, .94); border-bottom: .5px solid rgba(0, 0, 0, .14); }
+.iphone .ios-head .back { color: #007aff; font-size: 34px; line-height: 30px; font-weight: 300; padding-left: 4px; }
+.iphone .ios-head .who { display: grid; justify-items: center; gap: 3px; }
+.iphone .ios-head .avatar { width: 42px; height: 42px; background: linear-gradient(#a5abb6, #858a94); }
+.iphone .ios-head .name { font-size: 11px; color: #000; }
+.iphone .bubble { border-radius: 17px; }
+.iphone .bubble.in { background: #e9e9eb; color: #000; }
+.iphone .bubble.out { background: #34c759; color: #fff; }  /* an SMS, not an iMessage: green */
+.iphone .bubble.tail.in { border-bottom-left-radius: 5px; }
+.iphone .bubble.tail.out { border-bottom-right-radius: 5px; }
+.iphone .compose .plus { background: #e9e9eb; color: #8e8e93; }
+.iphone .compose .field { border: 1px solid #c6c6c8; border-radius: 18px; background: #fff; }
+.iphone .round.send { background: #34c759; }
+.iphone .round.mic svg { stroke: #8e8e93; }
+.iphone .chat-time { color: #8e8e93; opacity: 1; font-weight: 500; }
+.iphone .ios-alert { width: 100%; max-width: 250px; border-radius: 14px; background: rgba(242, 242, 247, .97); text-align: center; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, .22); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+.iphone .ios-alert .body { padding: 18px 16px 14px; font-size: 13px; line-height: 1.38; white-space: pre-wrap; text-align: left; max-height: 300px; overflow: auto; }
+.iphone .ios-alert input { width: calc(100% - 32px); margin: 0 16px 14px; min-height: 30px; padding: 4px 8px; border: .5px solid #c6c6c8; border-radius: 7px; background: #fff; font-size: 13px; }
+.iphone .ios-alert .buttons { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-top: .5px solid #c6c6c8; }
 .iphone .ios-alert .buttons button { min-height: 44px; border: 0; background: none; color: #007aff; font-size: 16px; cursor: pointer; }
-.iphone .ios-alert .buttons button + button { border-left: 1px solid #c6c6c8; font-weight: 600; }
-.iphone .ios-run { width: 100%; max-width: 220px; padding: 18px; border-radius: 14px; background: rgba(242, 242, 247, .97); text-align: center; font-size: 14px; display: grid; gap: 10px; justify-items: center; }
+.iphone .ios-alert .buttons button + button { border-left: .5px solid #c6c6c8; font-weight: 600; }
+.iphone .ios-run { width: 100%; max-width: 210px; padding: 18px; border-radius: 14px; background: rgba(242, 242, 247, .97); text-align: center; font-size: 13.5px; display: grid; gap: 10px; justify-items: center; }
 
-/* ---- Android ---- */
-.android { border-radius: 40px; }
-.android .screen { border-radius: 30px; background: #fdfbff; color: #1b1b1f; font-family: Roboto, "Google Sans", system-ui, sans-serif; }
-.android .camera { position: absolute; top: 18px; left: 50%; width: 12px; height: 12px; transform: translateX(-50%); background: #000; border-radius: 50%; z-index: 6; box-shadow: 0 0 0 2px #1a1a1a; }
-.android .statusbar { padding: 12px 22px 6px; font-size: 13px; font-weight: 500; }
-.android .pad button { background: #eef0f6; color: #1b1b1f; font-size: 28px; border-radius: 50%; }
-.android .pad button:active { background: #d8dbe6; }
-.android .call { background: #1e8e3e; border-radius: 28px; width: 88px; height: 56px; }
-.android .call-row { grid-template-columns: 64px 88px 64px; gap: 18px; }
-.android .tabs { --tab-on: #0b57d0; background: #f3f2f9; border-top: 0; }
-.android .tabs button[aria-current="page"] svg { background: #d3e3fd; border-radius: 16px; padding: 4px 18px; width: 60px; height: 32px; }
-.android .bubble.in { background: #e9eef6; color: #1b1b1f; border-radius: 20px 20px 20px 6px; }
-.android .bubble.out { background: #0b57d0; color: #fff; border-radius: 20px 20px 6px 20px; }
-.android .round.send { background: #0b57d0; }
-.android .compose input { border-radius: 24px; background: #eef0f6; border: 0; }
-.android .md-dialog { width: 100%; max-width: 280px; border-radius: 28px; background: #f3edf7; padding: 22px 22px 12px; box-shadow: 0 8px 28px rgba(0, 0, 0, .25); }
-.android .md-dialog .body { font-size: 14px; line-height: 1.45; white-space: pre-wrap; color: #49454f; max-height: 300px; overflow: auto; }
-.android .md-dialog input { width: 100%; margin-top: 14px; min-height: 44px; padding: 8px 12px; border: 1px solid #79747e; border-radius: 4px; background: transparent; font-size: 15px; }
-.android .md-dialog input:focus { outline: 2px solid #6750a4; border-color: transparent; }
+/* ---- Android (Material 3, Pixel-like) ---- */
+.android { border-radius: 40px; background: #202124; padding: 10px;
+  box-shadow: inset 0 0 0 1.5px #5f6368, 0 0 0 1px #3c4043, 0 30px 60px rgba(16, 24, 20, .28), 0 8px 16px rgba(16, 24, 20, .12); }
+.android .screen { border-radius: 31px; background: #f8f9ff; color: #1b1b1f; font-family: Roboto, "Google Sans", system-ui, sans-serif; }
+.android .hw { position: absolute; right: -3px; width: 3px; border-radius: 2px; background: #5f6368; }
+.android .hw-1 { top: 130px; height: 52px; }   /* power */
+.android .hw-2 { top: 200px; height: 84px; }   /* volume */
+.android .hw-3 { display: none; }
+.android .camera { position: absolute; z-index: 9; top: 10px; left: 50%; width: 12px; height: 12px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(circle at 35% 35%, #2b3246 0, #000 65%); }
+.md-status { display: flex; justify-content: space-between; align-items: center; height: 32px; padding: 0 20px; font-size: 12.5px; font-weight: 500; }
+.md-status .sys { display: inline-flex; align-items: center; gap: 4px; }
+.md-status .pct { font-size: 11.5px; }
+.android .tabs { background: #eef0f9; padding: 8px 0 6px; }
+.android .tabs button { font-size: 11.5px; font-weight: 500; color: #44474f; gap: 4px; }
+.android .tab-ico { width: 56px; height: 30px; border-radius: 15px; }
+.android .tabs button[aria-current="page"] { color: #1b1b1f; font-weight: 700; }
+.android .tabs button[aria-current="page"] .tab-ico { background: #d8e2ff; }
+.android .tabs svg { width: 22px; height: 22px; }
+.android .homebar { background: #eef0f9; height: 16px; }
+.android .homebar::after { width: 96px; height: 3.5px; background: #1b1b1f; opacity: .9; }
+.android .dial-number { font-weight: 400; font-size: 30px; }
+.android .pad { grid-template-columns: repeat(3, 70px); gap: 8px 14px; }
+.android .pad button { width: 70px; height: 54px; border-radius: 27px; background: #e1e2ec; color: #1b1b1f; }
+.android .pad button:active { background: #c5c6d0; border-radius: 16px; }
+.android .pad .digit { font-size: 25px; }
+.android .pad small { color: #44474f; font-weight: 500; letter-spacing: .08em; }
+.android .call-row { grid-template-columns: 70px 96px 70px; gap: 14px; }
+.android .call { width: 96px; height: 54px; border-radius: 27px; background: #146c2e; }
+.android .call:active { border-radius: 16px; }
+.android .erase { color: #44474f; }
+.android .md-head { display: flex; align-items: center; gap: 12px; padding: 4px 14px 10px; border-bottom: 1px solid #e1e2ec; }
+.android .md-head .back { font-size: 20px; color: #1b1b1f; }
+.android .md-head .avatar { width: 34px; height: 34px; font-size: 15px; background: #6750a4; }
+.android .md-head .name { display: grid; line-height: 1.2; }
+.android .md-head strong { font-size: 15px; font-weight: 500; }
+.android .md-head small { font-size: 11.5px; color: #44474f; }
+.android .bubble { border-radius: 20px; }
+.android .bubble.in { background: #e1e2ec; color: #1b1b1f; }
+.android .bubble.out { background: #d8e2ff; color: #001a41; }
+.android .bubble.tail.in { border-bottom-left-radius: 6px; }
+.android .bubble.tail.out { border-bottom-right-radius: 6px; }
+.android .chat-time { font-size: 11px; color: #44474f; opacity: 1; }
+.android .compose .plus { border: 1px solid #74777f; color: #44474f; width: 30px; height: 30px; font-size: 20px; }
+.android .compose .field { border-radius: 22px; background: #e1e2ec; min-height: 40px; }
+.android .round.send { background: #0b57d0; width: 32px; height: 32px; }
+.android .round.mic svg { stroke: #44474f; }
+.android .md-dialog { width: 100%; max-width: 270px; border-radius: 28px; background: #eef0f9; padding: 22px 22px 12px; box-shadow: 0 8px 28px rgba(0, 0, 0, .22); }
+.android .md-dialog .body { font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; color: #44474f; max-height: 300px; overflow: auto; }
+.android .md-dialog input { width: 100%; margin-top: 14px; min-height: 44px; padding: 8px 12px; border: 1px solid #74777f; border-radius: 4px; background: transparent; font-size: 15px; }
+.android .md-dialog input:focus { outline: 2px solid #0b57d0; border-color: transparent; }
 .android .md-dialog .buttons { display: flex; justify-content: flex-end; gap: 4px; margin-top: 14px; }
-.android .md-dialog .buttons button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 20px; background: none; color: #6750a4; font-weight: 500; font-size: 14px; cursor: pointer; }
-.android .md-dialog .buttons button:hover { background: rgba(103, 80, 164, .08); }
-.android .md-run { width: 100%; max-width: 260px; border-radius: 28px; background: #f3edf7; padding: 22px; display: flex; gap: 16px; align-items: center; font-size: 14px; }
-.ring { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(0, 0, 0, .12); border-top-color: currentColor; animation: spin 1s linear infinite; flex: none; }
+.android .md-dialog .buttons button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 20px; background: none; color: #0b57d0; font-weight: 500; font-size: 14px; cursor: pointer; }
+.android .md-dialog .buttons button:hover { background: rgba(11, 87, 208, .08); }
+.android .md-run { width: 100%; max-width: 250px; border-radius: 28px; background: #eef0f9; padding: 22px; display: flex; gap: 16px; align-items: center; font-size: 14px; }
 
 /* ---- Simple keypad phone ---- */
 .simple { width: 236px; padding: 18px 16px 22px; border-radius: 38px 38px 44px 44px; background: linear-gradient(160deg, #3a4048, #20242a); box-shadow: 0 0 0 2px #15181c, 0 24px 48px rgba(16, 24, 20, .28); color: #e8ece9; }

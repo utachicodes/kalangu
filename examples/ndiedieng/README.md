@@ -55,8 +55,9 @@ parle à l'API du serveur (et à Gemini ou à une vraie passerelle, ci-dessous).
   en crée un (après un appel, par exemple). Passer un signalement « En
   cours » ou « Résolu » envoie un SMS au chef, qui arrive dans le téléphone
   de gauche. Un message ambigu arrive « À vérifier ».
-- **L'assistant territorial,** sur sa propre page (bouton « Assistant »), à
-  l'écrit ou à la voix : le micro dicte la
+- **L'assistant territorial,** sur sa propre page (bouton « Assistant ») :
+  on touche l'orbe et on parle, la réponse est lue (« Voix ») ou seulement
+  écrite (« Texte ») ; le clavier permet aussi de l'écrire. Le micro dicte la
   question, et la réponse est lue à voix haute (ou à la demande avec
   « Écouter », ou toujours avec « Réponses à voix haute »). « Données
   utilisées » montre la requête SQL et les lignes derrière chaque chiffre.

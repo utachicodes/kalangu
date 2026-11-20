@@ -147,53 +147,74 @@ function cancelVoiceMessage() {
 }
 
 // ---------- Phone rendering ----------
-function statusBar(dark = false) {
-  return h("div", { class: "statusbar", style: dark ? "color:#fff" : null },
+// Each smartphone follows its own system: iOS (Dynamic Island, the status
+// bar's two "ears", the Phone keypad, Messages) or Android (punch-hole
+// camera, Material 3 dialer, Google Messages).
+function statusBar(kind) {
+  if (kind === "iphone") {
+    return h("div", { class: "statusbar ios-status", "aria-hidden": "true" },
+      h("span", { class: "ear", text: time() }),
+      h("span", { class: "island-gap" }),
+      h("span", { class: "ear sys" }, icon("signal"), icon("battery")));
+  }
+  return h("div", { class: "statusbar md-status", "aria-hidden": "true" },
     h("span", { text: time() }),
-    h("span", { class: "sys" }, icon("signal"), h("span", { text: "SN", style: "font-size:11px" }), icon("battery")));
+    h("span", { class: "sys" }, icon("signal"), h("span", { class: "pct", text: "82 %" }), icon("battery")));
 }
 function keypad(onKey) {
   const letters = { 2: "ABC", 3: "DEF", 4: "GHI", 5: "JKL", 6: "MNO", 7: "PQRS", 8: "TUV", 9: "WXYZ", 0: "+" };
   return h("div", { class: "pad", role: "group", "aria-label": "Clavier" },
     ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"].map((k) =>
-      h("button", { type: "button", "aria-label": k, onclick: () => onKey(k) }, k, h("small", { text: letters[k] ?? " " }))));
+      h("button", { type: "button", "aria-label": k, onclick: () => onKey(k) }, h("span", { class: "digit", text: k }), h("small", { text: letters[k] ?? "" }))));
 }
-function dialer() {
+function dialer(kind) {
   const p = state.phone;
   const display = h("div", { class: "dial-number", "aria-live": "polite", text: p.dialing || "" });
-  return h("div", { class: "app" },
-    display,
-    h("div", { class: "dial-hint", text: p.dialing ? "" : `Composez ${CODE} pour joindre la Mairie` }),
+  const hint = h("div", { class: "dial-hint", text: p.dialing ? "" : `Composez ${CODE} pour joindre la Mairie` });
+  const erase = h("button", {
+    type: "button", class: "erase", "aria-label": "Effacer", hidden: !p.dialing,
+    onclick: () => { p.dialing = p.dialing.slice(0, -1); display.textContent = p.dialing; erase.hidden = !p.dialing; },
+  }, icon("erase"));
+  return h("div", { class: "app dialer" },
+    h("div", { class: "dial-top" }, display, hint),
     keypad((k) => {
       p.dialing += k;
       display.textContent = p.dialing;
-      document.querySelector(".dial-hint").textContent = "";
+      hint.textContent = "";
+      erase.hidden = false;
     }),
     h("div", { class: "call-row" },
       h("span"),
       h("button", { type: "button", class: "call", "aria-label": `Appeler ${p.dialing || CODE}`, onclick: () => dial(p.dialing || CODE) }, icon("phone")),
-      h("button", {
-        type: "button", class: "erase", "aria-label": "Effacer",
-        onclick: () => { p.dialing = p.dialing.slice(0, -1); display.textContent = p.dialing; },
-      }, p.dialing ? icon("erase") : "")));
+      erase));
 }
-function chatView() {
+function chatView(kind) {
   const p = state.phone;
+  const ios = kind === "iphone";
   const items = [
     ...p.inbox.map((m) => ({ dir: "in", text: m.text, at: m.at, kind: "sms" })),
     ...sentFor().map((m) => ({ dir: "out", text: m.text, at: m.at, kind: m.kind })),
   ].sort((a, b) => a.at.localeCompare(b.at));
+  const stamp = (iso) => {
+    const d = new Date(iso);
+    const t = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    return d.toDateString() === new Date().toDateString() ? `Aujourd'hui ${t}` : `${d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} ${t}`;
+  };
   const chat = h("div", { class: "chat", "aria-live": "polite", "aria-label": "Conversation avec la Mairie" },
-    items.length ? null : h("p", { class: "chat-empty", text: "Écrivez à la Mairie, ou dictez un message vocal. Un SMS sans menu ouvert reçoit le menu." }),
-    items.map((m, i) => [
-      i === 0 || new Date(m.at) - new Date(items[i - 1].at) > 10 * 60 * 1000 ? h("span", { class: "chat-time", text: new Date(m.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) }) : null,
-      h("div", { class: `bubble ${m.dir}` },
-        m.kind === "vocal" ? h("span", { class: "voice-tag" }, icon("vocal"), "Message vocal, transcrit") : null,
-        m.text),
-    ]));
+    items.length ? null : h("p", { class: "chat-empty", text: "Écrivez à la Mairie, ou envoyez un message vocal. Un SMS sans menu ouvert reçoit le menu." }),
+    items.map((m, i) => {
+      const next = items[i + 1];
+      const last = !next || next.dir !== m.dir;
+      return [
+        i === 0 || new Date(m.at) - new Date(items[i - 1].at) > 10 * 60 * 1000 ? h("span", { class: "chat-time", text: stamp(m.at) }) : null,
+        h("div", { class: `bubble ${m.dir}${last ? " tail" : ""}` },
+          m.kind === "vocal" ? h("span", { class: "voice-tag" }, icon("vocal"), "Message vocal, transcrit") : null,
+          m.text),
+      ];
+    }));
   const input = h("input", {
-    id: "sms-input", type: "text", value: p.smsDraft, placeholder: "Message", "aria-label": "Message à la Mairie", autocomplete: "off",
-    oninput: (e) => (p.smsDraft = e.target.value),
+    id: "sms-input", type: "text", value: p.smsDraft, placeholder: ios ? "SMS" : "Message texte", "aria-label": "Message à la Mairie", autocomplete: "off",
+    oninput: (e) => { p.smsDraft = e.target.value; swap(); },
     onkeydown: (e) => { if (e.key === "Enter") sendSms(e.target.value); },
   });
   const micBtn = h("button", {
@@ -201,10 +222,22 @@ function chatView() {
     title: canListen ? "Message vocal, transcrit par le navigateur" : listenUnavailable,
     onclick: startVoiceMessage,
   }, icon("mic"));
+  const sendBtn = h("button", { type: "button", class: "round send", "aria-label": "Envoyer", onclick: () => sendSms(input.value) }, icon("send"));
+  // As on both systems: the microphone while the field is empty, send once there is text.
+  const swap = () => { const has = Boolean(input.value.trim()); micBtn.hidden = has; sendBtn.hidden = !has; };
+  swap();
   if (recording) chat.append(h("div", { class: "draft", text: recording.text || "Parlez…" }));
   setTimeout(() => (chat.scrollTop = chat.scrollHeight));
+  const head = ios
+    ? h("div", { class: "chat-head ios-head" },
+        h("span", { class: "back", "aria-hidden": "true", text: "‹" }),
+        h("span", { class: "who" }, h("span", { class: "avatar", text: "M" }), h("span", { class: "name", text: "MAIRIE ›" })))
+    : h("div", { class: "chat-head md-head" },
+        h("span", { class: "back", "aria-hidden": "true", text: "←" }),
+        h("span", { class: "avatar", text: "M" }),
+        h("span", { class: "name" }, h("strong", { text: "MAIRIE" }), h("small", { text: "Ndiédieng" })));
   return h("div", { class: "app" },
-    h("div", { class: "chat-head" }, h("span", { class: "avatar", text: "M" }), h("strong", { text: "MAIRIE" }), h("span", { text: "Ndiédieng", style: "opacity:.6" })),
+    head,
     chat,
     recording
       ? [
@@ -215,8 +248,9 @@ function chatView() {
             h("div", { class: "wave", "aria-hidden": "true" }, h("span", { class: "timer", text: "0:00" }), recording.levels.map(() => h("i"))),
             h("button", { type: "button", class: "round send", "aria-label": "Envoyer le message vocal", onclick: stopVoiceMessage }, icon("send"))),
         ]
-      : h("div", { class: "compose" }, micBtn, input,
-          h("button", { type: "button", class: "round send", "aria-label": "Envoyer", onclick: () => sendSms(input.value) }, icon("send"))));
+      : h("div", { class: "compose" },
+          h("span", { class: "plus", "aria-hidden": "true", text: "+" }),
+          h("div", { class: "field" }, input, micBtn, sendBtn)));
 }
 function ussdLayer(kind) {
   const p = state.phone;
@@ -255,15 +289,19 @@ function ussdLayer(kind) {
 }
 function smartphone(kind) {
   const p = state.phone;
+  const ios = kind === "iphone";
   const tab = (view, label, ic) => h("button", {
     type: "button", "aria-current": p.view === view ? "page" : null,
     onclick: () => { p.view = view; renderPhone({ focus: view === "messages" ? "sms" : null }); },
-  }, icon(ic), label);
-  return h("div", { class: `device smart ${kind}`, role: "group", "aria-label": kind === "iphone" ? "iPhone" : "Téléphone Android" },
-    h("div", { class: kind === "iphone" ? "island" : "camera", "aria-hidden": "true" }),
+  }, h("span", { class: "tab-ico" }, icon(ic)), label);
+  return h("div", { class: `device smart ${kind}`, role: "group", "aria-label": ios ? "iPhone" : "Téléphone Android" },
+    h("span", { class: "hw hw-1", "aria-hidden": "true" }),
+    h("span", { class: "hw hw-2", "aria-hidden": "true" }),
+    h("span", { class: "hw hw-3", "aria-hidden": "true" }),
     h("div", { class: "screen" },
-      statusBar(),
-      p.view === "dialer" ? dialer() : chatView(),
+      h("div", { class: ios ? "island" : "camera", "aria-hidden": "true" }),
+      statusBar(kind),
+      p.view === "dialer" ? dialer(kind) : chatView(kind),
       ussdLayer(kind),
       h("nav", { class: "tabs", "aria-label": "Applications" }, tab("dialer", "Clavier", "keypad"), tab("messages", "Messages", "chat")),
       h("div", { class: "homebar", "aria-hidden": "true" })));

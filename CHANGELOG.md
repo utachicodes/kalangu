@@ -15,7 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/api/signalements`); the equipment's state follows its open reports. The
   dashboard fits the screen without scrolling (one filter row, a five-column
   list, the phone scaled to fit), and the assistant has its own page
-  (`/ndiedieng/assistant/`). Dictation now fails with a clear message instead
+  (`/ndiedieng/assistant/`) built around a glowing orb: touch it and speak,
+  and the answer is read aloud or written (a keyboard button types the
+  question instead). The iPhone and the Android phone now follow their own
+  systems (Dynamic Island inside the screen, iOS keypad and Messages; punch-
+  hole camera, Material 3 dialer and Google Messages). An unrecognised
+  question gets suggestions to tap instead of a list of examples. Dictation now fails with a clear message instead
   of hanging where a browser offers it but does not run it, and shows a live
   waveform and glow. The in-browser demo is kept in IndexedDB, so both pages
   share it and a reload keeps it.
