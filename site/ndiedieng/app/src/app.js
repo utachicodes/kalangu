@@ -92,6 +92,9 @@ export function createApp(options) {
         (async (to, text) => {
             phoneFor(to).inbox.push({ from: "MAIRIE", text, at: new Date() });
         });
+    // Deleted reports, kept a few minutes so the Mairie can undo a delete.
+    const deleted = new Map();
+    const UNDO_MS = 10 * 60 * 1000;
     const inboxOf = (phone) => phone.inbox.map((m) => ({ from: m.from, text: m.text, at: m.at.toISOString() }));
     return async (req) => {
         const url = new URL(req.url);
@@ -148,7 +151,12 @@ export function createApp(options) {
                     return json(view(current));
                 if (req.method === "DELETE") {
                     commune.deleteSignalement(current.code);
-                    return json({ deleted: current.code });
+                    const now = Date.now();
+                    for (const [code, d] of deleted)
+                        if (now - d.at > UNDO_MS)
+                            deleted.delete(code);
+                    deleted.set(current.code, { report: current, at: now });
+                    return json({ deleted: current.code, undo: `/api/signalements/${current.code}/restaurer` });
                 }
                 const body = (await req.json());
                 const { change, error } = readChange(body, false);
@@ -204,6 +212,17 @@ export function createApp(options) {
                     })
                         .map(view),
                 });
+            }
+            const restore = /^\/api\/signalements\/(S-\d{4,})\/restaurer$/.exec(path);
+            if (req.method === "POST" && restore) {
+                const kept = deleted.get(restore[1]);
+                if (!kept || Date.now() - kept.at > UNDO_MS)
+                    return json({ error: "Ce signalement ne peut plus être restauré." }, 404);
+                const back = commune.restoreSignalement(kept.report);
+                if (!back)
+                    return json({ error: "Ce numéro a été réutilisé : le signalement ne peut pas être restauré." }, 409);
+                deleted.delete(restore[1]);
+                return json({ signalement: view(back) });
             }
             const action = /^\/api\/signalements\/(S-\d{4,})\/(prendre|verifier|resoudre)$/.exec(path);
             if (req.method === "POST" && action) {

@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TODO · Kalangu</title>
-<meta name="description" content="State as of 19 Nov 2026. Design reference: docs/design.md.">
+<meta name="description" content="State as of 20 Nov 2026. Design reference: docs/design.md.">
 <link rel="canonical" href="https://kalangu.utachi.website/docs/roadmap/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Kalangu">
 <meta property="og:title" content="TODO">
-<meta property="og:description" content="State as of 19 Nov 2026. Design reference: docs/design.md.">
+<meta property="og:description" content="State as of 20 Nov 2026. Design reference: docs/design.md.">
 <meta property="og:url" content="https://kalangu.utachi.website/docs/roadmap/">
 <meta name="twitter:card" content="summary">
 <link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -23,6 +23,7 @@
   <nav class="top-r" aria-label="Site">
     <a href="/docs/agents/">Agents</a>
     <a href="/docs/providers/">Providers</a>
+    <a href="/components/">Components</a>
     <a href="/contributing/">Contributing</a>
     <a href="https://github.com/utachicodes/kalangu">GitHub</a>
   </nav>
@@ -35,7 +36,7 @@
   <main id="content">
     <article class="doc">
 <h1 id="todo">TODO</h1>
-<p>State as of 19 Nov 2026. Design reference: <a href="/docs/design/">docs/design.md</a>.</p>
+<p>State as of 20 Nov 2026. Design reference: <a href="/docs/design/">docs/design.md</a>.</p>
 <h2 id="verify-first-checklist-before-announcing-anything">Verify-first checklist (before announcing anything)<a class="anchor" href="#verify-first-checklist-before-announcing-anything" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><input checked="" disabled="" type="checkbox"> Read the official Africa&#39;s Talking USSD and SMS docs: done; findings in
@@ -66,11 +67,52 @@ published since 16 Nov 2026: none, refreshed 17 Nov 2026
 <li><input disabled="" type="checkbox"> Ask two or three teams who run USSD services today whether deferral to
 SMS would suit their users (design doc §12, question 6, depends on this)</li>
 </ul>
+<h2 id="example-ndiédieng-live-at-ndiedieng">Example: Ndiédieng (live at /ndiedieng)<a class="anchor" href="#example-ndiédieng-live-at-ndiedieng" aria-label="Link to this section">#</a></h2>
+<p>A full use case for the commune of Ndiédieng (Kaolack, Senegal), and the
+website&#39;s live demo: <a href="https://kalangu.utachi.website/ndiedieng/" rel="noopener">kalangu.utachi.website/ndiedieng</a>.
+Code and French README in <a href="https://github.com/utachicodes/kalangu/tree/main/examples/ndiedieng" rel="noopener">examples/ndiedieng</a>.</p>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> Prototype: USSD <code>*123#</code> menus (breakdowns, births, deaths, follow-up,
+free message), free SMS and voice messages sorted by category and urgency,
+the town hall&#39;s reports, SMS back to the chief, the territorial assistant
+with the data behind each answer (rules, or Gemini on the server)</li>
+<li><input checked="" disabled="" type="checkbox"> Online at <code>/ndiedieng</code>, running entirely in the browser (sql.js);
+CI checks the published page is built from source (<code>check:web</code>)</li>
+<li><input checked="" disabled="" type="checkbox"> Three phones true to their systems: keypad phone, Android (Material 3),
+iPhone (iOS)</li>
+<li><input checked="" disabled="" type="checkbox"> Reports: open, edit, create and delete from the dashboard; the
+dashboard fits the screen without scrolling</li>
+<li><input checked="" disabled="" type="checkbox"> The assistant on its own page (<code>/ndiedieng/assistant/</code>), with an orb to
+tap and speak; answers read aloud or written</li>
+<li><input checked="" disabled="" type="checkbox"> Voice: a clear message instead of a hang where a browser offers
+dictation without running it; live waveform and glow</li>
+<li><input checked="" disabled="" type="checkbox"> The in-browser demo kept in IndexedDB, shared by both pages; &quot;start
+over&quot; in Help</li>
+<li><input checked="" disabled="" type="checkbox"> Undo after deleting a report, CSV export of the list, and a quick search
+(Ctrl/Cmd + K) over reports, villages and actions</li>
+<li><input checked="" disabled="" type="checkbox"> Linked from the README, the docs overview and the landing page</li>
+<li><input checked="" disabled="" type="checkbox"> Gemini on the website: a serverless function (<code>/api/ndiedieng/gemini</code>,
+built from <code>src/geminiFunction.ts</code>) holds <code>GEMINI_API_KEY</code>; fixed tasks
+only, limited per visitor, the rules whenever it fails</li>
+<li><input disabled="" type="checkbox"> Confirm the function answers on the live site after the merge, and set a
+quota on the key in Google AI Studio</li>
+<li><input disabled="" type="checkbox"> Run Ndiédieng on the Africa&#39;s Talking sandbox with their phone
+simulator (needs an account and a public URL for the callbacks)</li>
+<li><input disabled="" type="checkbox"> Menus and voice messages in Wolof and Sérère, reviewed by speakers</li>
+<li><input disabled="" type="checkbox"> Try <code>/ndiedieng</code> on real phones (Android and iPhone, Safari and Chrome),
+dictation included</li>
+<li><input disabled="" type="checkbox"> Hackathon JDL 2026: application due 8 Dec 2026; field tests with the
+village chiefs on 19 Dec, final on 20 Dec, in Ndiédieng</li>
+</ul>
 <h2 id="website">Website<a class="anchor" href="#website" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><input checked="" disabled="" type="checkbox"> Documentation on the website: quick start, agents, guides, design,
 contributing, roadmap, changelog; generated from the markdown and checked
 in CI (<code>pnpm site:check</code>)</li>
+<li><input checked="" disabled="" type="checkbox"> Landing page and docs overview link the live example (<code>/ndiedieng</code>),
+and the sitemap lists it</li>
+<li><input checked="" disabled="" type="checkbox"> Components page (<code>/components/</code>): the example&#39;s hand-built UI pieces,
+live, with their code, nicknames and reasons</li>
 <li><input disabled="" type="checkbox"> Look over the docs pages on a real phone and a desktop after the next
 deploy</li>
 </ul>
@@ -220,7 +262,7 @@ none as of 17 Nov 2026 (docs/prior-art.md §6)</li>
       <span>Generated from <code>TODO.md</code></span>
     </footer>
   </main>
-  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#verify-first-checklist-before-announcing-anything">Verify-first checklist (before announcing anything)</a></li><li><a href="#website">Website</a></li><li><a href="#v01-build-order-each-piece-independently-testable">v0.1 build order (each piece independently testable)</a></li><li><a href="#design-review-open-questions-design-doc-12-settled-17-nov-2026">Design review: open questions (design doc §12), settled 17 Nov 2026</a></li><li><a href="#version-02-payments-do-not-rush-money-code-needs-care">Version 0.2: payments (do not rush; money code needs care)</a></li><li><a href="#version-03-languages">Version 0.3: languages</a></li><li><a href="#version-04-channels">Version 0.4: channels</a></li></ul></nav>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#verify-first-checklist-before-announcing-anything">Verify-first checklist (before announcing anything)</a></li><li><a href="#example-ndiédieng-live-at-ndiedieng">Example: Ndiédieng (live at /ndiedieng)</a></li><li><a href="#website">Website</a></li><li><a href="#v01-build-order-each-piece-independently-testable">v0.1 build order (each piece independently testable)</a></li><li><a href="#design-review-open-questions-design-doc-12-settled-17-nov-2026">Design review: open questions (design doc §12), settled 17 Nov 2026</a></li><li><a href="#version-02-payments-do-not-rush-money-code-needs-care">Version 0.2: payments (do not rush; money code needs care)</a></li><li><a href="#version-03-languages">Version 0.3: languages</a></li><li><a href="#version-04-channels">Version 0.4: channels</a></li></ul></nav>
 </div>
 <script>
 // On a phone the menu starts closed, so the page's content comes first. Without

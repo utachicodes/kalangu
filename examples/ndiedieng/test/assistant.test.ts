@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { checkQuery, geminiAssistant, ruleAssistant } from "../src/assistant.js";
+import { promptFor } from "../src/gemini.js";
 import type { Commune } from "../src/db.js";
 import { openCommune } from "../src/nodeSql.js";
 
@@ -88,7 +89,45 @@ describe("Gemini assistant", () => {
     const g = fakeGemini("DELETE FROM signalements");
     const a = await geminiAssistant(c, { apiKey: "k", fetch: g.fetch }).ask("Combien de fiches ?");
     expect(a.par).toBe("regles");
-    expect(a.answer).toMatch(/Gemini indisponible : only a SELECT can run/);
+    expect(a.answer).toMatch(/fiches territoriales/);
     expect(c.signalements().length).toBeGreaterThan(0);
+  });
+
+  it("answers a greeting itself, without a query", async () => {
+    const call = async () => ({ sql: "", reponse: "Bonjour ! Demandez-moi par exemple quels forages sont en panne." });
+    const a = await geminiAssistant(commune(), { call }).ask("Hello");
+    expect(a).toMatchObject({ sql: null, par: "gemini", answer: "Bonjour ! Demandez-moi par exemple quels forages sont en panne." });
+  });
+
+  it("goes through any caller, such as the website's function", async () => {
+    const tasks: string[] = [];
+    const call = async (t: { task: string }) => {
+      tasks.push(t.task);
+      return t.task === "plan" ? { sql: "SELECT COUNT(*) AS n FROM villages", reponse: "" } : { reponse: "58 villages." };
+    };
+    const a = await geminiAssistant(commune(), { call }).ask("Combien de villages ?");
+    expect(tasks).toEqual(["plan", "answer"]);
+    expect(a).toMatchObject({ answer: "58 villages.", rows: [{ n: 58 }] });
+  });
+});
+
+describe("rule assistant small talk", () => {
+  it("greets back, thanks back, and offers questions", async () => {
+    const r = ruleAssistant(commune());
+    const hi = await r.ask("Hello");
+    expect(hi.answer).toMatch(/^Bonjour !/);
+    expect(hi.suggestions).toHaveLength(4);
+    expect((await r.ask("Merci beaucoup")).answer).toMatch(/Avec plaisir/);
+    expect((await r.ask("Bonjour, quels forages sont en panne depuis le mois dernier dans la commune ?")).sql).toMatch(/^SELECT/);
+  });
+});
+
+describe("what the Gemini tasks accept", () => {
+  it("builds a prompt only for a known task within limits", () => {
+    expect(promptFor({ task: "plan", question: "Combien de villages ?" })).toMatchObject({ user: "Combien de villages ?" });
+    expect(promptFor({ task: "write me a poem" })).toBe("unknown task");
+    expect(promptFor({ task: "plan", question: "x".repeat(501) })).toMatch(/too long/);
+    expect(promptFor({ task: "answer", question: "q", sql: "SELECT 1", rows: Array(10).fill({ t: "x".repeat(3000) }) })).toMatch(/within limits/);
+    expect(promptFor(null)).toBe("a task is required");
   });
 });

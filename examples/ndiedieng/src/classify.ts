@@ -10,6 +10,7 @@
  */
 
 import type { Categorie, Urgence } from "./db.js";
+import { CATEGORIES as GEMINI_CATEGORIES, directGemini, NATURE_LIST, type GeminiCall } from "./gemini.js";
 
 export interface Classification {
   categorie: Categorie;
@@ -88,59 +89,23 @@ export function urgency(categorie: Categorie, folded: string): Urgence {
   return "basse";
 }
 
-const CATEGORIES: Categorie[] = ["eau", "sante", "ecole", "energie", "piste", "naissance", "deces", "autre"];
-const NATURE_LIST = ["forage", "borne-fontaine", "poste de sante", "case de sante", "salle de classe", "latrines", "lampadaire solaire", "piste"];
+const CATEGORIES: readonly Categorie[] = GEMINI_CATEGORIES;
 
 /**
  * Gemini, asked for the same fields in a fixed JSON shape. The key goes in a
  * header; only the message text is sent, never the sender's number. On any
  * failure it falls back to the keywords, so a report is never lost.
  */
-export function geminiClassifier(options: { apiKey: string; model?: string; fetch?: typeof fetch; warn?: (m: string) => void }): Classifier {
+export function geminiClassifier(
+  options: ({ call: GeminiCall } | { apiKey: string; model?: string; fetch?: typeof fetch }) & { warn?: (m: string) => void },
+): Classifier {
   const fallback = keywordClassifier();
-  const doFetch = options.fetch ?? fetch;
-  const model = options.model ?? "gemini-3.5-flash-lite";
+  const call = "call" in options ? options.call : directGemini(options);
   const warn = options.warn ?? ((m: string) => console.warn(m));
   return {
     async classify(text) {
       try {
-        const res = await doFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-          method: "POST",
-          headers: { "content-type": "application/json", "x-goog-api-key": options.apiKey },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [
-                {
-                  text:
-                    "Tu classes les messages SMS envoyes par les chefs de village de la commune de Ndiedieng (Senegal) a la Mairie. " +
-                    "Le message peut etre en francais ou en wolof, avec des fautes. Categories : eau (forage, borne-fontaine), sante (poste ou case de sante), " +
-                    "ecole (salle de classe, latrines), energie (lampadaire solaire), piste (piste coupee, pont), naissance, deces, autre. " +
-                    "Urgence haute si un service essentiel est coupe pour beaucoup de gens ou s'il y a un danger. " +
-                    "confiance : ta certitude entre 0 et 1 ; sois honnete quand le message est ambigu.",
-                },
-              ],
-            },
-            contents: [{ role: "user", parts: [{ text }] }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseJsonSchema: {
-                type: "object",
-                properties: {
-                  categorie: { type: "string", enum: CATEGORIES },
-                  nature: { type: "string", enum: [...NATURE_LIST, "aucune"] },
-                  urgence: { type: "string", enum: ["haute", "moyenne", "basse"] },
-                  confiance: { type: "number" },
-                },
-                required: ["categorie", "nature", "urgence", "confiance"],
-              },
-            },
-          }),
-          signal: AbortSignal.timeout(8000),
-        });
-        if (!res.ok) throw new Error(`Gemini answered ${res.status}`);
-        const data = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> };
-        const raw = (data.candidates?.[0]?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? "").join("");
-        const out = JSON.parse(raw) as { categorie: Categorie; nature: string; urgence: Urgence; confiance: number };
+        const out = (await call({ task: "classify", text })) as { categorie: Categorie; nature: string; urgence: Urgence; confiance: number };
         if (!CATEGORIES.includes(out.categorie)) throw new Error(`unknown category ${out.categorie}`);
         return {
           categorie: out.categorie,

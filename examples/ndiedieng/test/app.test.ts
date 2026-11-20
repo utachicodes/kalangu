@@ -132,7 +132,7 @@ describe("the Mairie's create, read, update and delete", () => {
     await t.call("POST", "/api/signalements", { villageId: 12, categorie: equip.type, urgence: "haute", description: "x", equipementId: equip.id, notify: false });
     const broken = () => (t.commune.readOnly(`SELECT etat FROM equipements WHERE id = ${Number(equip.id)}`).rows[0] as { etat: string }).etat;
     expect(broken()).toBe("en panne");
-    expect((await t.call("DELETE", "/api/signalements/S-0001")).body).toEqual({ deleted: "S-0001" });
+    expect((await t.call("DELETE", "/api/signalements/S-0001")).body).toMatchObject({ deleted: "S-0001" });
     expect(t.commune.signalement("S-0001")).toBeNull();
     expect(broken()).toBe("fonctionnel");
     expect((await t.call("DELETE", "/api/signalements/S-0001")).status).toBe(404);
@@ -174,5 +174,35 @@ describe("a saved demo", () => {
     expect(body.inbox[0]!.text).toBe("déjà là");
     expect(inboxes.get(tel)!.length).toBe(body.inbox.length);
     expect(body.inbox.length).toBeGreaterThan(1);
+  });
+});
+
+describe("undoing a delete", () => {
+  it("puts the report back under its own code, equipment state included", async () => {
+    const t = setup();
+    const created = (await t.call("POST", "/api/signalements", { villageId: 4, categorie: "eau", urgence: "haute", description: "fuite au forage", notify: false })).body.signalement;
+    await t.call("POST", "/api/signalements", { villageId: 6, categorie: "piste", urgence: "basse", description: "nid de poule", notify: false });
+    const before = (await t.call("GET", `/api/signalements/${created.code}`)).body;
+
+    const del = await t.call("DELETE", `/api/signalements/${created.code}`);
+    expect(del.body).toEqual({ deleted: created.code, undo: `/api/signalements/${created.code}/restaurer` });
+    expect((await t.call("GET", `/api/signalements/${created.code}`)).status).toBe(404);
+
+    const back = await t.call("POST", del.body.undo);
+    expect(back.status).toBe(200);
+    expect(back.body.signalement).toEqual(before);
+    // Once only.
+    expect((await t.call("POST", del.body.undo)).status).toBe(404);
+  });
+
+  it("refuses when the code was given to a new report meanwhile", async () => {
+    const t = setup();
+    const last = (await t.call("POST", "/api/signalements", { villageId: 4, categorie: "eau", urgence: "haute", description: "fuite", notify: false })).body.signalement;
+    const del = await t.call("DELETE", `/api/signalements/${last.code}`);
+    const reused = (await t.call("POST", "/api/signalements", { villageId: 5, categorie: "sante", urgence: "moyenne", description: "porte cassée", notify: false })).body.signalement;
+    expect(reused.code).toBe(last.code);
+    const back = await t.call("POST", del.body.undo);
+    expect(back.status).toBe(409);
+    expect((await t.call("GET", `/api/signalements/${last.code}`)).body.description).toBe("porte cassée");
   });
 });

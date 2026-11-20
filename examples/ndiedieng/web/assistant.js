@@ -1,29 +1,27 @@
-// The assistant's page: touch the orb and speak, as with a voice assistant;
-// the answer is read aloud or written, with the data used. A keyboard
-// button writes the question instead. Every value from the API reaches the
+// The assistant's page: touch the orb and speak, as with a voice assistant,
+// and the answer is read aloud; or type the question with the keyboard
+// button, and the answer is written. Either way it shows the data used, and
+// "Écouter" reads any answer. Every value from the API reaches the
 // page through textContent, never as HTML (see common.js).
 
-import { $, h, icon, toast, announce, connect, call, canListen, canSpeak, listenUnavailable, listen, speak, stopSpeaking } from "./common.js";
+import { $, h, icon, toast, announce, connect, call, canListen, canSpeak, listenUnavailable, listen, speak, stopSpeaking,
+  naturalVoiceAvailable, unlockVoice, speakNatural, stopNatural } from "./common.js";
 
 const IDEAS = ["Quels forages sont en panne ?", "Quels villages ont le plus de pannes ?", "Quels signalements urgents sont en attente ?", "Combien de naissances ce mois-ci ?"];
 
-const state = { thread: [], voice: canSpeak, busy: false, speaking: null, orb: "idle" };
-try {
-  const saved = localStorage.getItem("ndiedieng.reply");
-  if (saved) state.voice = canSpeak && saved === "voix";
-} catch {}
+const state = { thread: [], busy: false, speaking: null, orb: "idle", natural: false };
 
 // ---------- The orb: one control, four states ----------
 let speakingWobble = 0;
-function setOrb(next, line = null, heard = false) {
+function setOrb(next, line = null, heard = false, { realLevel = false } = {}) {
   state.orb = next;
   const orb = $("orb");
   orb.dataset.state = next;
   orb.setAttribute("aria-label", next === "listening" ? "Arrêter et envoyer" : next === "speaking" ? "Arrêter la lecture" : next === "thinking" ? "L'assistant réfléchit" : "Parler à l'assistant");
   $("aurora").classList.toggle("on", next === "listening" || next === "speaking");
   cancelAnimationFrame(speakingWobble);
-  if (next === "speaking") {
-    // No level comes from speech synthesis: a gentle pulse stands in for it.
+  if (next === "speaking" && !realLevel) {
+    // No level comes from the browser's speech synthesis: a gentle pulse stands in for it.
     const t0 = performance.now();
     const tick = (t) => {
       const v = 0.25 + 0.25 * Math.abs(Math.sin((t - t0) / 180)) * (0.6 + 0.4 * Math.sin((t - t0) / 530));
@@ -31,7 +29,7 @@ function setOrb(next, line = null, heard = false) {
       speakingWobble = requestAnimationFrame(tick);
     };
     speakingWobble = requestAnimationFrame(tick);
-  } else if (next !== "listening") level(0);
+  } else if (next !== "listening" && next !== "speaking") level(0);
   const live = $("live");
   live.textContent = line ?? (next === "idle" ? (state.thread.length ? "Touchez l'orbe pour une autre question." : canListen ? "Touchez l'orbe et parlez." : "Écrivez votre question avec le clavier.") : "");
   live.classList.toggle("heard", heard);
@@ -46,6 +44,7 @@ function onOrb() {
   if (state.orb === "listening") return dictation?.stop();
   if (state.orb === "speaking") return quiet();
   if (state.orb === "thinking") return;
+  if (state.natural) unlockVoice(); // inside the tap, so the answer can be heard
   if (!canListen) {
     toast(listenUnavailable);
     return showKeyboard(true);
@@ -57,7 +56,7 @@ function onOrb() {
     onLevel: level,
     onDone: (t) => {
       dictation = null;
-      if (t) ask(t);
+      if (t) ask(t, { spoken: true });
       else setOrb("idle");
     },
     onError: (m) => toast(m),
@@ -94,7 +93,11 @@ function botTurn(m, i) {
       used(m),
       h("div", { class: "tools" },
         canSpeak
-          ? h("button", { type: "button", "aria-pressed": String(reading), onclick: () => (reading ? quiet() : say(m, i)) }, icon(reading ? "stop" : "speaker"), reading ? "Arrêter" : "Écouter")
+          ? h("button", { type: "button", "aria-pressed": String(reading), onclick: () => {
+            if (reading) return quiet();
+            if (state.natural) unlockVoice();
+            say(m, i);
+          } }, icon(reading ? "stop" : "speaker"), reading ? "Arrêter" : "Écouter")
           : null,
         h("button", {
           type: "button",
@@ -114,29 +117,44 @@ function render() {
 /** What is read aloud: the answer, and the questions offered if there are some. */
 const spoken = (m) => (m.suggestions?.length ? `${m.text} ${m.suggestions.slice(0, 2).join(" Ou : ")}` : m.text);
 function say(m, i) {
-  speak(spoken(m), {
-    onStart: () => setOrb("speaking"),
-    onEnd: () => {
-      if (state.speaking !== i) return;
-      state.speaking = null;
-      setOrb("idle");
-      render();
-    },
-  });
+  const ended = () => {
+    if (state.speaking !== i) return;
+    state.speaking = null;
+    setOrb("idle");
+    render();
+  };
+  const browserVoice = () =>
+    speak(spoken(m), { onStart: () => state.speaking === i && setOrb("speaking"), onEnd: ended });
   state.speaking = i;
-  setOrb("speaking");
   render();
+  if (!state.natural) {
+    setOrb("speaking");
+    return browserVoice();
+  }
+  // Gemini's voice, with the orb following it; the browser's if it fails.
+  setOrb("thinking", "Je prépare la réponse vocale…");
+  speakNatural(spoken(m), {
+    onStart: () => state.speaking === i && setOrb("speaking", null, false, { realLevel: true }),
+    onEnd: ended,
+    onLevel: (v) => state.speaking === i && level(v),
+  }).catch(() => {
+    if (state.speaking !== i) return;
+    setOrb("speaking");
+    browserVoice();
+  });
 }
 function quiet() {
   stopSpeaking();
+  stopNatural();
   if (state.speaking !== null) {
     state.speaking = null;
     render();
   }
-  if (state.orb === "speaking") setOrb("idle");
+  if (state.orb === "speaking" || (state.orb === "thinking" && !state.busy)) setOrb("idle");
 }
 
-async function ask(question) {
+/** A spoken question gets a spoken answer; a typed or tapped one, a written one. */
+async function ask(question, { spoken = false } = {}) {
   question = question.trim();
   if (!question || state.busy) return;
   state.busy = true;
@@ -159,7 +177,7 @@ async function ask(question) {
   const i = state.thread.length - 1;
   render();
   announce(answer.text);
-  if (state.voice) say(answer, i);
+  if (spoken && (state.natural || canSpeak)) say(answer, i);
   else setOrb("idle");
 }
 
@@ -174,16 +192,6 @@ function showKeyboard(on) {
   $("ask-form").hidden = !on;
   $("keyboard").setAttribute("aria-pressed", String(on));
   if (on) $("question").focus();
-}
-
-function setReply(mode) {
-  state.voice = mode === "voix" && canSpeak;
-  for (const b of document.querySelectorAll("#reply-mode button")) {
-    b.setAttribute("aria-checked", String(b.dataset.mode === (state.voice ? "voix" : "texte")));
-    b.tabIndex = b.getAttribute("aria-checked") === "true" ? 0 : -1;
-  }
-  try { localStorage.setItem("ndiedieng.reply", state.voice ? "voix" : "texte"); } catch {}
-  if (!state.voice) quiet();
 }
 
 // ---------- Start ----------
@@ -202,24 +210,21 @@ async function start() {
   $("ask-form").onsubmit = (e) => { e.preventDefault(); ask(q.value); };
   syncPrompt();
   $("restart").onclick = () => { quiet(); state.thread = []; render(); setOrb("idle"); };
-  if (!canSpeak) $("reply-mode").hidden = true;
-  for (const b of document.querySelectorAll("#reply-mode button")) b.onclick = () => setReply(b.dataset.mode);
-  $("reply-mode").onkeydown = (e) => {
-    if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
-    setReply(state.voice ? "texte" : "voix");
-    document.querySelector('#reply-mode [aria-checked="true"]').focus();
-  };
-  setReply(state.voice ? "voix" : "texte");
   // Space or Enter on the page, outside a field, works the orb.
   document.addEventListener("keydown", (e) => {
     if (e.target === document.body && (e.key === " " || e.key === "Enter")) { e.preventDefault(); onOrb(); }
   });
   try {
-    await connect();
+    const [, natural] = await Promise.all([connect(), naturalVoiceAvailable()]);
+    state.natural = natural;
   } catch (err) {
     $("booting").replaceChildren(h("p", { text: `L'assistant n'a pas pu démarrer : ${err.message}. Vérifiez votre connexion puis rechargez la page.` }));
     return;
   }
+  try {
+    const info = await call("GET", "/api/info");
+    if (/gemini/i.test(info.mode)) $("fine").textContent = "Avec Gemini. Répond à partir des fiches (fictives) de la commune et des signalements, et montre les données utilisées.";
+  } catch {}
   $("booting").hidden = true;
   if (!canListen) showKeyboard(true);
 }

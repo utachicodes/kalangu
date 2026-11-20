@@ -28,6 +28,7 @@ operators, real costs) is not done.
 | Start here | What it is |
 |---|---|
 | `pnpm install && pnpm demo` | The clinic agent on a simulated keypad phone; no account or API key |
+| [kalangu.utachi.website/ndiedieng](https://kalangu.utachi.website/ndiedieng/) | A full example running in your browser: a commune's village alerts by USSD, SMS and voice, a town-hall dashboard and a voice assistant ([below](#a-real-use-case-ndiédieng)) |
 | [docs/design.md](docs/design.md) | The v0.1 design: package layout, public API, turn types, sessions & deferral, the budgeter, Africa's Talking adapters, the simulator, the test plan |
 | [docs/payments-design.md](docs/payments-design.md) | The 0.2 payments design (pawaPay deposits): draft for review, no code yet |
 | [docs/design.md §12](docs/design.md#12-open-questions) | Seven open questions — the most useful feedback right now |
@@ -41,7 +42,7 @@ operators, real costs) is not done.
 | `@kalangu/sms` | Africa's Talking SMS: send, incoming messages, delivery reports |
 | `@kalangu/sim` | Terminal keypad-phone simulator, and a scriptable phone for tests |
 | `examples/clinic` | The example agent behind `pnpm demo` |
-| `examples/ndiedieng` | A prototype for a commune in Senegal: village chiefs report breakdowns, births and deaths by USSD, SMS or voice; the town hall sorts them and asks questions of its records (in French, fictitious data). [Try it online](https://kalangu.utachi.website/ndiedieng/) |
+| `examples/ndiedieng` | A prototype for a commune in Senegal: village chiefs report breakdowns, births and deaths by USSD, SMS or voice; the town hall tracks them and asks questions of its records (in French, fictitious data). [Try it online](https://kalangu.utachi.website/ndiedieng/) |
 
 ## The problem
 
@@ -74,7 +75,7 @@ Three ideas do the reconciling (full details in the design doc):
 
 ## Roadmap
 
-| Version | Ships | Proves | Status (19 Nov 2026) |
+| Version | Ships | Proves | Status (20 Nov 2026) |
 |---|---|---|---|
 | 0.1 | core, ussd (Africa's Talking), sms, terminal keypad simulator, one example agent | A model-backed agent works on USSD despite the time limit | Built and published (latest `0.1.0-alpha.9`). Not yet tested on real operators |
 | 0.2 | pay turns, policy layer, pawaPay sandbox adapter | An agent can take money safely | Engine built and tested against a fake provider. The pawaPay adapter waits for a sandbox account and its terms |
@@ -129,6 +130,62 @@ free sandbox with their phone simulator, follow
 
 The packages run on Node 20 or later; the test suite needs Node 22.12 or
 later. Requires pnpm. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## A real use case: Ndiédieng
+
+**Try it: <https://kalangu.utachi.website/ndiedieng/>**. Nothing to install,
+no account; it runs entirely in your browser.
+
+[`examples/ndiedieng`](examples/ndiedieng) is what Kalangu is for, built end to
+end for the commune of Ndiédieng (Kaolack, Senegal): in its villages, people
+have keypad phones and often no mobile data, and a broken borehole or a birth
+used to reach the town hall on foot.
+
+- **The village side.** Pick a village chief and a phone: a keypad phone, an
+  Android or an iPhone, each drawn as the real thing. Dial `*123#`: a Kalangu
+  `menu` asks what is wrong (water, health, school, energy, road, birth,
+  death), which equipment and how urgent, and gives a report number such as
+  `S-0042`. A free SMS or a voice message (transcribed by the browser) works
+  too; it is sorted into a category and urgency, with a confidence, and goes
+  to "to check" when the confidence is low.
+- **The town hall side.** The reports arrive on a dashboard, sorted by
+  urgency. Click one to change its category, equipment, urgency, status or
+  description, or to delete it (with Undo); "+ Nouveau" records one taken by
+  phone; "Exporter" downloads the list as a spreadsheet, and Ctrl/Cmd + K
+  finds any report, village or action. When
+  a report is taken on or resolved, the chief gets an SMS, and it lands in the
+  simulated phone.
+- **The assistant** ([its own page](https://kalangu.utachi.website/ndiedieng/assistant/)):
+  touch the orb and ask "Quels forages sont en panne ?". A spoken question is
+  answered aloud (with Gemini's voice when it is on), a typed one in writing,
+  and every answer shows the query and the rows behind it. Its
+  queries are read-only. With Gemini it answers free questions (Gemini
+  writes the query, then the answer from the rows); without it, the common
+  questions by rule. On the website the key stays on the server, in a small
+  function at `/api/ndiedieng/gemini` that only runs the prototype's fixed
+  tasks and limits each visitor.
+
+How it is built: the agent is ordinary Kalangu (`createAgent`, `menu`, `ask`,
+`say`), the phones are `@kalangu/sim`'s scriptable phone, and the API is a
+standard `Request -> Response` handler with no Node APIs. On the website the
+whole thing, SQLite included (sql.js), runs in the visitor's browser and is
+kept there between pages; `server.ts` runs the same code on Node, where
+Africa's Talking's real USSD and SMS callbacks can reach it. The data (58
+villages, 200 pieces of equipment, 499 records) is generated and fictitious.
+
+```sh
+pnpm install && pnpm build
+pnpm --filter @kalangu/example-ndiedieng build:web   # the page, into site/ndiedieng
+pnpm --filter @kalangu/example-ndiedieng start       # http://localhost:3000
+```
+
+Every UI piece in it (the voice orb, the phone simulators, the quick search,
+the undo toast and more) is hand-built with no UI library; the
+[components page](https://kalangu.utachi.website/components/) shows each one
+live, with its code and the reason it exists.
+
+The example's own README, in French, covers Gemini, the Africa's Talking
+gateway and every file: [examples/ndiedieng/README.md](examples/ndiedieng/README.md).
 
 ## Write an agent
 

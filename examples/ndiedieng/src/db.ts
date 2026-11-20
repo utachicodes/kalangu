@@ -6,6 +6,7 @@
  */
 
 import { generateTerritory, type EquipmentType, type Territory } from "./data.js";
+import { SCHEMA } from "./schema.js";
 import type { SqlDb, SqlRow } from "./sql.js";
 
 export type Categorie = EquipmentType | "naissance" | "deces" | "autre";
@@ -31,49 +32,7 @@ export interface Signalement {
   resoluLe: string | null;
 }
 
-export const SCHEMA = `
-CREATE TABLE villages (
-  id INTEGER PRIMARY KEY,
-  nom TEXT NOT NULL,
-  population INTEGER NOT NULL
-);
-CREATE TABLE chefs (
-  telephone TEXT PRIMARY KEY,
-  nom TEXT NOT NULL,
-  village_id INTEGER NOT NULL REFERENCES villages(id)
-);
-CREATE TABLE equipements (
-  id INTEGER PRIMARY KEY,
-  village_id INTEGER NOT NULL REFERENCES villages(id),
-  type TEXT NOT NULL,         -- eau, sante, ecole, energie, piste
-  nature TEXT NOT NULL,       -- forage, borne-fontaine, poste de sante, ...
-  nom TEXT NOT NULL,
-  etat TEXT NOT NULL          -- fonctionnel, en panne
-);
-CREATE TABLE fiches (
-  id INTEGER PRIMARY KEY,
-  village_id INTEGER NOT NULL REFERENCES villages(id),
-  categorie TEXT NOT NULL,    -- village, equipement, association, ecole, marche, ...
-  intitule TEXT NOT NULL,
-  etat TEXT NOT NULL,
-  population_desservie INTEGER NOT NULL,
-  derniere_visite TEXT NOT NULL -- YYYY-MM-DD
-);
-CREATE TABLE signalements (
-  id INTEGER PRIMARY KEY,
-  code TEXT NOT NULL UNIQUE,  -- S-0001
-  village_id INTEGER NOT NULL REFERENCES villages(id),
-  telephone TEXT NOT NULL,
-  categorie TEXT NOT NULL,    -- eau, sante, ecole, energie, piste, naissance, deces, autre
-  equipement_id INTEGER REFERENCES equipements(id),
-  urgence TEXT NOT NULL,      -- haute, moyenne, basse
-  description TEXT NOT NULL,
-  canal TEXT NOT NULL,        -- ussd, sms, vocal, mairie
-  statut TEXT NOT NULL,       -- nouveau, a_verifier, en_cours, resolu
-  confiance REAL NOT NULL,    -- 1 for a USSD menu choice; the classifier's own for SMS
-  cree_le TEXT NOT NULL,      -- ISO date and time
-  resolu_le TEXT
-);`;
+export { SCHEMA };
 
 export interface NewSignalement {
   villageId: number;
@@ -120,6 +79,8 @@ export interface Commune {
   updateSignalement(code: string, change: SignalementChange): Signalement | null;
   /** Removes a report (an error, a duplicate). False if there was none. */
   deleteSignalement(code: string): boolean;
+  /** Puts a deleted report back as it was, under its own code. Null if that code is taken again. */
+  restoreSignalement(s: Signalement): Signalement | null;
   villages(): Array<{ id: number; nom: string }>;
   counts(): Record<Statut, number> & { haute: number };
   close(): void;
@@ -289,6 +250,18 @@ export function createCommune(db: SqlDb, options: CommuneOptions = {}): Commune 
       db.run("DELETE FROM signalements WHERE code = ?", current.code);
       if (current.equipementId) syncEquipment(current.equipementId);
       return true;
+    },
+    restoreSignalement(r) {
+      const id = Number(/^S-(\d+)$/.exec(r.code)?.[1]);
+      if (!Number.isInteger(id) || commune.signalement(r.code) || db.get("SELECT 1 AS x FROM signalements WHERE id = ?", id)) return null;
+      db.run(
+        `INSERT INTO signalements
+    (id, code, village_id, telephone, categorie, equipement_id, urgence, description, canal, statut, confiance, cree_le, resolu_le)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, r.code, r.villageId, r.telephone, r.categorie, r.equipementId, r.urgence, r.description, r.canal, r.statut, r.confiance, r.creeLe, r.resoluLe,
+      );
+      if (r.equipementId) syncEquipment(r.equipementId);
+      return commune.signalement(r.code);
     },
     villages() {
       return db.all("SELECT id, nom FROM villages ORDER BY id") as Array<{ id: number; nom: string }>;

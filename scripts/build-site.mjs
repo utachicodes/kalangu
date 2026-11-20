@@ -51,6 +51,7 @@ export function notFoundHtml() {
   <nav class="top-r" aria-label="Site">
     <a href="/docs/agents/">Agents</a>
     <a href="/docs/providers/">Providers</a>
+    <a href="/components/">Components</a>
     <a href="/contributing/">Contributing</a>
     <a href="${REPO}">GitHub</a>
   </nav>
@@ -74,9 +75,12 @@ export function notFoundHtml() {
 `;
 }
 
-/** Every page of the site, the landing page first. */
+/** Pages written by hand rather than generated from markdown: the components gallery and the live example. */
+export const STATIC_PAGES = ["/components/", "/ndiedieng/", "/ndiedieng/assistant/"];
+
+/** Every page of the site, the landing page first, then the docs and the hand-written pages. */
 export function sitemap(pages) {
-  const urls = ["/", ...pages.map((p) => p.url)];
+  const urls = ["/", ...pages.map((p) => p.url), ...STATIC_PAGES];
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>${SITE_URL}${u}</loc></url>`).join("\n")}
@@ -239,6 +243,7 @@ export function pageHtml(page, rendered) {
   <nav class="top-r" aria-label="Site">
     <a href="/docs/agents/"${page.url === "/docs/agents/" ? ' aria-current="true"' : ""}>Agents</a>
     <a href="/docs/providers/"${page.url === "/docs/providers/" ? ' aria-current="true"' : ""}>Providers</a>
+    <a href="/components/">Components</a>
     <a href="/contributing/"${page.url === "/contributing/" ? ' aria-current="true"' : ""}>Contributing</a>
     <a href="${REPO}">GitHub</a>
   </nav>

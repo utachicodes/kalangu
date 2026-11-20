@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The website has a components page (`/components/`, linked next to Design,
+  Roadmap and Contribute, and in the docs header): the twelve UI components
+  built for the Ndiédieng example, each with a live demo running from the
+  exact code shown (HTML, CSS, JS, copyable), a nickname, and the reason it
+  exists, plus Marble, a mascot orb with googly eyes that follow the pointer.
+- Ndiédieng's dashboard: deleting a report is immediate, with "Annuler" in
+  the toast to bring it back under its own number (`POST
+  /api/signalements/S-xxxx/restaurer`, for ten minutes, refused if the number
+  was given out again); "Exporter" downloads the reports shown as a CSV for
+  Excel (semicolons, accents kept, phone numbers masked); and Ctrl/Cmd + K
+  opens a quick search over reports, villages and actions, driven from the
+  keyboard.
+- Ndiédieng on the website can use Gemini: a serverless function
+  (`/api/ndiedieng/gemini`, generated from `src/geminiFunction.ts`) holds
+  `GEMINI_API_KEY` and runs only the prototype's fixed tasks (write a query,
+  word an answer, sort a message), with size limits, an origin check and a
+  per-visitor rate limit. The page uses it when it is there, and the rules
+  otherwise. All Gemini prompts now live in `src/gemini.ts`; greetings and
+  thanks get a proper answer, with or without Gemini. The assistant's orb is
+  now a glassy sphere with colour drifting inside; a spoken question gets a
+  spoken answer and a typed one a written answer, so the separate Voix/Texte
+  switch is gone. With Gemini, answers are read by Gemini's speech model (a
+  `speak` task in the same function), and the orb follows the voice's real
+  level; the browser's own voice, now the most natural French one the system
+  has, is the fallback.
+- The README, the docs overview and the landing page present the Ndiédieng
+  example as Kalangu's live use case (`/ndiedieng`, a "Live example" button
+  and an "Example" link), and the sitemap lists its two pages. TODO.md tracks
+  what is done and what is next for it.
 - Ndiédieng: the Mairie can open any report in a dialog to change its
   category, equipment, urgency, status or description, create one itself, or
   delete one (new `POST`, `GET`, `PATCH` and `DELETE` routes under

@@ -26,6 +26,10 @@
   <div class="topbar-meta">
     <span class="pill pill-warn" title="58 villages, 200 équipements et 499 fiches générés pour la démonstration. Aucun numéro n'appartient à une vraie personne.">Données fictives</span>
     <span class="pill" id="mode" title="">Démarrage…</span>
+    <button type="button" class="btn btn-ghost search-btn" id="palette-open" aria-keyshortcuts="Control+K Meta+K">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span>Rechercher</span> <kbd id="palette-kbd">⌘K</kbd>
+    </button>
     <button type="button" class="btn btn-ghost" id="help-open">Aide</button>
     <a class="btn btn-orb" href="assistant/"><span class="mini-orb" aria-hidden="true"></span>Assistant</a>
   </div>
@@ -78,6 +82,10 @@
             <option value="naissance">Naissance</option><option value="deces">Décès</option><option value="autre">Autre</option>
           </select>
         </label>
+        <button type="button" class="btn" id="export" title="Télécharger les signalements affichés (CSV, s'ouvre dans Excel)">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          <span>Exporter</span>
+        </button>
       </div>
       <div class="table-wrap" id="table-wrap">
         <table class="reports">
@@ -128,11 +136,6 @@
     <footer class="modal-foot">
       <div class="danger-zone" id="rd-danger">
         <button type="button" class="btn btn-danger-ghost" id="rd-delete">Supprimer</button>
-        <span class="confirm" id="rd-confirm" hidden>
-          Supprimer définitivement ?
-          <button type="button" class="btn" id="rd-confirm-no">Non</button>
-          <button type="button" class="btn btn-danger" id="rd-confirm-yes">Supprimer</button>
-        </span>
       </div>
       <div class="foot-right">
         <button type="button" class="btn" data-close>Fermer</button>
@@ -152,6 +155,17 @@
     <p class="reset-line" id="reset-line" hidden>Vos changements sont gardés dans ce navigateur. <button type="button" class="link" id="reset">Recommencer la démonstration</button></p>
     <p class="muted small">Prototype : données fictives, aucun mot de passe, tout tourne dans votre navigateur. Une naissance ou un décès signalé ici est une pré-déclaration ; l'acte d'état civil suit la procédure légale. <a href="https://github.com/utachicodes/kalangu/tree/main/examples/ndiedieng">Code source</a> · construit avec <a href="https://kalangu.utachi.website">Kalangu</a>.</p>
   </div>
+</dialog>
+
+<!-- Quick search: reports, villages and actions, from the keyboard (Ctrl or Cmd + K). -->
+<dialog class="palette" id="palette" aria-label="Recherche rapide">
+  <div class="palette-search">
+    <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="pal-q" type="text" role="combobox" aria-expanded="true" aria-controls="pal-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Un signalement, un village, une action…">
+    <kbd>Échap</kbd>
+  </div>
+  <ul class="pal-list" id="pal-list" role="listbox" aria-label="Résultats"></ul>
+  <footer class="palette-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> choisir</span><span><kbd>↵</kbd> ouvrir</span><span><kbd>Échap</kbd> fermer</span></footer>
 </dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
