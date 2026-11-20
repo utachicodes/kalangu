@@ -13,6 +13,19 @@ npm as alpha releases: the API may change before 1.0.
 - [Providers](providers.md): plug in a model (Ollama, Claude, Gemini, any
   API in OpenAI's format) and gateways, several at once.
 
+## See it working: Ndiédieng
+
+[kalangu.utachi.website/ndiedieng](https://kalangu.utachi.website/ndiedieng/)
+is a complete example built with Kalangu, for the commune of Ndiédieng
+(Kaolack, Senegal). A village chief dials `*123#` on a simulated phone (a
+keypad phone, an Android or an iPhone) to report a broken borehole, a birth
+or a death, or sends an SMS or a voice message. The town hall sees the
+reports on a dashboard, edits and closes them, and the chief is told by SMS.
+An assistant answers the town hall's questions by voice, and shows the data
+behind each answer. Everything runs in your browser on fictitious data: no
+account, no install. The code is in
+[`examples/ndiedieng`](https://github.com/utachicodes/kalangu/tree/main/examples/ndiedieng).
+
 ## Guides
 
 - [Run on the Africa's Talking sandbox](sandbox-guide.md): the real gateway,

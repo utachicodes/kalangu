@@ -1,6 +1,6 @@
 # TODO
 
-State as of 19 Nov 2026. Design reference: [docs/design.md](docs/design.md).
+State as of 20 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 
 ## Verify-first checklist (before announcing anything)
 
@@ -32,11 +32,46 @@ State as of 19 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 - [ ] Ask two or three teams who run USSD services today whether deferral to
   SMS would suit their users (design doc §12, question 6, depends on this)
 
+## Example: Ndiédieng (live at /ndiedieng)
+
+A full use case for the commune of Ndiédieng (Kaolack, Senegal), and the
+website's live demo: [kalangu.utachi.website/ndiedieng](https://kalangu.utachi.website/ndiedieng/).
+Code and French README in [examples/ndiedieng](examples/ndiedieng).
+
+- [x] Prototype: USSD `*123#` menus (breakdowns, births, deaths, follow-up,
+  free message), free SMS and voice messages sorted by category and urgency,
+  the town hall's reports, SMS back to the chief, the territorial assistant
+  with the data behind each answer (rules, or Gemini on the server)
+- [x] Online at `/ndiedieng`, running entirely in the browser (sql.js);
+  CI checks the published page is built from source (`check:web`)
+- [x] Three phones true to their systems: keypad phone, Android (Material 3),
+  iPhone (iOS)
+- [x] Reports: open, edit, create and delete from the dashboard; the
+  dashboard fits the screen without scrolling
+- [x] The assistant on its own page (`/ndiedieng/assistant/`), with an orb to
+  tap and speak; answers read aloud or written
+- [x] Voice: a clear message instead of a hang where a browser offers
+  dictation without running it; live waveform and glow
+- [x] The in-browser demo kept in IndexedDB, shared by both pages; "start
+  over" in Help
+- [x] Linked from the README, the docs overview and the landing page
+- [ ] Gemini on the website: a Vercel function holding `GEMINI_API_KEY`
+  (rate-limited, falls back to the rules); needs a fresh key in Vercel first
+- [ ] Run Ndiédieng on the Africa's Talking sandbox with their phone
+  simulator (needs an account and a public URL for the callbacks)
+- [ ] Menus and voice messages in Wolof and Sérère, reviewed by speakers
+- [ ] Try `/ndiedieng` on real phones (Android and iPhone, Safari and Chrome),
+  dictation included
+- [ ] Hackathon JDL 2026: application due 8 Dec 2026; field tests with the
+  village chiefs on 19 Dec, final on 20 Dec, in Ndiédieng
+
 ## Website
 
 - [x] Documentation on the website: quick start, agents, guides, design,
   contributing, roadmap, changelog; generated from the markdown and checked
   in CI (`pnpm site:check`)
+- [x] Landing page and docs overview link the live example (`/ndiedieng`),
+  and the sitemap lists it
 - [ ] Look over the docs pages on a real phone and a desktop after the next
   deploy
 

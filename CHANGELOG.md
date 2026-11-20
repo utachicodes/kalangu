@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The README, the docs overview and the landing page present the Ndiédieng
+  example as Kalangu's live use case (`/ndiedieng`, a "Live example" button
+  and an "Example" link), and the sitemap lists its two pages. TODO.md tracks
+  what is done and what is next for it.
 - Ndiédieng: the Mairie can open any report in a dialog to change its
   category, equipment, urgency, status or description, create one itself, or
   delete one (new `POST`, `GET`, `PATCH` and `DELETE` routes under

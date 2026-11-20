@@ -69,11 +69,12 @@ describe("the real site", () => {
 });
 
 describe("discoverability", () => {
-  it("lists the landing page and every page in the sitemap", () => {
+  it("lists the landing page, every page and the live example in the sitemap", () => {
     const xml = sitemap(PAGES);
     assert.match(xml, new RegExp(`<loc>${SITE_URL}/</loc>`));
     for (const page of PAGES) assert.ok(xml.includes(`<loc>${SITE_URL}${page.url}</loc>`), `${page.url} missing from the sitemap`);
-    assert.equal((xml.match(/<url>/g) ?? []).length, PAGES.length + 1);
+    for (const url of ["/ndiedieng/", "/ndiedieng/assistant/"]) assert.ok(xml.includes(`<loc>${SITE_URL}${url}</loc>`), `${url} missing from the sitemap`);
+    assert.equal((xml.match(/<url>/g) ?? []).length, PAGES.length + 3);
   });
 
   it("points robots.txt at the sitemap", () => {
