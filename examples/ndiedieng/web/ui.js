@@ -1,130 +1,30 @@
-// The Ndiédieng demo page. Talks to the prototype's API: in the visitor's
-// browser on the website (app/web/local.js), or over HTTP to server.ts.
-// Every value from the API reaches the page through textContent, never as
-// HTML; only the constant icons below are parsed as markup.
+// The Ndiédieng dashboard: a chief's phone on one side, the Mairie's reports
+// on the other. Every value from the API reaches the page through
+// textContent, never as HTML (see common.js). The assistant has its own page.
 
-const MODE = document.querySelector('meta[name="ndiedieng-mode"]')?.getAttribute("content") ?? "server";
-const CODE = "*123#";
+import {
+  $, h, icon, toast, announce, ago, fullDate, connect, call, resetDemo,
+  MODE, CODE, LABEL, STATUT, URGENCE, CANAL, canListen, listenUnavailable, listen,
+} from "./common.js";
 
-// ---------- Small helpers ----------
-const $ = (id) => document.getElementById(id);
-function h(tag, props = {}, ...children) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (v === undefined || v === null || v === false) continue;
-    if (k === "class") el.className = v;
-    else if (k === "text") el.textContent = v;
-    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
-    else el.setAttribute(k, v === true ? "" : v);
-  }
-  for (const c of children.flat(Infinity)) if (c !== null && c !== undefined && c !== false) el.append(c);
-  return el;
-}
-const ICONS = {
-  phone: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg>',
-  keypad: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="1.6"/><circle cx="12" cy="5" r="1.6"/><circle cx="18" cy="5" r="1.6"/><circle cx="6" cy="11" r="1.6"/><circle cx="12" cy="11" r="1.6"/><circle cx="18" cy="11" r="1.6"/><circle cx="6" cy="17" r="1.6"/><circle cx="12" cy="17" r="1.6"/><circle cx="18" cy="17" r="1.6"/><circle cx="12" cy="22" r="1.2"/></svg>',
-  chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" stroke-linejoin="round"/></svg>',
-  mic: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
-  send: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
-  erase: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h11v14H9l-6-7z"/><path d="m12 9 5 6m0-6-5 6"/></svg>',
-  ussd: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
-  sms: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>',
-  vocal: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
-  signal: '<svg viewBox="0 0 18 12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="1" fill="currentColor"/><rect x="10" y="2.5" width="3" height="9.5" rx="1" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="1" fill="currentColor" opacity=".35"/></svg>',
-  battery: '<svg viewBox="0 0 26 12" aria-hidden="true"><rect x=".5" y=".5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".5"/><rect x="2" y="2" width="15" height="8" rx="1.6" fill="currentColor"/><rect x="23.5" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg>',
-};
-function icon(name, cls = "") {
-  const span = h("span", { class: `icon-wrap ${cls}` });
-  span.innerHTML = ICONS[name]; // constant markup, never data
-  return span.firstElementChild;
-}
 const time = () => new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-const rtf = new Intl.RelativeTimeFormat("fr", { numeric: "auto" });
-function ago(iso) {
-  const s = (new Date(iso).getTime() - Date.now()) / 1000;
-  const steps = [[60, "second"], [60, "minute"], [24, "hour"], [7, "day"], [4.35, "week"], [12, "month"], [Infinity, "year"]];
-  let v = s;
-  for (const [n, unit] of steps) {
-    if (Math.abs(v) < n) return rtf.format(Math.round(v), unit);
-    v /= n;
-  }
-  return "";
-}
-const fullDate = (iso) => new Date(iso).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
-const LABEL = { eau: "Eau", sante: "Santé", ecole: "École", energie: "Énergie", piste: "Piste", naissance: "Naissance", deces: "Décès", autre: "Autre" };
-const STATUT = { nouveau: "Nouveau", a_verifier: "À vérifier", en_cours: "En cours", resolu: "Résolu" };
-const CANAL = { ussd: "USSD", sms: "SMS", vocal: "Vocal" };
-
-function toast(text) {
-  const t = $("toast");
-  t.textContent = text;
-  t.hidden = false;
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.hidden = true), 4200);
-}
-const announce = (text) => {
-  $("announce").textContent = "";
-  setTimeout(() => ($("announce").textContent = text), 50);
-};
-
-// ---------- Voice: dictation and reading aloud, from the browser ----------
-const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const canListen = Boolean(Recognition);
-const canSpeak = "speechSynthesis" in window;
-function listen({ onText, onDone, onError }) {
-  const r = new Recognition();
-  r.lang = "fr-FR";
-  r.interimResults = true;
-  r.maxAlternatives = 1;
-  let finalText = "";
-  r.onresult = (e) => {
-    let interim = "";
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
-      else interim += e.results[i][0].transcript;
-    }
-    onText((finalText + interim).trim());
-  };
-  r.onerror = (e) => onError?.(e.error === "not-allowed" ? "Le micro n'est pas autorisé pour ce site." : e.error === "no-speech" ? "Je n'ai rien entendu." : "La dictée a échoué.");
-  r.onend = () => onDone(finalText.trim());
-  r.start();
-  return r;
-}
-function speak(text) {
-  if (!canSpeak) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "fr-FR";
-  const voice = speechSynthesis.getVoices().find((v) => v.lang?.toLowerCase().startsWith("fr"));
-  if (voice) u.voice = voice;
-  speechSynthesis.speak(u);
-}
 
 // ---------- State ----------
 const state = {
-  api: null,
   chefs: [],
   chef: null,
   device: "android",
-  phone: { view: "dialer", dialing: "", running: false, screen: null, inSession: false, inbox: [], sent: {}, smsDraft: "", ussdDraft: "", listening: false },
+  phone: { view: "dialer", dialing: "", running: false, screen: null, inSession: false, inbox: [], sent: {}, smsDraft: "", ussdDraft: "" },
   simple: { view: "home", compose: "" },
   reports: [],
   counts: { nouveau: 0, a_verifier: 0, en_cours: 0, resolu: 0, haute: 0 },
   filter: { statut: "", urgent: false, categorie: "", q: "" },
   seen: null,
-  speakAnswers: false,
-  thread: [],
 };
 try {
   state.device = localStorage.getItem("ndiedieng.device") || state.device;
 } catch {}
 
-// ---------- API ----------
-async function call(method, path, body) {
-  const res = await state.api(method, path, body);
-  if (res.status >= 400) throw new Error(res.body?.error || `Erreur ${res.status}`);
-  return res.body;
-}
 async function phoneCall(action, text = "") {
   const r = await call("POST", "/api/phone", { telephone: state.chef, action, text });
   state.phone.inbox = r.inbox;
@@ -196,95 +96,161 @@ async function sendSms(text, kind = "sms") {
   renderPhone({ focus: "sms" });
   refreshReports();
 }
-let phoneRecognition = null;
-function toggleVoiceMessage() {
-  const p = state.phone;
-  if (p.listening) {
-    phoneRecognition?.stop();
-    return;
-  }
-  p.listening = true;
-  p.smsDraft = "";
+// A voice message: the browser transcribes it while the chief speaks; it is
+// sent as text, like on a real gateway where the operator transcribes it.
+let recording = null; // { ctrl, startedAt, levels, cancelled, timer, text }
+function startVoiceMessage() {
+  if (!canListen) return toast(listenUnavailable);
+  if (recording) return;
+  state.phone.smsDraft = "";
+  recording = { startedAt: Date.now(), levels: Array(24).fill(0), cancelled: false, text: "" };
   renderPhone();
-  phoneRecognition = listen({
+  recording.ctrl = listen({
     onText: (t) => {
-      p.smsDraft = t;
-      const input = document.querySelector("#sms-input");
-      if (input) input.value = t;
+      if (!recording) return;
+      recording.text = t;
+      const d = document.querySelector(".draft");
+      if (d) { d.textContent = t || "…"; d.closest(".chat").scrollTop = 1e6; }
+    },
+    onLevel: (v) => {
+      if (!recording) return;
+      recording.levels.push(v);
+      recording.levels.shift();
+      const host = document.querySelector(".device");
+      host?.querySelector(".glow")?.style.setProperty("--level", v.toFixed(3));
+      const bars = host?.querySelectorAll(".wave i") ?? [];
+      bars.forEach((bar, i) => (bar.style.height = `${4 + recording.levels[i] * 26}px`));
     },
     onDone: (t) => {
-      p.listening = false;
-      phoneRecognition = null;
-      if (t) sendSms(t, "vocal");
+      const r = recording;
+      clearInterval(r?.timer);
+      recording = null;
+      if (r && !r.cancelled && t) sendSms(t, "vocal");
       else renderPhone();
     },
     onError: (m) => toast(m),
   });
+  if (!recording) return;
+  recording.timer = setInterval(() => {
+    const el = document.querySelector(".rec .timer");
+    if (el && recording) {
+      const s = Math.floor((Date.now() - recording.startedAt) / 1000);
+      el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    }
+  }, 250);
+}
+const stopVoiceMessage = () => recording?.ctrl?.stop();
+function cancelVoiceMessage() {
+  if (!recording) return;
+  recording.cancelled = true;
+  recording.ctrl?.cancel();
 }
 
 // ---------- Phone rendering ----------
-function statusBar(dark = false) {
-  return h("div", { class: "statusbar", style: dark ? "color:#fff" : null },
+// Each smartphone follows its own system: iOS (Dynamic Island, the status
+// bar's two "ears", the Phone keypad, Messages) or Android (punch-hole
+// camera, Material 3 dialer, Google Messages).
+function statusBar(kind) {
+  if (kind === "iphone") {
+    return h("div", { class: "statusbar ios-status", "aria-hidden": "true" },
+      h("span", { class: "ear", text: time() }),
+      h("span", { class: "island-gap" }),
+      h("span", { class: "ear sys" }, icon("signal"), icon("battery")));
+  }
+  return h("div", { class: "statusbar md-status", "aria-hidden": "true" },
     h("span", { text: time() }),
-    h("span", { class: "sys" }, icon("signal"), h("span", { text: "SN", style: "font-size:11px" }), icon("battery")));
+    h("span", { class: "sys" }, icon("signal"), h("span", { class: "pct", text: "82 %" }), icon("battery")));
 }
 function keypad(onKey) {
   const letters = { 2: "ABC", 3: "DEF", 4: "GHI", 5: "JKL", 6: "MNO", 7: "PQRS", 8: "TUV", 9: "WXYZ", 0: "+" };
   return h("div", { class: "pad", role: "group", "aria-label": "Clavier" },
     ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"].map((k) =>
-      h("button", { type: "button", "aria-label": k, onclick: () => onKey(k) }, k, h("small", { text: letters[k] ?? " " }))));
+      h("button", { type: "button", "aria-label": k, onclick: () => onKey(k) }, h("span", { class: "digit", text: k }), h("small", { text: letters[k] ?? "" }))));
 }
-function dialer() {
+function dialer(kind) {
   const p = state.phone;
   const display = h("div", { class: "dial-number", "aria-live": "polite", text: p.dialing || "" });
-  return h("div", { class: "app" },
-    display,
-    h("div", { class: "dial-hint", text: p.dialing ? "" : `Composez ${CODE} pour joindre la Mairie` }),
+  const hint = h("div", { class: "dial-hint", text: p.dialing ? "" : `Composez ${CODE} pour joindre la Mairie` });
+  const erase = h("button", {
+    type: "button", class: "erase", "aria-label": "Effacer", hidden: !p.dialing,
+    onclick: () => { p.dialing = p.dialing.slice(0, -1); display.textContent = p.dialing; erase.hidden = !p.dialing; },
+  }, icon("erase"));
+  return h("div", { class: "app dialer" },
+    h("div", { class: "dial-top" }, display, hint),
     keypad((k) => {
       p.dialing += k;
       display.textContent = p.dialing;
-      document.querySelector(".dial-hint").textContent = "";
+      hint.textContent = "";
+      erase.hidden = false;
     }),
     h("div", { class: "call-row" },
       h("span"),
       h("button", { type: "button", class: "call", "aria-label": `Appeler ${p.dialing || CODE}`, onclick: () => dial(p.dialing || CODE) }, icon("phone")),
-      h("button", {
-        type: "button", class: "erase", "aria-label": "Effacer",
-        onclick: () => { p.dialing = p.dialing.slice(0, -1); display.textContent = p.dialing; },
-      }, p.dialing ? icon("erase") : "")));
+      erase));
 }
-function chatView() {
+function chatView(kind) {
   const p = state.phone;
+  const ios = kind === "iphone";
   const items = [
     ...p.inbox.map((m) => ({ dir: "in", text: m.text, at: m.at, kind: "sms" })),
     ...sentFor().map((m) => ({ dir: "out", text: m.text, at: m.at, kind: m.kind })),
   ].sort((a, b) => a.at.localeCompare(b.at));
+  const stamp = (iso) => {
+    const d = new Date(iso);
+    const t = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    return d.toDateString() === new Date().toDateString() ? `Aujourd'hui ${t}` : `${d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} ${t}`;
+  };
   const chat = h("div", { class: "chat", "aria-live": "polite", "aria-label": "Conversation avec la Mairie" },
-    items.length ? null : h("p", { class: "chat-empty", text: "Écrivez à la Mairie, ou dictez un message vocal. Un SMS sans menu ouvert reçoit le menu." }),
-    items.map((m, i) => [
-      i === 0 || new Date(m.at) - new Date(items[i - 1].at) > 10 * 60 * 1000 ? h("span", { class: "chat-time", text: new Date(m.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) }) : null,
-      h("div", { class: `bubble ${m.dir}` },
-        m.kind === "vocal" ? h("span", { class: "voice-tag" }, icon("vocal"), "Message vocal, transcrit") : null,
-        m.text),
-    ]));
+    items.length ? null : h("p", { class: "chat-empty", text: "Écrivez à la Mairie, ou envoyez un message vocal. Un SMS sans menu ouvert reçoit le menu." }),
+    items.map((m, i) => {
+      const next = items[i + 1];
+      const last = !next || next.dir !== m.dir;
+      return [
+        i === 0 || new Date(m.at) - new Date(items[i - 1].at) > 10 * 60 * 1000 ? h("span", { class: "chat-time", text: stamp(m.at) }) : null,
+        h("div", { class: `bubble ${m.dir}${last ? " tail" : ""}` },
+          m.kind === "vocal" ? h("span", { class: "voice-tag" }, icon("vocal"), "Message vocal, transcrit") : null,
+          m.text),
+      ];
+    }));
   const input = h("input", {
-    id: "sms-input", type: "text", value: p.smsDraft, placeholder: p.listening ? "Je vous écoute…" : "Message", "aria-label": "Message à la Mairie", autocomplete: "off",
-    oninput: (e) => (p.smsDraft = e.target.value),
+    id: "sms-input", type: "text", value: p.smsDraft, placeholder: ios ? "SMS" : "Message texte", "aria-label": "Message à la Mairie", autocomplete: "off",
+    oninput: (e) => { p.smsDraft = e.target.value; swap(); },
     onkeydown: (e) => { if (e.key === "Enter") sendSms(e.target.value); },
   });
   const micBtn = h("button", {
-    type: "button", class: `round mic${p.listening ? " listening" : ""}`, disabled: !canListen,
-    "aria-label": p.listening ? "Arrêter et envoyer le message vocal" : "Dicter un message vocal",
-    title: canListen ? "Message vocal (transcrit par le navigateur)" : "La dictée n'est pas disponible dans ce navigateur (essayez Chrome ou Safari)",
-    onclick: toggleVoiceMessage,
+    type: "button", class: "round mic", "aria-label": "Enregistrer un message vocal",
+    title: canListen ? "Message vocal, transcrit par le navigateur" : listenUnavailable,
+    onclick: startVoiceMessage,
   }, icon("mic"));
+  const sendBtn = h("button", { type: "button", class: "round send", "aria-label": "Envoyer", onclick: () => sendSms(input.value) }, icon("send"));
+  // As on both systems: the microphone while the field is empty, send once there is text.
+  const swap = () => { const has = Boolean(input.value.trim()); micBtn.hidden = has; sendBtn.hidden = !has; };
+  swap();
+  if (recording) chat.append(h("div", { class: "draft", text: recording.text || "Parlez…" }));
   setTimeout(() => (chat.scrollTop = chat.scrollHeight));
+  const head = ios
+    ? h("div", { class: "chat-head ios-head" },
+        h("span", { class: "back", "aria-hidden": "true", text: "‹" }),
+        h("span", { class: "who" }, h("span", { class: "avatar", text: "M" }), h("span", { class: "name", text: "MAIRIE ›" })))
+    : h("div", { class: "chat-head md-head" },
+        h("span", { class: "back", "aria-hidden": "true", text: "←" }),
+        h("span", { class: "avatar", text: "M" }),
+        h("span", { class: "name" }, h("strong", { text: "MAIRIE" }), h("small", { text: "Ndiédieng" })));
   return h("div", { class: "app" },
-    h("div", { class: "chat-head" }, h("span", { class: "avatar", text: "M" }), h("strong", { text: "MAIRIE" }), h("span", { text: "Ndiédieng", style: "opacity:.6" })),
+    head,
     chat,
-    p.listening ? h("div", { class: "listening-note", text: "Parlez : votre message sera transcrit puis envoyé." }) : null,
-    h("div", { class: "compose" }, micBtn, input,
-      h("button", { type: "button", class: "round send", "aria-label": "Envoyer", onclick: () => sendSms(input.value) }, icon("send"))));
+    recording
+      ? [
+          h("div", { class: "glow", "aria-hidden": "true" }),
+          h("div", { class: "mic-note", role: "status", text: "Je vous écoute. Touchez ↑ pour envoyer." }),
+          h("div", { class: "rec" },
+            h("button", { type: "button", class: "round cancel", "aria-label": "Annuler le message vocal", onclick: cancelVoiceMessage }, icon("erase")),
+            h("div", { class: "wave", "aria-hidden": "true" }, h("span", { class: "timer", text: "0:00" }), recording.levels.map(() => h("i"))),
+            h("button", { type: "button", class: "round send", "aria-label": "Envoyer le message vocal", onclick: stopVoiceMessage }, icon("send"))),
+        ]
+      : h("div", { class: "compose" },
+          h("span", { class: "plus", "aria-hidden": "true", text: "+" }),
+          h("div", { class: "field" }, input, micBtn, sendBtn)));
 }
 function ussdLayer(kind) {
   const p = state.phone;
@@ -323,15 +289,19 @@ function ussdLayer(kind) {
 }
 function smartphone(kind) {
   const p = state.phone;
+  const ios = kind === "iphone";
   const tab = (view, label, ic) => h("button", {
     type: "button", "aria-current": p.view === view ? "page" : null,
     onclick: () => { p.view = view; renderPhone({ focus: view === "messages" ? "sms" : null }); },
-  }, icon(ic), label);
-  return h("div", { class: `device smart ${kind}`, role: "group", "aria-label": kind === "iphone" ? "iPhone" : "Téléphone Android" },
-    h("div", { class: kind === "iphone" ? "island" : "camera", "aria-hidden": "true" }),
+  }, h("span", { class: "tab-ico" }, icon(ic)), label);
+  return h("div", { class: `device smart ${kind}`, role: "group", "aria-label": ios ? "iPhone" : "Téléphone Android" },
+    h("span", { class: "hw hw-1", "aria-hidden": "true" }),
+    h("span", { class: "hw hw-2", "aria-hidden": "true" }),
+    h("span", { class: "hw hw-3", "aria-hidden": "true" }),
     h("div", { class: "screen" },
-      statusBar(),
-      p.view === "dialer" ? dialer() : chatView(),
+      h("div", { class: ios ? "island" : "camera", "aria-hidden": "true" }),
+      statusBar(kind),
+      p.view === "dialer" ? dialer(kind) : chatView(kind),
       ussdLayer(kind),
       h("nav", { class: "tabs", "aria-label": "Applications" }, tab("dialer", "Clavier", "keypad"), tab("messages", "Messages", "chat")),
       h("div", { class: "homebar", "aria-hidden": "true" })));
@@ -437,7 +407,16 @@ function renderPhone(opts = {}) {
     const id = opts.focus === "ussd" ? "ussd-input" : opts.focus === "sms" ? "sms-input" : wasInPhone ? active.id : null;
     if (id) document.getElementById(id)?.focus({ preventScroll: true });
   }
-  renderTips();
+  fitPhone();
+}
+
+/** Scales the phone to the room left under the controls: the page never scrolls. */
+function fitPhone() {
+  const stage = $("stage");
+  const device = $("device").firstElementChild;
+  if (!stage || !device || !stage.clientHeight) return;
+  const scale = Math.min(1, (stage.clientHeight - 8) / device.offsetHeight, (stage.clientWidth - 8) / device.offsetWidth);
+  $("device").style.setProperty("--fit", String(Math.max(0.5, scale)));
 }
 
 function renderTips() {
@@ -446,13 +425,14 @@ function renderTips() {
     h("li", {}, "Composez ", h("code", { text: CODE }), ", puis ", h("code", { text: "1" }), " ", h("code", { text: "1" }), " ", h("code", { text: "1" }), " ", h("code", { text: "1" }), " : forage en panne, urgent."),
     h("li", {}, "Tout en une fois : ", h("code", { text: "*123*1*4*3#" }), " (lampadaire, peut attendre)."),
     h("li", {}, smart ? "Onglet Messages : envoyez « bonjour », puis 5, puis votre message." : "Touche Messages, puis Écrire : « bonjour », puis 5, puis votre message."),
-    smart ? h("li", {}, "Le micro de Messages dicte un message vocal, transcrit par le navigateur.") : h("li", {}, "Le clavier de l'ordinateur marche quand le téléphone a le focus : Entrée appelle, Échap raccroche."),
-    h("li", {}, "À droite, « Résolu » envoie un SMS au chef : il arrive dans ce téléphone."),
+    smart ? h("li", {}, "Le micro de Messages enregistre un message vocal, transcrit par le navigateur.") : h("li", {}, "Le clavier de l'ordinateur marche quand le téléphone a le focus : Entrée appelle, Échap raccroche."),
+    h("li", {}, "Côté Mairie, ouvrez un signalement et passez-le « Résolu » : le chef reçoit un SMS dans ce téléphone."),
+    h("li", {}, "Le bouton Assistant ouvre une page pour interroger les fiches, à l'écrit ou à la voix."),
   ];
   $("tips").replaceChildren(...tips);
 }
 
-// ---------- Mairie: reports ----------
+// ---------- Mairie: the list ----------
 function matches(r) {
   const f = state.filter;
   if (f.urgent && (r.urgence !== "haute" || r.statut === "resolu")) return false;
@@ -467,9 +447,9 @@ async function refreshReports({ background = false } = {}) {
   if (state.filter.categorie) q.set("categorie", state.filter.categorie);
   try {
     const d = await call("GET", `/api/signalements?${q}`);
-    // A background refresh never redraws under the user's hands, nor for nothing.
+    // A background refresh never redraws for nothing, nor under an open dialog.
     const signature = JSON.stringify([q.toString(), d]);
-    if (background && (signature === lastSignature || document.activeElement?.closest?.("#rows"))) return;
+    if (background && (signature === lastSignature || $("report-dialog").open)) return;
     lastSignature = signature;
     const fresh = state.seen ? d.signalements.filter((s) => !state.seen.has(s.code)) : [];
     state.seen ??= new Set();
@@ -482,138 +462,203 @@ async function refreshReports({ background = false } = {}) {
     toast(err.message);
   }
 }
-async function act(r, verb, body) {
-  try {
-    const res = await call("POST", `/api/signalements/${r.code}/${verb}`, body);
-    toast(`SMS envoyé au chef du ${r.village} : « ${res.sms} »`);
-    if (state.chefs.find((c) => c.telephone === state.chef)?.village === r.village) {
-      await phoneCall("inbox");
-      renderPhone();
-    }
-    refreshReports();
-  } catch (err) {
-    toast(err.message);
-  }
-}
-function actionsFor(r) {
-  if (r.statut === "a_verifier") {
-    const cat = h("select", { "aria-label": `Catégorie pour ${r.code}` }, Object.entries(LABEL).map(([k, v]) => h("option", { value: k, selected: k === r.categorie, text: v })));
-    const urg = h("select", { "aria-label": `Urgence pour ${r.code}` }, ["haute", "moyenne", "basse"].map((u) => h("option", { value: u, selected: u === r.urgence, text: u })));
-    return [cat, urg, h("button", { type: "button", class: "btn btn-primary", onclick: (e) => { e.target.disabled = true; act(r, "verifier", { categorie: cat.value, urgence: urg.value }); }, text: "Valider" })];
-  }
-  if (r.statut === "nouveau") {
-    return [
-      h("button", { type: "button", class: "btn", onclick: (e) => { e.target.disabled = true; act(r, "prendre"); }, text: "Prendre en charge" }),
-      h("button", { type: "button", class: "btn btn-primary", onclick: (e) => { e.target.disabled = true; act(r, "resoudre"); }, text: "Résolu" }),
-    ];
-  }
-  if (r.statut === "en_cours") return h("button", { type: "button", class: "btn btn-primary", onclick: (e) => { e.target.disabled = true; act(r, "resoudre"); }, text: "Marquer résolu" });
-  return h("span", { class: "sub", text: "Chef informé par SMS" });
+function renderFilters() {
+  const c = state.counts;
+  const total = c.nouveau + c.a_verifier + c.en_cours + c.resolu;
+  const tabs = [["", "Tous", total], ["nouveau", "Nouveaux", c.nouveau], ["a_verifier", "À vérifier", c.a_verifier], ["en_cours", "En cours", c.en_cours], ["resolu", "Résolus", c.resolu]];
+  const focused = document.activeElement?.closest?.("#statuts") ? document.activeElement.dataset.value : null;
+  $("statuts").replaceChildren(...tabs.map(([v, label, n]) => h("button", {
+    type: "button", role: "radio", "data-value": v, "aria-checked": String(state.filter.statut === v),
+    tabindex: state.filter.statut === v ? "0" : "-1",
+    onclick: () => { state.filter.statut = v; refreshReports(); },
+  }, label, h("span", { class: "n", text: String(n) }))));
+  if (focused !== null) $("statuts").querySelector(`[data-value="${focused}"]`)?.focus();
+  $("k-urgent").textContent = String(c.haute);
+  $("urgent").setAttribute("aria-pressed", String(state.filter.urgent));
 }
 function renderReports(fresh = new Set()) {
-  for (const k of ["nouveau", "a_verifier", "en_cours", "haute"]) $(`k-${k}`).textContent = state.counts[k];
-  for (const b of document.querySelectorAll(".kpi")) {
-    const f = b.dataset.filter;
-    b.setAttribute("aria-pressed", String(f === "urgent" ? state.filter.urgent : state.filter.statut === f && !state.filter.urgent));
-  }
-  const total = state.counts.nouveau + state.counts.a_verifier + state.counts.en_cours + state.counts.resolu;
-  const segs = [["", "Tous", total], ["nouveau", "Nouveaux", state.counts.nouveau], ["a_verifier", "À vérifier", state.counts.a_verifier], ["en_cours", "En cours", state.counts.en_cours], ["resolu", "Résolus", state.counts.resolu]];
-  $("statuts").replaceChildren(...segs.map(([v, label, n]) => h("button", {
-    type: "button", role: "radio", "aria-checked": String(state.filter.statut === v),
-    onclick: () => { state.filter.statut = v; state.filter.urgent = false; refreshReports(); },
-  }, label, h("span", { class: "count", text: String(n) }))));
-
+  renderFilters();
   const rows = state.reports.filter(matches);
-  const urgent = rows.filter((r) => r.urgence === "haute" && r.statut !== "resolu").length;
-  $("result-line").textContent = `${rows.length} signalement${rows.length > 1 ? "s" : ""}${urgent ? ` · ${urgent} urgent${urgent > 1 ? "s" : ""} non résolu${urgent > 1 ? "s" : ""}` : ""}${state.filter.urgent ? " · filtre : urgents" : ""}`;
+  const filtered = state.filter.q || state.filter.categorie || state.filter.urgent || state.filter.statut;
+  $("result-line").textContent = `${rows.length} signalement${rows.length > 1 ? "s" : ""}${filtered ? " · filtrés" : ""} · cliquez une ligne pour l'ouvrir`;
   $("empty").hidden = rows.length > 0;
-  $("rows").replaceChildren(...rows.map((r) => h("tr", { class: fresh.has(r.code) ? "fresh" : null },
-    h("td", {},
-      h("span", { class: "code", text: r.code }),
-      h("span", { class: "sub channel" }, icon(r.canal), CANAL[r.canal] ?? r.canal),
-      h("span", { class: "sub", title: fullDate(r.creeLe), text: ago(r.creeLe) })),
-    h("td", {}, h("span", { class: "nowrap", text: r.village }), h("span", { class: "sub nowrap", text: r.telephone })),
-    h("td", { class: "cell-object" },
-      h("div", { class: "object" },
+  $("rows").replaceChildren(...rows.map((r) => h("tr", { class: fresh.has(r.code) ? "fresh" : null, onclick: (e) => { if (!e.target.closest("button")) openReport(r.code); } },
+    h("td", { class: "c-code" },
+      h("button", { type: "button", class: "row-open", "aria-label": `Ouvrir ${r.code}`, onclick: () => openReport(r.code), text: r.code }),
+      h("span", { class: "sub channel", title: fullDate(r.creeLe) }, icon(r.canal === "mairie" ? "mairie" : r.canal), `${CANAL[r.canal] ?? r.canal} · ${ago(r.creeLe)}`)),
+    h("td", { class: "c-village" }, h("span", { class: "one-line", text: r.village })),
+    h("td", { class: "c-object" },
+      h("span", { class: "one-line" },
         h("span", { class: `cat cat-${r.categorie}`, text: LABEL[r.categorie] ?? r.categorie }),
-        r.equipement ? h("span", { class: "sub", text: r.equipement.split(",")[0] }) : null,
-        h("span", { class: "desc", text: r.description }),
-        r.confiance < 1 ? h("span", { class: "sub", text: `Classé automatiquement, confiance ${Math.round(r.confiance * 100)}\u00a0%` }) : null)),
-    h("td", {}, h("span", { class: `badge u-${r.urgence}`, text: r.urgence })),
-    h("td", {}, h("span", { class: `badge s-${r.statut}`, text: STATUT[r.statut] })),
-    h("td", { class: "cell-actions" }, h("div", { class: "actions" }, actionsFor(r))))));
+        h("span", { class: "desc", text: r.equipement ? r.equipement.split(",")[0] : r.description })),
+      h("span", { class: "sub", text: r.equipement ? r.description : r.confiance < 1 ? `Classé automatiquement · confiance ${Math.round(r.confiance * 100)} %` : "" })),
+    h("td", { class: "c-urgence" }, h("span", { class: `badge u-${r.urgence}`, text: URGENCE[r.urgence] })),
+    h("td", { class: "c-statut" }, h("span", { class: `badge s-${r.statut}`, text: STATUT[r.statut] })))));
 }
 
-// ---------- Mairie: assistant ----------
-function renderThread() {
-  $("thread").replaceChildren(...state.thread.map((m) => {
-    if (m.role === "user") return h("div", { class: "msg msg-user", text: m.text });
-    if (m.pending) return h("div", { class: "msg msg-bot", "aria-label": "L'assistant réfléchit" }, h("span", { class: "typing" }, h("span"), h("span"), h("span")));
-    const data = m.sql
-      ? h("details", {},
-          h("summary", { text: `Données utilisées · ${m.rows.length} ligne${m.rows.length > 1 ? "s" : ""}` }),
-          h("pre", { text: m.sql }),
-          h("div", { class: "data-scroll" },
-            h("table", {},
-              h("thead", {}, h("tr", {}, m.columns.map((c) => h("th", { text: c })))),
-              h("tbody", {}, m.rows.slice(0, 50).map((r) => h("tr", {}, m.columns.map((c) => h("td", { text: String(r[c] ?? "") }))))))))
-      : null;
-    return h("div", { class: "msg msg-bot" },
-      h("div", { text: m.text }),
-      data,
-      canSpeak ? h("div", { class: "msg-tools" }, h("button", { type: "button", onclick: () => speak(m.text), text: "Écouter" })) : null);
-  }));
-  $("thread").scrollTop = $("thread").scrollHeight;
+// ---------- Mairie: one report, to read, change, create or delete ----------
+const dlg = () => $("report-dialog");
+let editing = null; // the report open in the dialog, or null when creating one
+let picked = { urgence: "moyenne", statut: "nouveau" };
+
+/** A row of radio buttons, with arrow keys, as the platform's own. */
+function radios(host, options, value, onPick) {
+  const draw = (current) => {
+    host.replaceChildren(...options.map(([v, label]) => h("button", {
+      type: "button", role: "radio", "data-value": v, "aria-checked": String(v === current), tabindex: v === current ? "0" : "-1",
+      onclick: () => { onPick(v); draw(v); host.querySelector(`[data-value="${v}"]`).focus(); },
+    }, label)));
+  };
+  host.onkeydown = (e) => {
+    if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    e.preventDefault();
+    const i = options.findIndex(([v]) => v === host.querySelector('[aria-checked="true"]')?.dataset.value);
+    const [next] = options[(i + (e.key === "ArrowRight" ? 1 : options.length - 1)) % options.length];
+    onPick(next);
+    draw(next);
+    host.querySelector(`[data-value="${next}"]`).focus();
+  };
+  draw(value);
 }
-async function ask(question, viaVoice = false) {
-  question = question.trim();
-  if (!question) return;
-  $("question").value = "";
-  state.thread.push({ role: "user", text: question }, { role: "bot", pending: true });
-  renderThread();
+async function fillEquipements(villageId, selected) {
+  const sel = $("rd-equipement");
+  sel.disabled = true;
+  const list = await call("GET", `/api/equipements?village=${villageId}`);
+  sel.replaceChildren(h("option", { value: "", text: "Aucun" }), ...list.map((e) => h("option", { value: String(e.id), text: e.nom.split(",")[0] })));
+  sel.value = selected ? String(selected) : "";
+  sel.disabled = false;
+}
+function formError(text) {
+  $("rd-error").textContent = text ?? "";
+  $("rd-error").hidden = !text;
+}
+function showConfirm(on) {
+  $("rd-confirm").hidden = !on;
+  $("rd-delete").hidden = on;
+  if (on) $("rd-confirm-no").focus();
+}
+function prepareForm(r) {
+  $("rd-categorie").replaceChildren(...Object.entries(LABEL).map(([k, v]) => h("option", { value: k, text: v })));
+  $("rd-categorie").value = r?.categorie ?? "eau";
+  picked = { urgence: r?.urgence ?? "moyenne", statut: r?.statut ?? "nouveau" };
+  radios($("rd-urgence"), Object.entries(URGENCE), picked.urgence, (v) => (picked.urgence = v));
+  radios($("rd-statut"), Object.entries(STATUT), picked.statut, (v) => (picked.statut = v));
+  $("rd-description").value = r?.description ?? "";
+  $("rd-notify").checked = true;
+  formError(null);
+  showConfirm(false);
+}
+async function openReport(code) {
+  let r;
   try {
-    const a = await call("POST", "/api/ask", { question });
-    state.thread[state.thread.length - 1] = { role: "bot", text: a.answer, sql: a.sql, columns: a.columns, rows: a.rows };
-    if (viaVoice || state.speakAnswers) speak(a.answer);
+    r = await call("GET", `/api/signalements/${code}`);
   } catch (err) {
-    state.thread[state.thread.length - 1] = { role: "bot", text: `Désolé : ${err.message}` };
+    return toast(err.message);
   }
-  renderThread();
+  editing = r;
+  $("rd-title").textContent = `${r.code} · ${LABEL[r.categorie]}`;
+  $("rd-sub").textContent = `${r.village} · ${CANAL[r.canal] ?? r.canal} · ${fullDate(r.creeLe)} · ${r.telephone}`;
+  const notice = r.statut === "a_verifier"
+    ? `Classé automatiquement (confiance ${Math.round(r.confiance * 100)} %) : vérifiez la catégorie et l'urgence, puis passez-le « En cours ».`
+    : r.statut === "resolu" && r.resoluLe ? `Résolu le ${fullDate(r.resoluLe)}.` : "";
+  $("rd-notice").textContent = notice;
+  $("rd-notice").hidden = !notice;
+  $("rd-new-fields").hidden = true;
+  $("rd-statut-field").hidden = false;
+  $("rd-danger").hidden = false;
+  $("rd-notify-label").textContent = "Prévenir le chef par SMS si le statut change";
+  $("rd-save").textContent = "Enregistrer";
+  prepareForm(r);
+  await fillEquipements(r.villageId, r.equipementId);
+  dlg().showModal();
 }
-let askRecognition = null;
-function toggleDictation() {
-  const mic = $("mic");
-  if (askRecognition) return askRecognition.stop();
-  mic.classList.add("listening");
-  mic.setAttribute("aria-label", "Arrêter la dictée");
-  $("question").placeholder = "Je vous écoute…";
-  askRecognition = listen({
-    onText: (t) => ($("question").value = t),
-    onDone: (t) => {
-      askRecognition = null;
-      mic.classList.remove("listening");
-      mic.setAttribute("aria-label", "Dicter la question");
-      $("question").placeholder = "Posez une question, ou dictez-la";
-      if (t) ask(t, true);
-    },
-    onError: (m) => toast(m),
-  });
+async function openNew() {
+  editing = null;
+  $("rd-title").textContent = "Nouveau signalement";
+  $("rd-sub").textContent = "Saisi par la Mairie, après un appel ou une visite.";
+  $("rd-notice").hidden = true;
+  $("rd-new-fields").hidden = false;
+  $("rd-statut-field").hidden = true;
+  $("rd-danger").hidden = true;
+  $("rd-notify-label").textContent = "Prévenir le chef du village par SMS";
+  $("rd-save").textContent = "Créer";
+  const villages = await call("GET", "/api/villages");
+  $("rd-village").replaceChildren(...villages.map((v) => h("option", { value: String(v.id), text: v.nom })));
+  const mine = state.chefs.find((c) => c.telephone === state.chef)?.village;
+  const start = villages.find((v) => v.nom === mine) ?? villages[0];
+  $("rd-village").value = String(start.id);
+  prepareForm(null);
+  await fillEquipements(start.id, null);
+  dlg().showModal();
+  $("rd-village").focus();
+}
+async function afterChange(sms, telephone) {
+  if (sms) toast(`SMS envoyé au chef : « ${sms} »`);
+  if (telephone && state.chefs.some((c) => c.telephone === state.chef)) {
+    await phoneCall("inbox");
+    if (!document.activeElement?.closest?.(".device")) renderPhone();
+  }
+  await refreshReports();
+}
+async function saveReport(e) {
+  e.preventDefault();
+  const description = $("rd-description").value.trim();
+  if (!description) {
+    formError("Décrivez le problème en quelques mots.");
+    return $("rd-description").focus();
+  }
+  const fields = {
+    categorie: $("rd-categorie").value,
+    urgence: picked.urgence,
+    description,
+    equipementId: $("rd-equipement").value ? Number($("rd-equipement").value) : null,
+    notify: $("rd-notify").checked,
+  };
+  const save = $("rd-save");
+  save.disabled = true;
+  try {
+    let res;
+    if (editing) {
+      const change = { notify: fields.notify };
+      for (const k of ["categorie", "urgence", "description", "equipementId"]) if (fields[k] !== editing[k]) change[k] = fields[k];
+      if (picked.statut !== editing.statut) change.statut = picked.statut;
+      if (Object.keys(change).length === 1) return dlg().close();
+      res = await call("PATCH", `/api/signalements/${editing.code}`, change);
+      announce(`${editing.code} enregistré.`);
+      if (!res.sms) toast(`${editing.code} enregistré.`);
+    } else {
+      res = await call("POST", "/api/signalements", { ...fields, villageId: Number($("rd-village").value) });
+      state.seen?.add(res.signalement.code);
+      if (!res.sms) toast(`${res.signalement.code} créé.`);
+    }
+    dlg().close();
+    await afterChange(res.sms, res.signalement.telephone);
+  } catch (err) {
+    formError(err.message);
+  } finally {
+    save.disabled = false;
+  }
+}
+async function deleteReport() {
+  if (!editing) return;
+  try {
+    await call("DELETE", `/api/signalements/${editing.code}`);
+    toast(`${editing.code} supprimé.`);
+    dlg().close();
+    await refreshReports();
+  } catch (err) {
+    formError(err.message);
+  }
 }
 
 // ---------- Start ----------
 async function start() {
+  let restored = false;
   try {
-    if (MODE === "local") {
-      const { boot } = await import("./app/web/local.js");
-      state.api = await boot();
-    } else {
-      state.api = async (method, path, body) => {
-        const res = await fetch(path, { method, headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
-        return { status: res.status, body: await res.json() };
-      };
-    }
+    ({ restored } = await connect());
     const [info, chefs] = await Promise.all([call("GET", "/api/info"), call("GET", "/api/chefs")]);
-    $("mode").textContent = info.mode;
+    $("mode").textContent = MODE === "local" ? "Dans votre navigateur" : "Serveur";
+    $("mode").title = info.mode;
     state.chefs = chefs;
     state.chef = chefs[6]?.telephone ?? chefs[0].telephone;
   } catch (err) {
@@ -621,10 +666,12 @@ async function start() {
     return;
   }
 
+  // Village side
   $("chef").replaceChildren(...state.chefs.map((c) => h("option", { value: c.telephone, text: `${c.village} · ${c.telephone.slice(0, 4)} •• ${c.telephone.slice(-2)}` })));
   $("chef").value = state.chef;
   $("chef").onchange = async (e) => {
     state.chef = e.target.value;
+    cancelVoiceMessage();
     Object.assign(state.phone, { screen: null, running: false, dialing: "", ussdDraft: "", smsDraft: "" });
     state.simple = { view: "home", compose: "" };
     await phoneCall("inbox");
@@ -633,7 +680,11 @@ async function start() {
   const setDevice = (d) => {
     state.device = d;
     try { localStorage.setItem("ndiedieng.device", d); } catch {}
-    for (const b of document.querySelectorAll("#devices button")) b.setAttribute("aria-checked", String(b.dataset.device === d));
+    for (const b of document.querySelectorAll("#devices button")) {
+      b.setAttribute("aria-checked", String(b.dataset.device === d));
+      b.tabIndex = b.dataset.device === d ? 0 : -1;
+    }
+    cancelVoiceMessage();
     renderPhone();
   };
   for (const b of document.querySelectorAll("#devices button")) b.onclick = () => setDevice(b.dataset.device);
@@ -644,34 +695,47 @@ async function start() {
     setDevice(next);
     document.querySelector(`#devices [data-device="${next}"]`).focus();
   };
+  new ResizeObserver(() => fitPhone()).observe($("stage"));
 
-  for (const b of document.querySelectorAll(".kpi")) {
-    b.onclick = () => {
-      const f = b.dataset.filter;
-      if (f === "urgent") { state.filter.urgent = !state.filter.urgent; state.filter.statut = ""; }
-      else { state.filter.statut = state.filter.statut === f && !state.filter.urgent ? "" : f; state.filter.urgent = false; }
-      refreshReports();
-    };
-  }
+  // One side at a time on a narrow screen
+  const setPane = (pane) => {
+    $("app").dataset.pane = pane;
+    for (const b of document.querySelectorAll("#panes button")) b.setAttribute("aria-pressed", String(b.dataset.pane === pane));
+    if (pane === "village") requestAnimationFrame(fitPhone);
+  };
+  for (const b of document.querySelectorAll("#panes button")) b.onclick = () => setPane(b.dataset.pane);
+  setPane("village");
+
+  // Mairie side
+  $("urgent").onclick = () => { state.filter.urgent = !state.filter.urgent; renderReports(); };
+  $("statuts").onkeydown = (e) => {
+    if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    e.preventDefault();
+    const order = ["", "nouveau", "a_verifier", "en_cours", "resolu"];
+    state.filter.statut = order[(order.indexOf(state.filter.statut) + (e.key === "ArrowRight" ? 1 : 4)) % 5];
+    refreshReports();
+  };
   $("q").oninput = (e) => { state.filter.q = e.target.value.trim(); renderReports(); };
   $("categorie").onchange = (e) => { state.filter.categorie = e.target.value; refreshReports(); };
   $("clear").onclick = () => { state.filter = { statut: "", urgent: false, categorie: "", q: "" }; $("q").value = ""; $("categorie").value = ""; refreshReports(); };
+  $("new").onclick = () => openNew().catch((err) => toast(err.message));
 
-  state.thread.push({ role: "bot", text: "Bonjour. Je réponds à partir des fiches de la commune et des signalements reçus, et je montre toujours les données utilisées. Posez une question, ou dictez-la avec le micro." });
-  renderThread();
-  const examples = ["Quels forages sont en panne ?", "Quels villages ont le plus de pannes ?", "Combien de naissances ce mois-ci ?", "Quels signalements urgents sont en attente ?", "Combien de fiches sont à mettre à jour ?"];
-  $("chips").replaceChildren(...examples.map((q) => h("button", { type: "button", onclick: () => ask(q), text: q })));
-  $("ask-form").onsubmit = (e) => { e.preventDefault(); ask($("question").value); };
-  const mic = $("mic");
-  if (!canListen) { mic.disabled = true; mic.title = "La dictée n'est pas disponible dans ce navigateur (essayez Chrome ou Safari)."; }
-  mic.onclick = toggleDictation;
-  const speakBtn = $("speak");
-  if (!canSpeak) speakBtn.hidden = true;
-  speakBtn.onclick = () => {
-    state.speakAnswers = !state.speakAnswers;
-    speakBtn.setAttribute("aria-pressed", String(state.speakAnswers));
-    if (!state.speakAnswers && canSpeak) speechSynthesis.cancel();
-  };
+  // The report dialog
+  $("report-form").onsubmit = saveReport;
+  $("rd-village").onchange = (e) => fillEquipements(Number(e.target.value), null).catch((err) => formError(err.message));
+  $("rd-delete").onclick = () => showConfirm(true);
+  $("rd-confirm-no").onclick = () => { showConfirm(false); $("rd-delete").focus(); };
+  $("rd-confirm-yes").onclick = deleteReport;
+  for (const d of document.querySelectorAll("dialog")) {
+    for (const b of d.querySelectorAll("[data-close]")) b.onclick = () => d.close();
+    // A click on the backdrop closes, as people expect.
+    d.addEventListener("click", (e) => { if (e.target === d) d.close(); });
+  }
+
+  // Help
+  $("help-open").onclick = () => { renderTips(); $("help-dialog").showModal(); };
+  $("reset-line").hidden = MODE !== "local";
+  $("reset").onclick = async () => { if (await resetDemo()) location.reload(); };
 
   $("booting").hidden = true;
   $("app").hidden = false;
@@ -679,7 +743,8 @@ async function start() {
   await phoneCall("inbox");
   renderPhone();
   await refreshReports();
+  if (restored) toast("Votre démonstration a repris là où vous l'aviez laissée. Aide › Recommencer pour repartir de zéro.");
   setInterval(() => refreshReports({ background: true }), MODE === "local" ? 5000 : 4000);
-  setInterval(() => { if (!document.activeElement?.closest?.(".device")) renderPhone(); }, 30000);
+  setInterval(() => { if (!document.activeElement?.closest?.(".device") && !recording) renderPhone(); }, 30000);
 }
 start();

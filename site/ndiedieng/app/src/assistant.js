@@ -122,11 +122,13 @@ export function ruleAssistant(commune) {
             const intent = INTENTS.find((i) => i.match.every((re) => re.test(q)));
             if (!intent) {
                 return {
-                    answer: `Sans IA en ligne, je reconnais les questions courantes, par exemple : ${EXAMPLES.join(" / ")}. Avec une clé Gemini, je réponds aux questions libres.`,
+                    answer: "Je ne sais pas encore répondre à celle-ci. Dans cette démonstration, je connais les pannes, les signalements, " +
+                        "les naissances et décès, la population et les fiches des villages. Essayez par exemple :",
                     sql: null,
                     columns: [],
                     rows: [],
                     par: "regles",
+                    suggestions: EXAMPLES.slice(0, 4),
                 };
             }
             const { columns, rows } = runReadOnly(commune, intent.sql);

@@ -57,7 +57,8 @@ describe("rule assistant", () => {
   it("says what it can answer when it does not recognise a question", async () => {
     const a = await ruleAssistant(commune()).ask("Quel temps fera-t-il demain ?");
     expect(a.sql).toBeNull();
-    expect(a.answer).toMatch(/questions courantes/);
+    expect(a.answer).toMatch(/Je ne sais pas encore/);
+    expect(a.suggestions).toHaveLength(4);
   });
 });
 

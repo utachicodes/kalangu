@@ -14,20 +14,20 @@
 <script type="importmap">{ "imports": { "@kalangu/core": "./vendor/core/index.js", "@kalangu/sim": "./vendor/sim/phone.js" } }</script>
 <script type="module" src="ui.js"></script>
 </head>
-<body>
-<a class="skip" href="#mairie">Aller au tableau de bord de la Mairie</a>
-
+<body class="dash">
 <header class="topbar">
   <div class="brand">
-    <span class="brand-mark" aria-hidden="true"></span>
-    <div>
-      <h1>Ndiédieng <span class="thin">· alertes sans internet</span></h1>
-      <p class="subtitle">Les chefs de village alertent la Mairie depuis n'importe quel téléphone. Prototype construit avec <a href="https://kalangu.utachi.website">Kalangu</a>.</p>
-    </div>
+    <h1>Ndiédieng <span class="thin">· alertes sans internet</span></h1>
   </div>
+  <nav class="panes" id="panes" aria-label="Côté">
+    <button type="button" data-pane="village" aria-pressed="true">Village</button>
+    <button type="button" data-pane="mairie" aria-pressed="false">Mairie</button>
+  </nav>
   <div class="topbar-meta">
     <span class="pill pill-warn" title="58 villages, 200 équipements et 499 fiches générés pour la démonstration. Aucun numéro n'appartient à une vraie personne.">Données fictives</span>
-    <span class="pill" id="mode">Démarrage…</span>
+    <span class="pill" id="mode" title="">Démarrage…</span>
+    <button type="button" class="btn btn-ghost" id="help-open">Aide</button>
+    <a class="btn btn-orb" href="assistant/"><span class="mini-orb" aria-hidden="true"></span>Assistant</a>
   </div>
 </header>
 
@@ -36,60 +36,40 @@
   <p>Démarrage de la démonstration…<br><span class="muted">Kalangu et la base de la commune se chargent dans votre navigateur.</span></p>
 </div>
 
-<main class="layout" id="app" hidden>
-  <section class="village" aria-labelledby="village-title">
-    <div class="section-head">
-      <p class="eyebrow">Côté village</p>
-      <h2 id="village-title">Le téléphone du chef de village</h2>
-    </div>
-
-    <div class="controls">
+<main class="shell" id="app" hidden>
+  <section class="pane village" id="pane-village" aria-label="Côté village">
+    <div class="village-controls">
       <label class="field">
         <span class="field-label">Chef de village</span>
         <select id="chef"></select>
       </label>
-      <div class="field">
-        <span class="field-label" id="device-label">Téléphone</span>
-        <div class="segmented" role="radiogroup" aria-labelledby="device-label" id="devices">
-          <button type="button" role="radio" data-device="simple">Téléphone simple</button>
-          <button type="button" role="radio" data-device="android">Android</button>
-          <button type="button" role="radio" data-device="iphone">iPhone</button>
-        </div>
+      <div class="segmented" role="radiogroup" aria-label="Téléphone" id="devices">
+        <button type="button" role="radio" data-device="simple">Simple</button>
+        <button type="button" role="radio" data-device="android">Android</button>
+        <button type="button" role="radio" data-device="iphone">iPhone</button>
       </div>
     </div>
-
-    <div class="stage">
-      <div id="device" class="device-host"></div>
-    </div>
-
-    <details class="tips" open>
-      <summary>À essayer</summary>
-      <ul id="tips"></ul>
-    </details>
+    <div class="stage" id="stage"><div class="device-fit" id="device"></div></div>
   </section>
 
-  <section class="mairie" id="mairie" aria-labelledby="mairie-title" tabindex="-1">
-    <div class="section-head">
-      <p class="eyebrow">Côté Mairie</p>
-      <h2 id="mairie-title">Les signalements de la commune</h2>
+  <section class="pane mairie card" id="pane-mairie" aria-label="Côté Mairie">
+    <div class="mairie-head">
+      <h2 class="pane-title">Signalements</h2>
+      <button type="button" class="btn btn-primary" id="new"><span aria-hidden="true">+</span> Nouveau</button>
     </div>
 
-    <div class="kpis" id="kpis">
-      <button type="button" class="kpi" data-filter="nouveau"><span class="kpi-value" id="k-nouveau">0</span><span class="kpi-label">nouveaux</span></button>
-      <button type="button" class="kpi" data-filter="a_verifier"><span class="kpi-value" id="k-a_verifier">0</span><span class="kpi-label">à vérifier</span></button>
-      <button type="button" class="kpi" data-filter="en_cours"><span class="kpi-value" id="k-en_cours">0</span><span class="kpi-label">en cours</span></button>
-      <button type="button" class="kpi kpi-alert" data-filter="urgent"><span class="kpi-value" id="k-haute">0</span><span class="kpi-label">urgents non résolus</span></button>
-    </div>
-
-    <div class="card">
+    <div class="view" id="view-reports">
+      <div class="filters">
+        <div class="tabs-status" role="radiogroup" aria-label="Statut" id="statuts"></div>
+        <button type="button" class="chip-urgent" id="urgent" aria-pressed="false"><span class="dot" aria-hidden="true"></span>Urgents <b id="k-urgent">0</b></button>
+      </div>
       <div class="toolbar">
         <label class="search">
           <span class="visually-hidden">Rechercher</span>
           <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="q" type="search" placeholder="Village, numéro, description…" autocomplete="off">
+          <input id="q" type="search" placeholder="Rechercher" autocomplete="off">
         </label>
-        <div class="segmented segmented-light" role="radiogroup" aria-label="Statut" id="statuts"></div>
-        <label class="field field-inline">
+        <label class="field-inline">
           <span class="visually-hidden">Catégorie</span>
           <select id="categorie">
             <option value="">Toutes catégories</option>
@@ -99,47 +79,82 @@
           </select>
         </label>
       </div>
-      <p class="result-line" id="result-line" aria-live="polite"></p>
-      <div class="table-wrap">
+      <div class="table-wrap" id="table-wrap">
         <table class="reports">
-          <thead><tr><th scope="col">Signalement</th><th scope="col">Village</th><th scope="col">Objet</th><th scope="col">Urgence</th><th scope="col">Statut</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+          <caption class="visually-hidden">Signalements. Cliquez une ligne pour la voir, la modifier ou la supprimer.</caption>
+          <thead><tr><th scope="col">Signalement</th><th scope="col">Village</th><th scope="col">Objet</th><th scope="col">Urgence</th><th scope="col">Statut</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
         <p class="empty" id="empty" hidden>Aucun signalement ne correspond. <button type="button" class="link" id="clear">Effacer les filtres</button></p>
       </div>
+      <p class="result-line" id="result-line" aria-live="polite"></p>
     </div>
 
-    <div class="card assistant" aria-labelledby="assistant-title">
-      <div class="assistant-head">
-        <div>
-          <h3 id="assistant-title">Assistant territorial</h3>
-          <p class="muted small">Répond à partir des 499 fiches et des signalements, et montre les données utilisées.</p>
-        </div>
-        <button type="button" class="toggle" id="speak" aria-pressed="false" title="Lire les réponses à voix haute">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>
-          <span>Réponses à voix haute</span>
-        </button>
-      </div>
-      <div class="thread" id="thread" aria-live="polite"></div>
-      <div class="chips" id="chips"></div>
-      <form class="composer" id="ask-form">
-        <label class="visually-hidden" for="question">Votre question</label>
-        <input id="question" autocomplete="off" placeholder="Posez une question, ou dictez-la">
-        <button type="button" class="icon-btn" id="mic" aria-label="Dicter la question" title="Dicter la question">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
-        </button>
-        <button type="submit" class="btn btn-primary">Demander</button>
-      </form>
-    </div>
   </section>
 </main>
 
+<!-- A report: read, change, delete. -->
+<dialog class="modal" id="report-dialog" aria-labelledby="rd-title">
+  <form method="dialog" id="report-form" novalidate>
+    <header class="modal-head">
+      <div>
+        <h2 id="rd-title"></h2>
+        <p class="modal-sub" id="rd-sub"></p>
+      </div>
+      <button type="button" class="icon-close" data-close aria-label="Fermer">×</button>
+    </header>
+    <p class="notice" id="rd-notice" hidden></p>
+    <div class="modal-body">
+      <div class="grid-2" id="rd-new-fields" hidden>
+        <label class="field"><span class="field-label">Village</span><select id="rd-village"></select></label>
+        <span></span>
+      </div>
+      <div class="grid-2">
+        <label class="field"><span class="field-label">Catégorie</span><select id="rd-categorie"></select></label>
+        <label class="field"><span class="field-label">Équipement</span><select id="rd-equipement"></select></label>
+      </div>
+      <fieldset class="field">
+        <legend class="field-label">Urgence</legend>
+        <div class="segmented segmented-light" id="rd-urgence" role="radiogroup" aria-label="Urgence"></div>
+      </fieldset>
+      <fieldset class="field" id="rd-statut-field">
+        <legend class="field-label">Statut</legend>
+        <div class="segmented segmented-light" id="rd-statut" role="radiogroup" aria-label="Statut"></div>
+      </fieldset>
+      <label class="field"><span class="field-label">Description</span><textarea id="rd-description" rows="3" maxlength="300"></textarea></label>
+      <label class="check"><input type="checkbox" id="rd-notify" checked> <span id="rd-notify-label">Prévenir le chef par SMS si le statut change</span></label>
+      <p class="form-error" id="rd-error" role="alert" hidden></p>
+    </div>
+    <footer class="modal-foot">
+      <div class="danger-zone" id="rd-danger">
+        <button type="button" class="btn btn-danger-ghost" id="rd-delete">Supprimer</button>
+        <span class="confirm" id="rd-confirm" hidden>
+          Supprimer définitivement ?
+          <button type="button" class="btn" id="rd-confirm-no">Non</button>
+          <button type="button" class="btn btn-danger" id="rd-confirm-yes">Supprimer</button>
+        </span>
+      </div>
+      <div class="foot-right">
+        <button type="button" class="btn" data-close>Fermer</button>
+        <button type="submit" class="btn btn-primary" id="rd-save">Enregistrer</button>
+      </div>
+    </footer>
+  </form>
+</dialog>
+
+<dialog class="modal modal-narrow" id="help-dialog" aria-labelledby="help-title">
+  <header class="modal-head">
+    <h2 id="help-title">À essayer</h2>
+    <button type="button" class="icon-close" data-close aria-label="Fermer">×</button>
+  </header>
+  <div class="modal-body">
+    <ol class="steps" id="tips"></ol>
+    <p class="reset-line" id="reset-line" hidden>Vos changements sont gardés dans ce navigateur. <button type="button" class="link" id="reset">Recommencer la démonstration</button></p>
+    <p class="muted small">Prototype : données fictives, aucun mot de passe, tout tourne dans votre navigateur. Une naissance ou un décès signalé ici est une pré-déclaration ; l'acte d'état civil suit la procédure légale. <a href="https://github.com/utachicodes/kalangu/tree/main/examples/ndiedieng">Code source</a> · construit avec <a href="https://kalangu.utachi.website">Kalangu</a>.</p>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <p class="visually-hidden" id="announce" aria-live="polite"></p>
-
-<footer class="footer">
-  Prototype : données fictives, aucun mot de passe, tout tourne dans votre navigateur. Une naissance ou un décès signalé ici est une pré-déclaration ; l'acte d'état civil suit la procédure légale.
-  <a href="https://github.com/utachicodes/kalangu/tree/main/examples/ndiedieng">Code source</a>
-</footer>
 </body>
 </html>

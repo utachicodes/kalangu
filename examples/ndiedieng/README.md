@@ -49,12 +49,15 @@ parle à l'API du serveur (et à Gemini ou à une vraie passerelle, ci-dessous).
   transcription côté Mairie (phase 2 du projet), et la dictée du navigateur ne
   connaît que le français.
 - **À droite, la Mairie.** Les signalements arrivent triés par urgence, avec
-  recherche, filtres par statut et par catégorie, et des cartes cliquables
-  (« urgents non résolus »). « Prendre en charge » et « Résolu » envoient un
-  SMS au chef, qui arrive dans le téléphone de gauche. Un message ambigu
-  arrive « À vérifier » : l'agent corrige la catégorie et l'urgence, puis
-  valide.
-- **L'assistant territorial,** à l'écrit ou à la voix : le micro dicte la
+  recherche et filtres par statut, par catégorie et « urgents ». Un clic sur
+  un signalement l'ouvre : on change sa catégorie, son équipement, son
+  urgence, son statut ou sa description, ou on le supprime ; « + Nouveau »
+  en crée un (après un appel, par exemple). Passer un signalement « En
+  cours » ou « Résolu » envoie un SMS au chef, qui arrive dans le téléphone
+  de gauche. Un message ambigu arrive « À vérifier ».
+- **L'assistant territorial,** sur sa propre page (bouton « Assistant ») :
+  on touche l'orbe et on parle, la réponse est lue (« Voix ») ou seulement
+  écrite (« Texte ») ; le clavier permet aussi de l'écrire. Le micro dicte la
   question, et la réponse est lue à voix haute (ou à la demande avec
   « Écouter », ou toujours avec « Réponses à voix haute »). « Données
   utilisées » montre la requête SQL et les lignes derrière chaque chiffre.
@@ -111,7 +114,7 @@ une **pré-déclaration** : l'acte d'état civil suit la procédure légale.
 | [`src/db.ts`](src/db.ts) | La base SQLite (`node:sqlite`) : villages, équipements, fiches, signalements |
 | [`src/data.ts`](src/data.ts) | Les données fictives, à remplacer par les fiches réelles |
 | [`src/app.ts`](src/app.ts) | L'API de la démonstration, sans dépendance à Node |
-| [`web/`](web) | La page : `index.html`, `styles.css`, `ui.js` (les trois téléphones, le tableau, l'assistant et la voix) |
+| [`web/`](web) | Les pages : `index.html` et `ui.js` (les trois téléphones et le tableau), `assistant/index.html` et `assistant.js` (l'assistant), `common.js` (l'API et la voix), `local.ts` (la démo dans le navigateur, gardée dans IndexedDB) |
 | [`web/local.ts`](web/local.ts), [`web/sqljs.ts`](web/sqljs.ts) | Le prototype dans le navigateur, sur SQLite compilé pour le web |
 | [`src/server.ts`](src/server.ts) | Le serveur Node : la même page, l'API, et la passerelle optionnelle |
 | [`scripts/build-web.mjs`](scripts/build-web.mjs) | Construit `site/ndiedieng` (vérifié en CI) |
