@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { checkQuery, geminiAssistant, ruleAssistant } from "../src/assistant.js";
-import { openCommune, type Commune } from "../src/db.js";
+import type { Commune } from "../src/db.js";
+import { openCommune } from "../src/nodeSql.js";
 
 const open: Commune[] = [];
 afterEach(() => open.splice(0).forEach((c) => c.close()));

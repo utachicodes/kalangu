@@ -1,7 +1,11 @@
 /**
  * The Ndiédieng prototype, served with Node's http module.
  *
+ *   pnpm build && pnpm --filter @kalangu/example-ndiedieng build:web
  *   pnpm --filter @kalangu/example-ndiedieng start      # then open http://localhost:3000
+ *
+ * It serves the same page as the website (site/ndiedieng), talking to this
+ * server's API instead of running the prototype in the browser.
  *
  * Optional, from the environment:
  *   GEMINI_API_KEY (and GEMINI_MODEL)   SMS sorting and free questions by Gemini
@@ -15,7 +19,10 @@
  * behind access control, never open on the internet with real data.
  */
 
+import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage } from "node:http";
+import { extname, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { consoleLogger, type Channel } from "@kalangu/core";
 import { africasTalkingSms } from "@kalangu/sms";
 import { africasTalkingUssd } from "@kalangu/ussd";
@@ -23,7 +30,7 @@ import { createNdiediengAgent } from "./agent.js";
 import { createApp, USSD_CODE } from "./app.js";
 import { geminiAssistant, ruleAssistant } from "./assistant.js";
 import { geminiClassifier, keywordClassifier } from "./classify.js";
-import { openCommune } from "./db.js";
+import { openCommune } from "./nodeSql.js";
 
 const env = process.env;
 const commune = openCommune();
@@ -59,9 +66,36 @@ const app = createApp({
   commune,
   agent,
   assistant,
+  classifier,
   mode: `${geminiKey ? "classement et assistant par Gemini" : "classement par mots-clés, assistant par règles"}${live ? ", passerelle Africa's Talking active" : ""}`,
   ...(sms ? { notify: (to: string, text: string) => sms.send({ to, text }) } : {}),
 });
+// The page, from the website's build of it, told to use this server's API.
+const SITE = fileURLToPath(new URL("../../../site/ndiedieng/", import.meta.url));
+const TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".svg": "image/svg+xml",
+};
+async function staticFile(path: string): Promise<Response> {
+  const file = resolve(SITE, `.${path === "/" ? "/index.html" : decodeURIComponent(path)}`);
+  // Nothing outside the page's own folder.
+  if (!file.startsWith(SITE.endsWith(sep) ? SITE : SITE + sep)) return new Response("Not found", { status: 404 });
+  try {
+    let body: string | Buffer = await readFile(file);
+    if (file.endsWith("index.html")) {
+      body = body
+        .toString("utf8")
+        .replace('<base href="/ndiedieng/">', '<base href="/">')
+        .replace('<meta name="ndiedieng-mode" content="local">', '<meta name="ndiedieng-mode" content="server">');
+    }
+    return new Response(body, { headers: { "content-type": TYPES[extname(file)] ?? "application/octet-stream" } });
+  } catch {
+    return new Response(path === "/" ? "Build the page first: pnpm --filter @kalangu/example-ndiedieng build:web" : "Not found", { status: 404 });
+  }
+}
+
 const isGateway = (path: string) => live && [route("/ussd"), route("/ussd/end"), route("/sms"), route("/sms/delivery")].includes(path);
 
 const port = Number(env["PORT"] ?? 3000);
@@ -69,7 +103,13 @@ createServer(async (req, res) => {
   try {
     const request = await toRequest(req, port);
     const path = new URL(request.url).pathname;
-    const response = isGateway(path) ? await agent.requestHandler(request) : await app(request);
+    const response = isGateway(path)
+      ? await agent.requestHandler(request)
+      : path.startsWith("/api/")
+        ? await app(request)
+        : request.method === "GET"
+          ? await staticFile(path)
+          : new Response("Not found", { status: 404 });
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(Buffer.from(await response.arrayBuffer()));
   } catch (err) {

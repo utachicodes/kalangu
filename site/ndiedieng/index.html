@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="/ndiedieng/">
+<meta name="ndiedieng-mode" content="local">
+<title>Ndiédieng · alertes sans internet</title>
+<meta name="description" content="Prototype pour la commune de Ndiédieng : les chefs de village alertent la Mairie par USSD, SMS ou message vocal, sans internet ; la Mairie suit les signalements et interroge ses fiches avec un assistant. Construit avec Kalangu.">
+<meta property="og:title" content="Ndiédieng · alertes sans internet">
+<meta property="og:description" content="Les chefs de village alertent la Mairie depuis n'importe quel téléphone, sans internet. Un prototype construit avec Kalangu.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">{ "imports": { "@kalangu/core": "./vendor/core/index.js", "@kalangu/sim": "./vendor/sim/phone.js" } }</script>
+<script type="module" src="ui.js"></script>
+</head>
+<body>
+<a class="skip" href="#mairie">Aller au tableau de bord de la Mairie</a>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <div>
+      <h1>Ndiédieng <span class="thin">· alertes sans internet</span></h1>
+      <p class="subtitle">Les chefs de village alertent la Mairie depuis n'importe quel téléphone. Prototype construit avec <a href="https://kalangu.utachi.website">Kalangu</a>.</p>
+    </div>
+  </div>
+  <div class="topbar-meta">
+    <span class="pill pill-warn" title="58 villages, 200 équipements et 499 fiches générés pour la démonstration. Aucun numéro n'appartient à une vraie personne.">Données fictives</span>
+    <span class="pill" id="mode">Démarrage…</span>
+  </div>
+</header>
+
+<div id="booting" class="booting" role="status">
+  <div class="spinner" aria-hidden="true"></div>
+  <p>Démarrage de la démonstration…<br><span class="muted">Kalangu et la base de la commune se chargent dans votre navigateur.</span></p>
+</div>
+
+<main class="layout" id="app" hidden>
+  <section class="village" aria-labelledby="village-title">
+    <div class="section-head">
+      <p class="eyebrow">Côté village</p>
+      <h2 id="village-title">Le téléphone du chef de village</h2>
+    </div>
+
+    <div class="controls">
+      <label class="field">
+        <span class="field-label">Chef de village</span>
+        <select id="chef"></select>
+      </label>
+      <div class="field">
+        <span class="field-label" id="device-label">Téléphone</span>
+        <div class="segmented" role="radiogroup" aria-labelledby="device-label" id="devices">
+          <button type="button" role="radio" data-device="simple">Téléphone simple</button>
+          <button type="button" role="radio" data-device="android">Android</button>
+          <button type="button" role="radio" data-device="iphone">iPhone</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div id="device" class="device-host"></div>
+    </div>
+
+    <details class="tips" open>
+      <summary>À essayer</summary>
+      <ul id="tips"></ul>
+    </details>
+  </section>
+
+  <section class="mairie" id="mairie" aria-labelledby="mairie-title" tabindex="-1">
+    <div class="section-head">
+      <p class="eyebrow">Côté Mairie</p>
+      <h2 id="mairie-title">Les signalements de la commune</h2>
+    </div>
+
+    <div class="kpis" id="kpis">
+      <button type="button" class="kpi" data-filter="nouveau"><span class="kpi-value" id="k-nouveau">0</span><span class="kpi-label">nouveaux</span></button>
+      <button type="button" class="kpi" data-filter="a_verifier"><span class="kpi-value" id="k-a_verifier">0</span><span class="kpi-label">à vérifier</span></button>
+      <button type="button" class="kpi" data-filter="en_cours"><span class="kpi-value" id="k-en_cours">0</span><span class="kpi-label">en cours</span></button>
+      <button type="button" class="kpi kpi-alert" data-filter="urgent"><span class="kpi-value" id="k-haute">0</span><span class="kpi-label">urgents non résolus</span></button>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <label class="search">
+          <span class="visually-hidden">Rechercher</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="Village, numéro, description…" autocomplete="off">
+        </label>
+        <div class="segmented segmented-light" role="radiogroup" aria-label="Statut" id="statuts"></div>
+        <label class="field field-inline">
+          <span class="visually-hidden">Catégorie</span>
+          <select id="categorie">
+            <option value="">Toutes catégories</option>
+            <option value="eau">Eau</option><option value="sante">Santé</option><option value="ecole">École</option>
+            <option value="energie">Énergie</option><option value="piste">Piste</option>
+            <option value="naissance">Naissance</option><option value="deces">Décès</option><option value="autre">Autre</option>
+          </select>
+        </label>
+      </div>
+      <p class="result-line" id="result-line" aria-live="polite"></p>
+      <div class="table-wrap">
+        <table class="reports">
+          <thead><tr><th scope="col">Signalement</th><th scope="col">Village</th><th scope="col">Objet</th><th scope="col">Urgence</th><th scope="col">Statut</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <p class="empty" id="empty" hidden>Aucun signalement ne correspond. <button type="button" class="link" id="clear">Effacer les filtres</button></p>
+      </div>
+    </div>
+
+    <div class="card assistant" aria-labelledby="assistant-title">
+      <div class="assistant-head">
+        <div>
+          <h3 id="assistant-title">Assistant territorial</h3>
+          <p class="muted small">Répond à partir des 499 fiches et des signalements, et montre les données utilisées.</p>
+        </div>
+        <button type="button" class="toggle" id="speak" aria-pressed="false" title="Lire les réponses à voix haute">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+          <span>Réponses à voix haute</span>
+        </button>
+      </div>
+      <div class="thread" id="thread" aria-live="polite"></div>
+      <div class="chips" id="chips"></div>
+      <form class="composer" id="ask-form">
+        <label class="visually-hidden" for="question">Votre question</label>
+        <input id="question" autocomplete="off" placeholder="Posez une question, ou dictez-la">
+        <button type="button" class="icon-btn" id="mic" aria-label="Dicter la question" title="Dicter la question">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+        </button>
+        <button type="submit" class="btn btn-primary">Demander</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<p class="visually-hidden" id="announce" aria-live="polite"></p>
+
+<footer class="footer">
+  Prototype : données fictives, aucun mot de passe, tout tourne dans votre navigateur. Une naissance ou un décès signalé ici est une pré-déclaration ; l'acte d'état civil suit la procédure légale.
+  <a href="https://github.com/utachicodes/kalangu/tree/main/examples/ndiedieng">Code source</a>
+</footer>
+</body>
+</html>

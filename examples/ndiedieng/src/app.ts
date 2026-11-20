@@ -1,8 +1,9 @@
 /**
- * The demo web app: on the left a keypad phone for any village chief (USSD
- * and SMS, through Kalangu's simulator), on the right the Mairie's dashboard
- * and the territorial assistant. A standard Request -> Response handler, so
- * it is tested without a server and served by server.ts.
+ * The demo's API: a simulated phone for any village chief (USSD, SMS and a
+ * transcribed voice message, through Kalangu's simulator), the Mairie's
+ * reports, and the territorial assistant. A standard Request -> Response
+ * handler with no Node APIs, so it runs behind server.ts and, on the website,
+ * inside the visitor's browser (web/local.ts).
  *
  * When the Mairie acts on a report, the chief gets an SMS: in the demo it
  * lands in the simulated phone's inbox; with a real gateway, `notify` sends it.
@@ -10,10 +11,10 @@
 
 import type { Agent } from "@kalangu/core";
 import { createPhone, type SimPhone } from "@kalangu/sim";
-import { VILLAGE_LABELS } from "./agent.js";
+import { NOT_REGISTERED, recordFreeText, VILLAGE_LABELS } from "./agent.js";
 import type { Assistant } from "./assistant.js";
+import type { Classifier } from "./classify.js";
 import type { Categorie, Commune, Signalement, Statut, Urgence } from "./db.js";
-import { demoPage } from "./page.js";
 
 export const USSD_CODE = "*123#";
 
@@ -21,9 +22,11 @@ export interface AppOptions {
   commune: Commune;
   agent: Agent;
   assistant: Assistant;
+  /** Sorts a transcribed voice message, as for a free SMS. */
+  classifier: Classifier;
   /** Sends an SMS to a chief outside a conversation. Defaults to the simulated phone's inbox. */
   notify?: (to: string, text: string) => Promise<void>;
-  /** Shown on the page: which classifier and assistant are on. */
+  /** Which classifier and assistant are on, for the page to say. */
   mode: string;
 }
 
@@ -73,9 +76,7 @@ export function createApp(options: AppOptions): (req: Request) => Promise<Respon
     const url = new URL(req.url);
     const path = url.pathname;
     try {
-      if (req.method === "GET" && path === "/") {
-        return new Response(demoPage({ code: USSD_CODE, mode: options.mode }), { headers: { "content-type": "text/html; charset=utf-8" } });
-      }
+      if (req.method === "GET" && path === "/api/info") return json({ mode: options.mode, code: USSD_CODE });
       if (req.method === "GET" && path === "/api/chefs") return json(commune.chefs());
 
       if (req.method === "POST" && path === "/api/phone") {
@@ -92,6 +93,11 @@ export function createApp(options: AppOptions): (req: Request) => Promise<Respon
         else if (body.action === "sms") {
           if (!text.trim()) return json({ error: "empty SMS" }, 400);
           await phone.sendSms(text);
+        } else if (body.action === "vocal") {
+          // A voice message, already transcribed: recorded like a free SMS, confirmed by SMS.
+          if (!text.trim()) return json({ error: "empty voice message" }, 400);
+          const done = await recordFreeText(commune, options.classifier, body.telephone, text, "vocal");
+          await notify(body.telephone, done ? done.reply : NOT_REGISTERED);
         } else if (body.action !== "inbox") return json({ error: `unknown action ${body.action}` }, 400);
         return json({ screen, inSession: phone.inSession, inbox: inboxOf(phone) });
       }

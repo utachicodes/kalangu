@@ -4,7 +4,8 @@ import { createPhone } from "@kalangu/sim";
 import { createNdiediengAgent, NOT_REGISTERED, parseDate } from "../src/agent.js";
 import { keywordClassifier } from "../src/classify.js";
 import { chefPhone } from "../src/data.js";
-import { openCommune, type Commune } from "../src/db.js";
+import type { Commune } from "../src/db.js";
+import { openCommune } from "../src/nodeSql.js";
 
 const open: Commune[] = [];
 afterEach(() => open.splice(0).forEach((c) => c.close()));

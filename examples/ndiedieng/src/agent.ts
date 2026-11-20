@@ -9,7 +9,7 @@
 
 import { ask, createAgent, menu, type Agent, type AgentConfig, type Channel, type Step, type TurnContext } from "@kalangu/core";
 import { REVIEW_BELOW, type Classifier } from "./classify.js";
-import type { Categorie, Commune, Urgence } from "./db.js";
+import type { Canal, Categorie, Commune, Signalement, Urgence } from "./db.js";
 
 type Ctx = TurnContext;
 
@@ -25,6 +25,40 @@ const LABELS: Record<Categorie, string> = {
 };
 
 export const NOT_REGISTERED = "Ce numéro n'est pas enregistré comme chef de village. Contactez la Mairie pour l'ajouter.";
+
+/**
+ * A free-text message from a chief (an SMS, or a voice message once
+ * transcribed): sorted, recorded, and the reply to send back. Null when the
+ * number is not a registered chief's.
+ */
+export async function recordFreeText(
+  commune: Commune,
+  classifier: Classifier,
+  telephone: string,
+  text: string,
+  canal: Canal,
+): Promise<{ signalement: Signalement; reply: string } | null> {
+  const chef = commune.chefByPhone(telephone);
+  if (!chef) return null;
+  const c = await classifier.classify(text);
+  const equipement = c.nature ? commune.equipementFor(chef.villageId, c.nature) : null;
+  const review = c.confiance < REVIEW_BELOW || c.categorie === "autre";
+  const s = commune.addSignalement({
+    villageId: chef.villageId,
+    telephone: chef.telephone,
+    categorie: c.categorie,
+    equipementId: equipement?.id ?? null,
+    urgence: c.urgence,
+    description: text.trim().slice(0, 300),
+    canal,
+    statut: review ? "a_verifier" : "nouveau",
+    confiance: c.confiance,
+  });
+  const reply = review
+    ? `Message reçu (${s.code}). La Mairie va le vérifier et vous répondra par SMS.`
+    : `Message reçu (${s.code}) : ${LABELS[c.categorie]}${c.nature ? `, ${c.nature}` : ""}, urgence ${c.urgence}. Merci.`;
+  return { signalement: s, reply };
+}
 
 export interface NdiediengOptions extends Partial<Omit<AgentConfig, "start">> {
   commune: Commune;
@@ -140,25 +174,8 @@ export function createNdiediengAgent(options: NdiediengOptions): Agent {
 
   // --- Free text, sorted by the classifier.
   const message = ask("Décrivez le problème ou la déclaration :", async (text: string, ctx: Ctx) => {
-    const chef = chefOf(ctx);
-    if (!chef) return NOT_REGISTERED;
-    const c = await classifier.classify(text);
-    const equipement = c.nature ? commune.equipementFor(chef.villageId, c.nature) : null;
-    const review = c.confiance < REVIEW_BELOW || c.categorie === "autre";
-    const s = commune.addSignalement({
-      villageId: chef.villageId,
-      telephone: chef.telephone,
-      categorie: c.categorie,
-      equipementId: equipement?.id ?? null,
-      urgence: c.urgence,
-      description: text.trim().slice(0, 300),
-      canal: canal(ctx),
-      statut: review ? "a_verifier" : "nouveau",
-      confiance: c.confiance,
-    });
-    return review
-      ? `Message reçu (${s.code}). La Mairie va le vérifier et vous répondra par SMS.`
-      : `Message reçu (${s.code}) : ${LABELS[c.categorie]}${c.nature ? `, ${c.nature}` : ""}, urgence ${c.urgence}. Merci.`;
+    const done = await recordFreeText(commune, classifier, ctx.phone, text, canal(ctx));
+    return done ? done.reply : NOT_REGISTERED;
   });
 
   const start = menu("Mairie de Ndiédieng", [

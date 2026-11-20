@@ -16,9 +16,15 @@ et les signalements en français, et voient la requête derrière chaque chiffre
 > opérateur n'utilise (+221 00 000 00 xx). Rien ne vient des fiches réelles de
 > la commune.
 
-## Lancer la démonstration
+## Essayer la démonstration
 
-Node 22.13 ou plus récent, et pnpm. Depuis la racine du dépôt :
+**En ligne, sans rien installer :** <https://kalangu.utachi.website/ndiedieng/>.
+Tout tourne dans votre navigateur : Kalangu, la base SQLite de la commune
+(compilée pour le navigateur, [sql.js](https://sql.js.org)) et l'API. Chaque
+visiteur a sa propre démonstration, et rien n'est envoyé nulle part.
+
+**Sur votre machine,** avec Node 22.13 ou plus récent et pnpm, depuis la
+racine du dépôt :
 
 ```sh
 pnpm install
@@ -26,21 +32,35 @@ pnpm build
 pnpm --filter @kalangu/example-ndiedieng start
 ```
 
-Puis ouvrez <http://localhost:3000>. Aucun compte, aucune clé.
+Puis ouvrez <http://localhost:3000> : la même page, servie par Node, qui
+parle à l'API du serveur (et à Gemini ou à une vraie passerelle, ci-dessous).
 
-- **À gauche, le téléphone d'un chef de village.** Choisissez le village,
-  composez `*123#` (bouton « Appeler / Envoyer ») et suivez les menus avec le
-  clavier. Un code complet comme `*123*1*1*1*1#` fait tout d'un coup : panne,
-  eau, forage, urgent. En SMS, envoyez n'importe quel texte pour recevoir le
-  menu, puis `5` pour écrire librement : « le forage est en panne depuis
-  hier ».
-- **À droite, la Mairie.** Les signalements arrivent triés par urgence. « Prendre
-  en charge » et « Résolu » envoient un SMS au chef (visible dans le téléphone
-  de gauche). Un SMS ambigu arrive « À vérifier » : l'agent corrige la catégorie
-  et l'urgence, puis valide.
-- **L'assistant territorial.** Posez une question ou cliquez une suggestion ;
-  « Données utilisées » montre la requête SQL et les lignes sur lesquelles
-  repose la réponse.
+- **À gauche, le téléphone d'un chef de village,** en trois modèles :
+  *téléphone simple* (le plus courant dans les villages : écran, touches
+  programmables, clavier ; le clavier de l'ordinateur marche quand il a le
+  focus), *Android* et *iPhone* (composeur, fenêtre USSD de chaque système,
+  application Messages). Composez `*123#` et suivez les menus ; un code
+  complet comme `*123*1*1*1*1#` fait tout d'un coup (panne, eau, forage,
+  urgent). Dans Messages, envoyez n'importe quel texte pour recevoir le menu,
+  puis `5` pour écrire librement.
+- **Message vocal** (Android, iPhone) : le micro de Messages dicte un message,
+  transcrit par le navigateur puis classé comme un SMS libre. C'est une
+  simulation : en vrai, un message vocal passerait par l'opérateur et une
+  transcription côté Mairie (phase 2 du projet), et la dictée du navigateur ne
+  connaît que le français.
+- **À droite, la Mairie.** Les signalements arrivent triés par urgence, avec
+  recherche, filtres par statut et par catégorie, et des cartes cliquables
+  (« urgents non résolus »). « Prendre en charge » et « Résolu » envoient un
+  SMS au chef, qui arrive dans le téléphone de gauche. Un message ambigu
+  arrive « À vérifier » : l'agent corrige la catégorie et l'urgence, puis
+  valide.
+- **L'assistant territorial,** à l'écrit ou à la voix : le micro dicte la
+  question, et la réponse est lue à voix haute (ou à la demande avec
+  « Écouter », ou toujours avec « Réponses à voix haute »). « Données
+  utilisées » montre la requête SQL et les lignes derrière chaque chiffre.
+
+La dictée demande un navigateur qui la propose (Chrome, Edge, Safari) et
+l'accord du micro ; ailleurs, le bouton est désactivé et le dit.
 
 ## Avec l'IA de Gemini
 
@@ -90,9 +110,13 @@ une **pré-déclaration** : l'acte d'état civil suit la procédure légale.
 | [`src/assistant.ts`](src/assistant.ts) | L'assistant territorial et la vérification des requêtes |
 | [`src/db.ts`](src/db.ts) | La base SQLite (`node:sqlite`) : villages, équipements, fiches, signalements |
 | [`src/data.ts`](src/data.ts) | Les données fictives, à remplacer par les fiches réelles |
-| [`src/app.ts`](src/app.ts), [`src/page.ts`](src/page.ts) | La page de démonstration et son API |
-| [`src/server.ts`](src/server.ts) | Le serveur et la passerelle optionnelle |
+| [`src/app.ts`](src/app.ts) | L'API de la démonstration, sans dépendance à Node |
+| [`web/`](web) | La page : `index.html`, `styles.css`, `ui.js` (les trois téléphones, le tableau, l'assistant et la voix) |
+| [`web/local.ts`](web/local.ts), [`web/sqljs.ts`](web/sqljs.ts) | Le prototype dans le navigateur, sur SQLite compilé pour le web |
+| [`src/server.ts`](src/server.ts) | Le serveur Node : la même page, l'API, et la passerelle optionnelle |
+| [`scripts/build-web.mjs`](scripts/build-web.mjs) | Construit `site/ndiedieng` (vérifié en CI) |
 
-`pnpm --filter @kalangu/example-ndiedieng test` lance les tests (37) : les
-parcours USSD et SMS, le classement, l'assistant, et le refus de toute requête
-qui écrit.
+`pnpm --filter @kalangu/example-ndiedieng test` lance les tests : les
+parcours USSD, SMS et vocal, le classement, l'assistant, et le refus de toute
+requête qui écrit. Après une modification de `web/` ou `src/`, reconstruisez la
+page du site : `pnpm build && pnpm --filter @kalangu/example-ndiedieng build:web`.

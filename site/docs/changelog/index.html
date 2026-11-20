@@ -41,6 +41,14 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="n
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>The Ndiédieng prototype is online at kalangu.utachi.website/ndiedieng,
+running entirely in the visitor&#39;s browser (Kalangu, SQLite through sql.js,
+and the API), with a new interface: three phones (a simple keypad phone,
+Android and iPhone, each with its own USSD dialog), voice messages and a
+spoken assistant (the browser&#39;s dictation and speech), and a reworked
+dashboard (search, status filters, relative times, cards on phones). The
+example&#39;s data layer now runs on both Node&#39;s SQLite and sql.js; CI checks
+the published page is built from source.</li>
 <li><code>examples/ndiedieng</code>: a prototype for the commune of Ndiédieng (Senegal), in
 French, on fictitious data (58 villages, 200 equipments, 499 records). Village
 chiefs report breakdowns, births and deaths by USSD or SMS; free SMS are
