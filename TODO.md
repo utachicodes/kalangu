@@ -65,7 +65,21 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
 - [ ] Set a quota on the Gemini key in Google AI Studio
 - [ ] Run Ndiédieng on the Africa's Talking sandbox with their phone
   simulator (needs an account and a public URL for the callbacks)
-- [ ] Menus and voice messages in Wolof and Sérère, reviewed by speakers
+- [ ] Wolof in the example (Gemini already sorts Wolof SMS; everything else
+  is French). Step 1, buildable now, with drafts clearly marked unreviewed:
+  - [ ] Language choice at `*123#` (1. Français / 2. Wolof), remembered per
+    number, with Kalangu's language menu
+  - [ ] The Ndiédieng menus and SMS replies in Wolof (about 40 strings),
+    drafted with Gemini
+  - [ ] Français / Wolof choice on the assistant page; Gemini answers in the
+    chosen language
+  - [ ] Wolof voice messages through Gemini audio transcription (browsers do
+    not dictate Wolof); quality unknown, test with speakers
+  - [ ] A review sheet (French | Wolof draft | correction) for a speaker
+- [ ] Step 2: a Wolof speaker reviews every string (and `locales/wo.draft.json`,
+  where some entries already look wrong) before the field tests on 19 Dec
+- [ ] Then Sérère, the same way; a speaker matters even more there
+- [ ] Check whether Gemini's speech model can speak Wolof
 - [ ] Try `/ndiedieng` on real phones (Android and iPhone, Safari and Chrome),
   dictation included
 - [ ] Hackathon JDL 2026: application due 8 Dec 2026; field tests with the
