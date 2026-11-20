@@ -241,10 +241,8 @@ export function pageHtml(page, rendered) {
 <header class="top">
   <a class="brand" href="/"><i></i>kalangu</a>
   <nav class="top-r" aria-label="Site">
-    <a href="/docs/agents/"${page.url === "/docs/agents/" ? ' aria-current="true"' : ""}>Agents</a>
-    <a href="/docs/providers/"${page.url === "/docs/providers/" ? ' aria-current="true"' : ""}>Providers</a>
+    <!-- Only what the sidebar doesn't already list: no link twice on a page. -->
     <a href="/components/">Components</a>
-    <a href="/contributing/"${page.url === "/contributing/" ? ' aria-current="true"' : ""}>Contributing</a>
     <a href="${REPO}">GitHub</a>
   </nav>
 </header>

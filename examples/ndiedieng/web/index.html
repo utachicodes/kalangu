@@ -26,10 +26,6 @@
   <div class="topbar-meta">
     <span class="pill pill-warn" title="58 villages, 200 équipements et 499 fiches générés pour la démonstration. Aucun numéro n'appartient à une vraie personne.">Données fictives</span>
     <span class="pill" id="mode" title="">Démarrage…</span>
-    <button type="button" class="btn btn-ghost search-btn" id="palette-open" aria-keyshortcuts="Control+K Meta+K">
-      <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <span>Rechercher</span> <kbd id="palette-kbd">⌘K</kbd>
-    </button>
     <button type="button" class="btn btn-ghost" id="help-open">Aide</button>
     <a class="btn btn-orb" href="assistant/"><span class="mini-orb" aria-hidden="true"></span>Assistant</a>
   </div>
@@ -68,11 +64,12 @@
         <button type="button" class="chip-urgent" id="urgent" aria-pressed="false"><span class="dot" aria-hidden="true"></span>Urgents <b id="k-urgent">0</b></button>
       </div>
       <div class="toolbar">
-        <label class="search">
-          <span class="visually-hidden">Rechercher</span>
+        <!-- The one search: it opens the quick search (also Ctrl/Cmd + K). -->
+        <button type="button" class="search search-trigger" id="palette-open" aria-keyshortcuts="Control+K Meta+K" aria-haspopup="dialog">
           <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="q" type="search" placeholder="Rechercher" autocomplete="off">
-        </label>
+          <span class="search-label" id="q-label">Rechercher un signalement, un village…</span>
+          <kbd id="palette-kbd">⌘K</kbd>
+        </button>
         <label class="field-inline">
           <span class="visually-hidden">Catégorie</span>
           <select id="categorie">
@@ -138,7 +135,6 @@
         <button type="button" class="btn btn-danger-ghost" id="rd-delete">Supprimer</button>
       </div>
       <div class="foot-right">
-        <button type="button" class="btn" data-close>Fermer</button>
         <button type="submit" class="btn btn-primary" id="rd-save">Enregistrer</button>
       </div>
     </footer>

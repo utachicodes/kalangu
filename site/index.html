@@ -183,8 +183,6 @@ a { color: inherit; text-decoration: none; }
   font: 500 13px/1 'Inter Tight', system-ui, sans-serif; cursor: pointer;
 }
 .qs-copy:hover { background: var(--cream); color: var(--ink); }
-.qs-links { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 20px; font-size: 15px; font-weight: 500; }
-.qs-links a:hover { opacity: .6; }
 
 /* ---------- Phones ---------- */
 @media (max-width: 760px) {
@@ -248,14 +246,10 @@ html { scroll-behavior: smooth; }
 .codebox .qs-bar { font-size: 13px; }
 .codebox pre { margin: 0; padding: 20px 22px 22px; overflow: auto; font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .tk-k { color: #F2A65A; } .tk-s { color: #A8D58A; } .tk-c { color: rgba(251, 246, 239, .45); } .tk-f { color: #8CC8F2; }
-.example { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: center; margin-top: 40px; padding: 36px 40px; border-radius: 22px;
+.example { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; align-items: center; margin-top: 40px; padding: 36px 40px; border-radius: 22px;
   background: radial-gradient(60% 120% at 100% 100%, rgba(246, 222, 104, .7), transparent 70%), linear-gradient(135deg, #F4EBC6, #F9CBA9); }
 .example h3 { font-size: 34px; letter-spacing: -.03em; font-weight: 500; line-height: 1.05; }
 .example p { margin-top: 10px; font-size: 17px; line-height: 1.5; color: rgba(13, 13, 12, .7); font-weight: 500; max-width: 54ch; }
-.example .btns { display: flex; flex-direction: column; gap: 10px; }
-.btn-lg { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 54px; padding: 0 22px; border: 1.4px solid var(--ink); border-radius: 8px; font-size: 16px; font-weight: 500; transition: background .2s, color .2s; white-space: nowrap; }
-.btn-lg:hover, .btn-lg.solid { background: var(--ink); color: var(--cream); }
-.btn-lg.solid:hover { background: transparent; color: var(--ink); }
 .install { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 32px; }
 .install .codebox { flex: 1 1 520px; box-shadow: none; }
 .install .codebox pre { padding: 16px 20px; font-size: 14.5px; white-space: pre-wrap; word-break: break-word; }
@@ -272,8 +266,7 @@ html { scroll-behavior: smooth; }
   .why-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .code-sec { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .example { grid-template-columns: minmax(0, 1fr); padding: 28px 24px; }
-  .example .btns { flex-direction: row; flex-wrap: wrap; }
-}
+  }
 @media (max-width: 600px) {
   .more { padding: 0 16px; }
   .sec { padding-top: 64px; }
@@ -413,9 +406,6 @@ html { scroll-behavior: smooth; }
         <h3>Ndiédieng, Senegal</h3>
         <p>Village chiefs dial <code>*123#</code> on a keypad phone, an Android or an iPhone to report a broken borehole. The town hall sees it, fixes it, and the chief gets an SMS. Ask the assistant out loud. 58 fictional villages, nothing to install.</p>
       </div>
-      <div class="btns">
-        <a class="btn-lg solid" href="/ndiedieng/">Try the live example</a>
-        <a class="btn-lg" href="/components/">See the components</a>
       </div>
     </div>
   </section>
@@ -428,17 +418,15 @@ html { scroll-behavior: smooth; }
         <div class="qs-bar"><span>Terminal</span><button class="qs-copy" type="button" data-copy="code-install">Copy</button></div>
         <pre><code id="code-install">npm install @kalangu/core @kalangu/ussd @kalangu/sms</code></pre>
       </div>
-      <a class="btn-lg solid" href="/docs/quick-start/" data-open-qs>Quick start</a>
-      <a class="btn-lg" href="/docs/">Read the docs</a>
     </div>
-    <p class="alpha">Alpha: on npm and tested, but the API may still change before 1.0, and it hasn't met a real operator yet. <a href="/docs/roadmap/">See the roadmap</a>.</p>
+    <p class="alpha">Alpha: on npm and tested, but the API may still change before 1.0, and it hasn't met a real operator yet.</p>
   </section>
 
   <footer class="foot">
     <svg class="drum-mini" viewBox="0 0 96 120" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="40" cy="20" rx="24" ry="6"/><ellipse cx="40" cy="96" rx="24" ry="6"/><path d="M16 20c0 14 14 22 14 38s-14 24-14 38M64 20c0 14-14 22-14 38s14 24 14 38"/><path d="M70 10c10 6 16 16 14 30"/></svg>
     <span>Named after the Hausa talking drum, which carried messages between towns long before phones.</span>
     <nav aria-label="Footer">
-      <a href="/docs/">Docs</a><a href="/components/">Components</a><a href="/docs/changelog/">Changelog</a><a href="/contributing/">Contribute</a><a href="https://github.com/utachicodes/kalangu">GitHub</a>
+      <a href="/docs/changelog/">Changelog</a><a href="https://github.com/utachicodes/kalangu">GitHub</a>
     </nav>
     <span class="fine">MIT licensed · built in the open</span>
   </footer>
@@ -491,7 +479,6 @@ node agent.mjs</code></pre>
     <div class="qs-bar"><span>Terminal</span><button class="qs-copy" type="button" data-copy="qs-repo">Copy</button></div>
     <pre><code id="qs-repo">git clone https://github.com/utachicodes/kalangu.git &amp;&amp; cd kalangu &amp;&amp; pnpm install &amp;&amp; pnpm demo</code></pre>
   </div>
-  <p class="qs-links"><a href="/docs/agents/">Build an agent &rarr;</a><a href="/docs/providers/">Connect a model or gateway &rarr;</a></p>
 </dialog>
 
 <script>
@@ -609,7 +596,7 @@ node agent.mjs</code></pre>
 (() => {
   const dialog = document.getElementById('qs');
   if (!dialog || typeof dialog.showModal !== 'function') return;
-  for (const open of document.querySelectorAll('#flash, [data-open-qs]')) {
+  for (const open of document.querySelectorAll('#flash')) {
     open.addEventListener('click', (e) => {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
       e.preventDefault();
