@@ -179,10 +179,11 @@ pnpm --filter @kalangu/example-ndiedieng build:web   # the page, into site/ndied
 pnpm --filter @kalangu/example-ndiedieng start       # http://localhost:3000
 ```
 
-Every UI piece in it (the voice orb, the phone simulators, the quick search,
-the undo toast and more) is hand-built with no UI library; the
-[components page](https://kalangu.utachi.website/components/) shows each one
-live, with its code and the reason it exists.
+The pieces we could not find elsewhere while building it are on the
+[components page](https://kalangu.utachi.website/components/), live and with
+their code: a USSD and SMS screen preview running Kalangu's budgeter, one USSD
+session on three phones, a voice orb on your real microphone, dictation that
+never hangs, and spoken answers that play on iPhones.
 
 The example's own README, in French, covers Gemini, the Africa's Talking
 gateway and every file: [examples/ndiedieng/README.md](examples/ndiedieng/README.md).

@@ -93,13 +93,6 @@ body.gem {
 .gem-icon.send { background: #1f1f1f; color: #fff; }
 .gem-icon.send:hover { background: #3c3c3c; }
 .fine { position: relative; z-index: 1; margin: 6px auto 0; width: min(760px, 100%); text-align: center; font-size: 12px; color: var(--g-ink-3); }
-.aurora { position: absolute; left: 0; right: 0; bottom: 0; height: 240px; z-index: 0; pointer-events: none; opacity: 0; transition: opacity .3s; overflow: hidden; }
-.aurora.on { opacity: calc(.3 + var(--level, 0) * .7); }
-.aurora i { position: absolute; bottom: -140px; width: 60%; height: 260px; border-radius: 50%; filter: blur(60px); transform: scale(calc(.8 + var(--level, 0) * .5)); transition: transform .1s; }
-.aurora i:nth-child(1) { left: -5%; background: var(--g-blue); animation: sway 4s ease-in-out infinite alternate; }
-.aurora i:nth-child(2) { left: 22%; background: var(--g-purple); animation: sway 3.2s ease-in-out infinite alternate-reverse; }
-.aurora i:nth-child(3) { right: -5%; background: var(--g-pink); animation: sway 3.6s ease-in-out infinite alternate; }
-@keyframes sway { from { translate: -6% 0; } to { translate: 6% 0; } }
 
 /* ---------- The orb ----------
    idle: breathes slowly; listening: grows with the voice (--level);
@@ -154,6 +147,34 @@ body.fresh .orb { --size: 132px; }
 .suggest { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 body.fresh .hello { text-align: center; }
 body.fresh .ideas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+/* ---------- The glow at the bottom of the screen ----------
+   A wide band of the four colours rising from the bottom edge: it swells with
+   the voice (--level), drifts slowly, and breathes low while thinking. */
+.aurora { position: fixed; left: 0; right: 0; bottom: 0; height: 60vh; z-index: 0; pointer-events: none; opacity: 0; transition: opacity .5s ease; overflow: hidden; }
+.aurora.on { opacity: 1; }
+.aurora i { position: absolute; left: -25%; right: -25%; bottom: 0; border-radius: 50% 50% 0 0 / 100% 100% 0 0; transform-origin: bottom center; will-change: transform; }
+/* The broad colour band. */
+.aurora i:nth-child(1) { height: 70%;
+  background: linear-gradient(90deg, #4285f4, #9b72cb, #d96570, #f6c344, #3cc6f2, #4285f4);
+  background-size: 200% 100%; filter: blur(70px); opacity: .55;
+  transform: translateY(42%) scaleY(calc(.55 + var(--level, 0) * .9));
+  animation: band 9s linear infinite; transition: transform .14s ease-out; }
+/* A brighter, narrower core that follows the voice more sharply. */
+.aurora i:nth-child(2) { left: 5%; right: 5%; height: 45%;
+  background: linear-gradient(90deg, #9b72cb, #4285f4, #3cc6f2, #d96570, #9b72cb);
+  background-size: 220% 100%; filter: blur(48px); opacity: .6;
+  transform: translateY(55%) scaleY(calc(.35 + var(--level, 0) * 1.3));
+  animation: band 6s linear infinite reverse; transition: transform .1s ease-out; }
+/* A soft white haze where the light meets the bottom edge. */
+.aurora i:nth-child(3) { left: 15%; right: 15%; height: 22%; background: radial-gradient(50% 100% at 50% 100%, rgba(255,255,255,.9), transparent 75%);
+  filter: blur(18px); opacity: calc(.4 + var(--level, 0) * .5); transform: translateY(30%); }
+@keyframes band { to { background-position: 200% 0; } }
+.aurora.thinking i:nth-child(1), .aurora.thinking i:nth-child(2) { animation-duration: 2.4s, 2.4s; }
+.aurora.thinking { opacity: .7; }
+.aurora.thinking i:nth-child(1) { transform: translateY(48%) scaleY(.5); animation: band 2.4s linear infinite, breathe-band 1.6s ease-in-out infinite; }
+@keyframes breathe-band { 50% { opacity: .35; } }
+.gem-foot > *:not(.aurora) { position: relative; z-index: 1; }
 
 .booting-veil { position: fixed; inset: 0; z-index: 30; display: grid; place-content: center; justify-items: center; gap: 14px; background: #fff; color: var(--g-ink-3); font-size: 15px; }
 

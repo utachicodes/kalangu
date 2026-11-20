@@ -332,12 +332,20 @@ export function unlockVoice() {
   }
 }
 
-/**
- * Reads `text` with Gemini's voice. Resolves once it starts (or throws, so
- * the caller can use the browser's voice); onLevel gets 0..1 as it speaks.
- */
-export async function speakNatural(text, { onStart, onEnd, onLevel } = {}) {
-  stopNatural();
+/** The answer in short pieces, sentence by sentence, so the first can play while the next is prepared. */
+function speechChunks(text) {
+  const sentences = text.match(/[^.!?;:]+[.!?;:]*\s*/g) ?? [text];
+  const chunks = [];
+  for (const s of sentences) {
+    const last = chunks.length - 1;
+    // The first piece stays short (it decides how soon the voice starts); later ones may grow.
+    if (last >= 0 && chunks[last].length + s.length < (last === 0 ? 90 : 260)) chunks[last] += s;
+    else chunks.push(s);
+  }
+  return chunks.map((c) => c.trim()).filter(Boolean);
+}
+
+async function fetchSpeech(text) {
   const res = await fetch(SPEECH_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -347,23 +355,53 @@ export async function speakNatural(text, { onStart, onEnd, onLevel } = {}) {
   const body = await res.json().catch(() => ({}));
   if (!res.ok || !body.result?.data) throw new Error(body.error ?? `speech ${res.status}`);
   const bytes = Uint8Array.from(atob(body.result.data), (c) => c.charCodeAt(0));
-  const url = URL.createObjectURL(new Blob([bytes], { type: body.result.mimeType || "audio/wav" }));
-  player ??= Object.assign(new Audio(), { playsInline: true });
-  const current = { url, raf: 0, done: false };
+  return URL.createObjectURL(new Blob([bytes], { type: body.result.mimeType || "audio/wav" }));
+}
+
+/**
+ * Reads `text` with Gemini's voice, piece by piece: the first sentence plays
+ * as soon as it is ready while the next is fetched. Resolves once it starts
+ * (or throws, so the caller can use the browser's voice); onLevel gets 0..1.
+ */
+export async function speakNatural(text, { onStart, onEnd, onLevel } = {}) {
+  stopNatural();
+  const chunks = speechChunks(text);
+  const current = { raf: 0, done: false, urls: [] };
   playing = current;
+  const pending = chunks.map(() => null);
+  const get = (i) => (pending[i] ??= fetchSpeech(chunks[i]).then((url) => (current.urls.push(url), url)));
   const finish = () => {
     if (current.done) return;
     current.done = true;
     cancelAnimationFrame(current.raf);
-    URL.revokeObjectURL(url);
+    current.urls.forEach((u) => URL.revokeObjectURL(u));
     if (playing === current) playing = null;
     onLevel?.(0);
     onEnd?.();
   };
-  player.onended = finish;
-  player.onerror = finish;
-  player.src = url;
-  await player.play();
+  current.stop = finish;
+  player ??= Object.assign(new Audio(), { playsInline: true });
+
+  const first = await get(0); // throws: the caller falls back to the browser's voice
+  if (current.done) return;
+  if (chunks.length > 1) get(1).catch(() => {});
+  const playAt = async (i, url) => {
+    if (current.done) return;
+    player.onended = async () => {
+      if (current.done) return;
+      if (i + 1 >= chunks.length) return finish();
+      if (i + 2 < chunks.length) get(i + 2).catch(() => {});
+      try {
+        playAt(i + 1, await get(i + 1));
+      } catch {
+        finish(); // a later piece failed: stop cleanly rather than half a sentence
+      }
+    };
+    player.onerror = finish;
+    player.src = url;
+    await player.play();
+  };
+  await playAt(0, first);
   onStart?.();
   if (onLevel && !playerAnalyser) {
     // No level to read: a gentle pulse while it speaks.
@@ -384,7 +422,6 @@ export async function speakNatural(text, { onStart, onEnd, onLevel } = {}) {
     };
     tick();
   }
-  current.stop = finish;
 }
 
 export function stopNatural() {
@@ -392,4 +429,121 @@ export function stopNatural() {
   const p = playing;
   player?.pause();
   p.stop?.();
+}
+
+// ---------- Listening through Gemini: record, then transcribe ----------
+// Browsers' own dictation is missing or silent in many of them (Firefox,
+// Brave, Arc…) and knows no Wolof. When the website's function is there,
+// the page records the question itself and Gemini writes it down.
+
+/**
+ * Records one question. Stops by itself after a pause once speech was heard
+ * (or after `maxMs`), or when `stop()` is called. onLevel gets 0..1 as you
+ * speak; onDone gets a base64 WAV (16 kHz mono), or null when nothing was said.
+ */
+export async function recordQuestion({ onLevel, onSpeech, onDone, onError, maxMs = 30_000, silenceMs = 1500, waitMs = 8000 }) {
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (err) {
+    onError?.(err?.name === "NotAllowedError" ? ERRORS["not-allowed"] : ERRORS["audio-capture"]);
+    onDone(null);
+    return { stop() {} };
+  }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume().catch(() => {});
+  const source = ctx.createMediaStreamSource(stream);
+  // ScriptProcessor is old but everywhere, Safari included; it hands us raw samples.
+  const node = ctx.createScriptProcessor(4096, 1, 1);
+  const chunks = [];
+  const started = performance.now();
+  let heard = false;
+  let quietSince = 0;
+  let finished = false;
+  let level = 0;
+  let raf = 0;
+  // The room's own noise, from the first moments: speech is judged against it,
+  // so a quiet voice in a quiet room counts, and a fan in a noisy one doesn't.
+  let floor = 0;
+  let floorSamples = 0;
+  node.onaudioprocess = (e) => {
+    const input = e.inputBuffer.getChannelData(0);
+    chunks.push(new Float32Array(input));
+    let sum = 0;
+    for (let i = 0; i < input.length; i++) sum += input[i] * input[i];
+    const rms = Math.sqrt(sum / input.length);
+    level = Math.min(1, rms * 6);
+    const now = performance.now();
+    if (now - started < 350) {
+      floor = (floor * floorSamples + rms) / ++floorSamples;
+      return;
+    }
+    const speaking = rms > Math.max(0.008, floor * 3);
+    const quiet = rms < Math.max(0.005, floor * 1.8);
+    if (speaking) {
+      if (!heard) onSpeech?.();
+      heard = true;
+      quietSince = 0;
+    } else if (heard && quiet) quietSince ||= now;
+    if ((heard && quietSince && now - quietSince > silenceMs) || now - started > maxMs || (!heard && now - started > waitMs)) finish();
+  };
+  source.connect(node);
+  node.connect(ctx.destination); // required for onaudioprocess to run; the output is silence
+  const draw = () => { onLevel?.(level); raf = requestAnimationFrame(draw); };
+  draw();
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    cancelAnimationFrame(raf);
+    onLevel?.(0);
+    node.disconnect();
+    source.disconnect();
+    stream.getTracks().forEach((t) => t.stop());
+    const rate = ctx.sampleRate;
+    ctx.close().catch(() => {});
+    onDone(heard ? toWav(chunks, rate, 16000) : null);
+  }
+  return { stop: finish };
+}
+
+/** Float samples at `from` Hz, to a base64 16-bit mono WAV at `to` Hz. */
+function toWav(chunks, from, to) {
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const ratio = from / to;
+  const n = Math.floor(total / ratio);
+  const pcm = new DataView(new ArrayBuffer(44 + n * 2));
+  const all = new Float32Array(total);
+  let at = 0;
+  for (const c of chunks) { all.set(c, at); at += c.length; }
+  for (let i = 0; i < n; i++) {
+    // Average the samples that fold into this one: a simple low-pass before downsampling.
+    const a = Math.floor(i * ratio), b = Math.min(total, Math.floor((i + 1) * ratio));
+    let s = 0;
+    for (let j = a; j < b; j++) s += all[j];
+    const v = Math.max(-1, Math.min(1, s / Math.max(1, b - a)));
+    pcm.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true);
+  }
+  const str = (o, t) => { for (let i = 0; i < t.length; i++) pcm.setUint8(o + i, t.charCodeAt(i)); };
+  str(0, "RIFF"); pcm.setUint32(4, 36 + n * 2, true); str(8, "WAVEfmt ");
+  pcm.setUint32(16, 16, true); pcm.setUint16(20, 1, true); pcm.setUint16(22, 1, true);
+  pcm.setUint32(24, to, true); pcm.setUint32(28, to * 2, true); pcm.setUint16(32, 2, true); pcm.setUint16(34, 16, true);
+  str(36, "data"); pcm.setUint32(40, n * 2, true);
+  const bytes = new Uint8Array(pcm.buffer);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/** A recorded question to text, by Gemini through the website's function. */
+export async function transcribe(wavBase64) {
+  const res = await fetch(SPEECH_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ task: "transcribe", audio: wavBase64, mimeType: "audio/wav" }),
+    signal: AbortSignal.timeout(25_000),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? `transcription ${res.status}`);
+  return String(body.result?.texte ?? "").trim();
 }

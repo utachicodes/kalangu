@@ -22,12 +22,15 @@ export type GeminiTask =
   /** A free SMS or voice message from a chief, to a category and an urgency. */
   | { task: "classify"; text: string }
   /** An answer, read aloud by Gemini's speech model: `{ mimeType, data }` (base64 audio). */
-  | { task: "speak"; text: string };
+  | { task: "speak"; text: string }
+  /** A recorded question (base64 WAV), to `{ texte }`: French or Wolof, word for word. */
+  | { task: "transcribe"; audio: string; mimeType: string };
 
 /** Runs a task, wherever the key is. Resolves to the model's JSON answer. */
 export type GeminiCall = (task: GeminiTask) => Promise<unknown>;
 
-const LIMITS = { question: 500, sql: 2000, text: 500, rowsJson: 20_000, speech: 700 };
+const LIMITS = { question: 500, sql: 2000, text: 500, rowsJson: 20_000, speech: 700, audioBase64: 1_400_000 };
+const AUDIO_TYPES = ["audio/wav", "audio/x-wav"];
 
 interface Prompt {
   system: string;
@@ -36,6 +39,8 @@ interface Prompt {
   timeoutMs: number;
   /** "audio": the speech model, which answers with sound instead of JSON. */
   kind?: "json" | "audio";
+  /** Sound sent with the prompt, for transcription. */
+  attachment?: { mimeType: string; data: string };
 }
 
 /** The prompt for a task, or an error message when the input is not acceptable. */
@@ -101,6 +106,22 @@ export function promptFor(input: unknown): Prompt | string {
       timeoutMs: 8000,
     };
   }
+  if (t["task"] === "transcribe") {
+    const audio = t["audio"];
+    const mimeType = t["mimeType"];
+    if (typeof audio !== "string" || !audio || audio.length > LIMITS.audioBase64 || !/^[A-Za-z0-9+/=]+$/.test(audio)) return "audio is missing or too long";
+    if (typeof mimeType !== "string" || !AUDIO_TYPES.includes(mimeType)) return "audio must be WAV";
+    return {
+      system:
+        "Tu transcris une question posée à voix haute à l'assistant de la Mairie de Ndiédieng (Sénégal). " +
+        "Elle peut être en français ou en wolof. Écris exactement ce qui est dit, dans la langue parlée, avec la ponctuation et les accents, sans rien ajouter ni répondre. " +
+        "Si on n'entend rien d'intelligible, renvoie texte = \"\".",
+      user: "Transcris cet enregistrement.",
+      schema: { type: "object", properties: { texte: { type: "string" } }, required: ["texte"] },
+      timeoutMs: 20_000,
+      attachment: { mimeType: "audio/wav", data: audio },
+    };
+  }
   if (t["task"] === "speak") {
     const text = str(t["text"], LIMITS.speech);
     if (!text) return "text is missing or too long";
@@ -148,7 +169,7 @@ export async function generate(options: GenerateOptions, prompt: Prompt): Promis
           }
         : {
             systemInstruction: { parts: [{ text: prompt.system }] },
-            contents: [{ role: "user", parts: [{ text: prompt.user }] }],
+            contents: [{ role: "user", parts: [...(prompt.attachment ? [{ inlineData: prompt.attachment }] : []), { text: prompt.user }] }],
             generationConfig: { responseMimeType: "application/json", responseJsonSchema: prompt.schema },
           },
     ),

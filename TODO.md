@@ -74,12 +74,15 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
   - [ ] Français / Wolof choice on the assistant page; Gemini answers in the
     chosen language
   - [ ] Wolof voice messages through Gemini audio transcription (browsers do
-    not dictate Wolof); quality unknown, test with speakers
+    not dictate Wolof). The assistant already listens through Gemini, and its
+    transcription prompt accepts French or Wolof; quality to test with speakers
+  - [ ] Spoken answers in Wolof (the "speak" task's prompt says French today)
   - [ ] A review sheet (French | Wolof draft | correction) for a speaker
 - [ ] Step 2: a Wolof speaker reviews every string (and `locales/wo.draft.json`,
   where some entries already look wrong) before the field tests on 19 Dec
 - [ ] Then Sérère, the same way; a speaker matters even more there
-- [ ] Check whether Gemini's speech model can speak Wolof
+- [x] Gemini's speech model speaks Wolof (confirmed by the maintainer, 20 Nov
+  2026); quality still to judge with speakers
 - [ ] Try `/ndiedieng` on real phones (Android and iPhone, Safari and Chrome),
   dictation included
 - [ ] Hackathon JDL 2026: application due 8 Dec 2026; field tests with the
@@ -92,8 +95,10 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
   in CI (`pnpm site:check`)
 - [x] Landing page ("Live example" button) and docs overview link the live
   example (`/ndiedieng`), and the sitemap lists it
-- [x] Components page (`/components/`): the example's hand-built UI pieces,
-  live, with their code, nicknames and reasons
+- [x] Components page (`/components/`), cut to what is not available
+  elsewhere: the USSD/SMS screen preview on Kalangu's budgeter, one USSD
+  session on three phones, the voice orb on a real microphone, Marble Jr.,
+  dictation that never hangs, and spoken answers that play on iPhones
 - [ ] Look over the docs pages on a real phone and a desktop after the next
   deploy
 

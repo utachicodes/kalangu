@@ -11,7 +11,8 @@
 import { SCHEMA } from "./schema.js";
 export const CATEGORIES = ["eau", "sante", "ecole", "energie", "piste", "naissance", "deces", "autre"];
 export const NATURE_LIST = ["forage", "borne-fontaine", "poste de sante", "case de sante", "salle de classe", "latrines", "lampadaire solaire", "piste"];
-const LIMITS = { question: 500, sql: 2000, text: 500, rowsJson: 20_000, speech: 700 };
+const LIMITS = { question: 500, sql: 2000, text: 500, rowsJson: 20_000, speech: 700, audioBase64: 1_400_000 };
+const AUDIO_TYPES = ["audio/wav", "audio/x-wav"];
 /** The prompt for a task, or an error message when the input is not acceptable. */
 export function promptFor(input) {
     const t = input;
@@ -76,6 +77,23 @@ export function promptFor(input) {
             timeoutMs: 8000,
         };
     }
+    if (t["task"] === "transcribe") {
+        const audio = t["audio"];
+        const mimeType = t["mimeType"];
+        if (typeof audio !== "string" || !audio || audio.length > LIMITS.audioBase64 || !/^[A-Za-z0-9+/=]+$/.test(audio))
+            return "audio is missing or too long";
+        if (typeof mimeType !== "string" || !AUDIO_TYPES.includes(mimeType))
+            return "audio must be WAV";
+        return {
+            system: "Tu transcris une question posée à voix haute à l'assistant de la Mairie de Ndiédieng (Sénégal). " +
+                "Elle peut être en français ou en wolof. Écris exactement ce qui est dit, dans la langue parlée, avec la ponctuation et les accents, sans rien ajouter ni répondre. " +
+                "Si on n'entend rien d'intelligible, renvoie texte = \"\".",
+            user: "Transcris cet enregistrement.",
+            schema: { type: "object", properties: { texte: { type: "string" } }, required: ["texte"] },
+            timeoutMs: 20_000,
+            attachment: { mimeType: "audio/wav", data: audio },
+        };
+    }
     if (t["task"] === "speak") {
         const text = str(t["text"], LIMITS.speech);
         if (!text)
@@ -113,7 +131,7 @@ export async function generate(options, prompt) {
             }
             : {
                 systemInstruction: { parts: [{ text: prompt.system }] },
-                contents: [{ role: "user", parts: [{ text: prompt.user }] }],
+                contents: [{ role: "user", parts: [...(prompt.attachment ? [{ inlineData: prompt.attachment }] : []), { text: prompt.user }] }],
                 generationConfig: { responseMimeType: "application/json", responseJsonSchema: prompt.schema },
             }),
         signal: AbortSignal.timeout(prompt.timeoutMs),
