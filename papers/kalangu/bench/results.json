@@ -1,0 +1,159 @@
+{
+  "machine": {
+    "cpu": "Apple M3 Pro",
+    "cores": 11,
+    "memGB": 18,
+    "node": "v26.12.1",
+    "platform": "darwin 27.0.0"
+  },
+  "date": "2026-11-21T12:53:54.670Z",
+  "A": {
+    "sessions": 500,
+    "requestsPerSession": 5,
+    "perRequestMs": {
+      "n": 2500,
+      "p50": 0.029,
+      "p95": 0.632,
+      "p99": 0.954,
+      "max": 4.077
+    },
+    "perSessionMs": {
+      "n": 500,
+      "p50": 0.695,
+      "p95": 1.112,
+      "p99": 1.595,
+      "max": 6.154
+    },
+    "reportsCreated": {
+      "nouveau": 518,
+      "a_verifier": 0,
+      "en_cours": 19,
+      "resolu": 0,
+      "haute": 514
+    }
+  },
+  "B": {
+    "deadlineMs": 4000,
+    "slow6000": [
+      {
+        "toScreenMs": 4004,
+        "screenEnded": true,
+        "screenText": "We are working on your question. You will receive an SMS shortly.",
+        "toSmsMs": 6012,
+        "sms": "Answer to \"When is the clinic open?\"."
+      },
+      {
+        "toScreenMs": 4003,
+        "screenEnded": true,
+        "screenText": "We are working on your question. You will receive an SMS shortly.",
+        "toSmsMs": 6011,
+        "sms": "Answer to \"When is the clinic open?\"."
+      },
+      {
+        "toScreenMs": 4001,
+        "screenEnded": true,
+        "screenText": "We are working on your question. You will receive an SMS shortly.",
+        "toSmsMs": 6002,
+        "sms": "Answer to \"When is the clinic open?\"."
+      }
+    ],
+    "fast1500": [
+      {
+        "toScreenMs": 1501,
+        "screenEnded": true,
+        "screenText": "Answer to \"When is the clinic open?\".",
+        "toSmsMs": null,
+        "sms": null
+      },
+      {
+        "toScreenMs": 1502,
+        "screenEnded": true,
+        "screenText": "Answer to \"When is the clinic open?\".",
+        "toSmsMs": null,
+        "sms": null
+      },
+      {
+        "toScreenMs": 1502,
+        "screenEnded": true,
+        "screenText": "Answer to \"When is the clinic open?\".",
+        "toSmsMs": null,
+        "sms": null
+      }
+    ]
+  },
+  "C": [
+    {
+      "locale": "en (built in)",
+      "messages": 32,
+      "ucs2": 0,
+      "ucs2Share": 0,
+      "multiSegment": 0,
+      "culprits": []
+    },
+    {
+      "locale": "fr (built in)",
+      "messages": 32,
+      "ucs2": 3,
+      "ucs2Share": 0.094,
+      "multiSegment": 0,
+      "culprits": [
+        [
+          "ç",
+          2
+        ],
+        [
+          "ê",
+          1
+        ]
+      ]
+    },
+    {
+      "locale": "wo (draft)",
+      "messages": 32,
+      "ucs2": 11,
+      "ucs2Share": 0.344,
+      "multiSegment": 0,
+      "culprits": [
+        [
+          "ë",
+          11
+        ]
+      ]
+    },
+    {
+      "locale": "ha (draft)",
+      "messages": 32,
+      "ucs2": 12,
+      "ucs2Share": 0.375,
+      "multiSegment": 1,
+      "culprits": [
+        [
+          "ɗ",
+          7
+        ],
+        [
+          "ɓ",
+          6
+        ],
+        [
+          "ƙ",
+          2
+        ]
+      ]
+    },
+    {
+      "locale": "sw (draft)",
+      "messages": 32,
+      "ucs2": 0,
+      "ucs2Share": 0,
+      "multiSegment": 0,
+      "culprits": []
+    }
+  ],
+  "D": {
+    "screens": 41,
+    "over160": 0,
+    "maxChars": 134,
+    "meanChars": 91.4
+  }
+}
