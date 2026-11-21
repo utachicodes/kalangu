@@ -66,7 +66,7 @@ describe("the website's Gemini function", () => {
     expect(await res.json()).toEqual({ result: { mimeType: "audio/wav", data: "UklGRg==" } });
     expect(calls[0].url).toContain("/models/tts-model:generateContent");
     expect(calls[0].body.generationConfig).toMatchObject({ responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } });
-    expect(calls[0].body.contents[0].parts[0].text).toMatch(/: 7 forages sont en panne\.$/);
+    expect(calls[0].body.contents[0].parts[0].text).toBe("7 forages sont en panne."); // only the words to say
     expect((await geminiHandler({ apiKey: "k", fetch })(post({ task: "speak", text: "x".repeat(800) }))).status).toBe(400);
   });
 
