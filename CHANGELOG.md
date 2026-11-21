@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Search and sharing: the landing page describes Kalangu to search engines
+  (schema.org WebSite and SoftwareSourceCode), and the landing, components
+  and docs pages share with a 1200×630 card (`site/assets/og.png`) instead of
+  a bare link. The four packages' npm "homepage" now points to the website.
 - The landing page scrolls past the hero to a short "Why Kalangu?": six
   reasons (keypad phones, screens counted before sending, the 4-second
   deadline, any model, languages, testing without a SIM), an agent in one

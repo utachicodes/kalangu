@@ -232,7 +232,11 @@ export function pageHtml(page, rendered) {
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(rendered.description)}">
 <meta property="og:url" content="${SITE_URL}${page.url}">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="${SITE_URL}/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Kalangu: AI agents for every phone. USSD and SMS, keypad phones included. Open source.">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/docs/docs.css">
 </head>

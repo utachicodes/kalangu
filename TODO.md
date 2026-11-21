@@ -108,6 +108,18 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
   dictation that never hangs, and spoken answers that play on iPhones
 - [ ] Look over the docs pages on a real phone and a desktop after the next
   deploy
+- [x] Structured data on the landing page, a share card for every page, npm
+  homepages pointing to the site, more GitHub topics (21 Nov 2026)
+- [x] Google Search Console: verified (TXT record), home page in the priority
+  crawl queue (21 Nov 2026). The verification record had hidden the site from
+  the wildcard DNS record; `kalangu` now has its own ALIAS to Vercel next to
+  the TXT, which must stay
+- [ ] Sitemap in Search Console: it read as "could not be read" while DNS was
+  broken; check it reads (22 pages) once Google tries again
+- [ ] Bing Webmaster Tools: import from Search Console (also covers
+  DuckDuckGo, Yahoo, Ecosia)
+- [ ] Links from elsewhere: LinkedIn, a short write-up (dev.to or Medium),
+  the hackathon application, "awesome" lists
 
 ## v0.1 build order (each piece independently testable)
 

@@ -12,7 +12,11 @@
 <meta property="og:title" content="TODO">
 <meta property="og:description" content="State as of 20 Nov 2026. Design reference: docs/design.md.">
 <meta property="og:url" content="https://kalangu.utachi.website/docs/roadmap/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://kalangu.utachi.website/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Kalangu: AI agents for every phone. USSD and SMS, keypad phones included. Open source.">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/docs/docs.css">
 </head>
@@ -142,6 +146,18 @@ session on three phones, the voice orb on a real microphone, Marble Jr.,
 dictation that never hangs, and spoken answers that play on iPhones</li>
 <li><input disabled="" type="checkbox"> Look over the docs pages on a real phone and a desktop after the next
 deploy</li>
+<li><input checked="" disabled="" type="checkbox"> Structured data on the landing page, a share card for every page, npm
+homepages pointing to the site, more GitHub topics (21 Nov 2026)</li>
+<li><input checked="" disabled="" type="checkbox"> Google Search Console: verified (TXT record), home page in the priority
+crawl queue (21 Nov 2026). The verification record had hidden the site from
+the wildcard DNS record; <code>kalangu</code> now has its own ALIAS to Vercel next to
+the TXT, which must stay</li>
+<li><input disabled="" type="checkbox"> Sitemap in Search Console: it read as &quot;could not be read&quot; while DNS was
+broken; check it reads (22 pages) once Google tries again</li>
+<li><input disabled="" type="checkbox"> Bing Webmaster Tools: import from Search Console (also covers
+DuckDuckGo, Yahoo, Ecosia)</li>
+<li><input disabled="" type="checkbox"> Links from elsewhere: LinkedIn, a short write-up (dev.to or Medium),
+the hackathon application, &quot;awesome&quot; lists</li>
 </ul>
 <h2 id="v01-build-order-each-piece-independently-testable">v0.1 build order (each piece independently testable)<a class="anchor" href="#v01-build-order-each-piece-independently-testable" aria-label="Link to this section">#</a></h2>
 <ul>
