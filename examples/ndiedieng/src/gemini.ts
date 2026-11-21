@@ -152,11 +152,10 @@ export function promptFor(input: unknown): Prompt | string {
     return {
       kind: "audio",
       system: "",
-      // The style goes before the colon; only what follows is spoken.
-      user:
-        langue === "wo"
-          ? `Lis ceci en wolof du Sénégal, avec une prononciation naturelle, d'une voix chaleureuse, claire et posée : ${text}`
-          : `Lis ceci en français, d'une voix chaleureuse, claire et posée, à un rythme naturel : ${text}`,
+      // Only the words to say. A spoken style instruction ("read this warmly:")
+      // was read aloud along with the answer, so the speech model gets the
+      // text alone and takes the language from it.
+      user: text,
       schema: {},
       timeoutMs: 20_000,
     };

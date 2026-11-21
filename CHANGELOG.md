@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Ndiédieng's spoken answers no longer read their own instruction aloud
+  ("Lis ceci en français, d'une voix chaleureuse…"): the speech model now
+  gets only the words to say. Checked by transcribing the generated speech
+  back, in French and in Wolof.
+
 ### Added
 
 - Search and sharing: the landing page describes Kalangu to search engines

@@ -127,7 +127,7 @@ describe("answering in the question's language", () => {
     const answer = promptFor({ task: "answer", question: "q", sql: "SELECT 1", rows: [], langue: "wo" });
     expect(typeof answer === "object" && answer.system).toMatch(/en wolof du Sénégal/);
     const spoken = promptFor({ task: "speak", text: "Jërëjëf", langue: "wo" });
-    expect(typeof spoken === "object" && spoken.user).toMatch(/^Lis ceci en wolof/);
+    expect(typeof spoken === "object" && spoken.user).toBe("Jërëjëf"); // the words alone: no instruction to read aloud
     expect(promptFor({ task: "speak", text: "Hello", langue: "en" })).toBe("langue must be fr or wo");
     expect(promptFor({ task: "answer", question: "q", sql: "SELECT 1", rows: [] })).toMatchObject({ system: expect.stringMatching(/en français correct/) });
   });
