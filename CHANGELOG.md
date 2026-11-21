@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A short paper, `papers/kalangu` (IEEE format, LaTeX and PDF): Kalangu's
+  design, the Ndiédieng case study, and measurements on the built packages
+  (fixed-menu latency, deferral timing, SMS encoding cost per language, screen
+  budget), with the benchmark script and its raw results.
 - Search and sharing: the landing page describes Kalangu to search engines
   (schema.org WebSite and SoftwareSourceCode), and the landing, components
   and docs pages share with a 1200×630 card (`site/assets/og.png`) instead of
