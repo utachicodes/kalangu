@@ -108,6 +108,14 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
   dictation that never hangs, and spoken answers that play on iPhones
 - [ ] Look over the docs pages on a real phone and a desktop after the next
   deploy
+- [x] Structured data on the landing page, a share card for every page, npm
+  homepages pointing to the site, more GitHub topics (21 Nov 2026)
+- [ ] Google Search Console: verify kalangu.utachi.website (DNS TXT record
+  at the registrar), submit the sitemap, request indexing of the home page
+- [ ] Bing Webmaster Tools: import from Search Console (also covers
+  DuckDuckGo, Yahoo, Ecosia)
+- [ ] Links from elsewhere: LinkedIn, a short write-up (dev.to or Medium),
+  the hackathon application, "awesome" lists
 
 ## v0.1 build order (each piece independently testable)
 
