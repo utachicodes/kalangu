@@ -9,6 +9,7 @@ study, measurements on the built packages, and what is still unverified.
 | `paper.tex` | The paper (IEEEtran, compiled with XeTeX) |
 | `refs.bib` | References: standards, gateway docs, surveyed packages |
 | `paper.pdf` | The compiled paper |
+| `paper.docx` | The same paper in Word, IEEE layout (two columns, Times), with the figures as images |
 | `bench/bench.mjs` | The measurements of Section VI, on the built packages |
 | `bench/results.json` | Their raw output, with the machine they ran on |
 
@@ -32,3 +33,5 @@ No network, account or API key: everything runs on Kalangu's simulator. Update
 the numbers in Section VI if they change.
 
 The authors and acknowledgments are placeholders to fill in before submission.
+`paper.docx` was made from the same text: if `paper.tex` changes, change the
+Word file too (or regenerate it) so the two stay the same.
