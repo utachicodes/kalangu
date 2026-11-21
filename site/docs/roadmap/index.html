@@ -148,8 +148,12 @@ dictation that never hangs, and spoken answers that play on iPhones</li>
 deploy</li>
 <li><input checked="" disabled="" type="checkbox"> Structured data on the landing page, a share card for every page, npm
 homepages pointing to the site, more GitHub topics (21 Nov 2026)</li>
-<li><input disabled="" type="checkbox"> Google Search Console: verify kalangu.utachi.website (DNS TXT record
-at the registrar), submit the sitemap, request indexing of the home page</li>
+<li><input checked="" disabled="" type="checkbox"> Google Search Console: verified (TXT record), home page in the priority
+crawl queue (21 Nov 2026). The verification record had hidden the site from
+the wildcard DNS record; <code>kalangu</code> now has its own ALIAS to Vercel next to
+the TXT, which must stay</li>
+<li><input disabled="" type="checkbox"> Sitemap in Search Console: it read as &quot;could not be read&quot; while DNS was
+broken; check it reads (22 pages) once Google tries again</li>
 <li><input disabled="" type="checkbox"> Bing Webmaster Tools: import from Search Console (also covers
 DuckDuckGo, Yahoo, Ecosia)</li>
 <li><input disabled="" type="checkbox"> Links from elsewhere: LinkedIn, a short write-up (dev.to or Medium),

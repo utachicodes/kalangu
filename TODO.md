@@ -110,8 +110,12 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
   deploy
 - [x] Structured data on the landing page, a share card for every page, npm
   homepages pointing to the site, more GitHub topics (21 Nov 2026)
-- [ ] Google Search Console: verify kalangu.utachi.website (DNS TXT record
-  at the registrar), submit the sitemap, request indexing of the home page
+- [x] Google Search Console: verified (TXT record), home page in the priority
+  crawl queue (21 Nov 2026). The verification record had hidden the site from
+  the wildcard DNS record; `kalangu` now has its own ALIAS to Vercel next to
+  the TXT, which must stay
+- [ ] Sitemap in Search Console: it read as "could not be read" while DNS was
+  broken; check it reads (22 pages) once Google tries again
 - [ ] Bing Webmaster Tools: import from Search Console (also covers
   DuckDuckGo, Yahoo, Ecosia)
 - [ ] Links from elsewhere: LinkedIn, a short write-up (dev.to or Medium),
