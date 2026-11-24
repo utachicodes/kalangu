@@ -119,17 +119,23 @@ foraj ñoo yaqu…&quot; → the 8 broken boreholes, answered in Wolof); not yet
 with a real speaker</li>
 <li><input disabled="" type="checkbox"> Wolof voice messages through Gemini audio transcription (browsers do
 not dictate Wolof). The assistant already listens through Gemini, and its
-transcription prompt accepts French or Wolof; quality to test with speakers</li>
+transcription prompt accepts French or Wolof; quality to test with speakers.
+Open alternatives to compare: <code>whosper</code> (CAYTU&#39;s Whisper fine-tune for
+Wolof) and Adia TTS (CONCREE), both packaged by sudoping01; read their
+licences first</li>
 <li><input checked="" disabled="" type="checkbox"> Spoken answers in Wolof (the &quot;speak&quot; task takes the language)</li>
 <li><input checked="" disabled="" type="checkbox"> A review sheet (French | Wolof draft | correction):
 <code>examples/ndiedieng/wolof-review.csv</code>, generated from <code>strings.ts</code> and
 checked in the tests</li>
 </ul>
 </li>
-<li><input disabled="" type="checkbox"> Step 2: a Wolof speaker reviews every string in the sheet (and
-<code>locales/wo.draft.json</code>, redrafted by hand on 24 Nov, payments included)
-before the field tests on 19 Dec. The maintainer speaks Wolof; a second speaker
-should still check what the maintainer corrects</li>
+<li><input checked="" disabled="" type="checkbox"> Second draft of the Ndiédieng Wolof strings (24 Nov): &quot;faatu&quot; for a
+death, &quot;yàkkamti&quot; for urgent, no invented words</li>
+<li><input disabled="" type="checkbox"> Step 2: the maintainer reviews every string in
+<code>examples/ndiedieng/wolof-review.csv</code> (fill the <code>correction</code> column; the
+corrections then go into <code>src/strings.ts</code>, and the <code>kalangu.*</code> rows into
+<code>locales/wo.draft.json</code> too) before the field tests on 19 Dec. A second
+speaker should still check what the maintainer corrects</li>
 <li><input checked="" disabled="" type="checkbox"> The website demo keeps each chief&#39;s language across reloads, with the
 reports and inboxes (a conversation in progress is not kept)</li>
 <li><input disabled="" type="checkbox"> Then Sérère, the same way; a speaker matters even more there</li>
@@ -271,6 +277,9 @@ priors (languages design §4, §9.4)</li>
 CONTRIBUTING.md): drafts only, marked unreviewed</li>
 <li><input checked="" disabled="" type="checkbox"> Wolof, Hausa and Swahili machine drafts (Gemini, 19 Nov 2026), through
 the checker and checked in CI: <code>locales/*.draft.json</code>, marked not reviewed</li>
+<li><input checked="" disabled="" type="checkbox"> Second pass on the drafts (24 Nov 2026): Wolof redrafted by hand by a
+speaker, <code>common.*</code> and <code>payments.*</code>; Hausa and Swahili clear errors fixed
+by a non-speaker. Still unreviewed</li>
 <li><input checked="" disabled="" type="checkbox"> Draft the text normalization design:
 <a href="/docs/design/normalization/">docs/normalization-design.md</a> (fold,
 render for USSD, canonicalize; Gemini offline only; own repo later)</li>
@@ -280,8 +289,27 @@ accents, case, spacing and apostrophe style, and against the USSD form of
 the label (normalization design §11 step 1)</li>
 <li><input disabled="" type="checkbox"> Review the normalization design and its questions for native speakers
 (§10, §12)</li>
-<li><input disabled="" type="checkbox"> Native speakers to review the Wolof, Hausa and Swahili drafts in
-<code>locales/</code> (<code>locales/README.md</code> says how)</li>
+<li><input disabled="" type="checkbox"> Native speakers to review the drafts in <code>locales/</code> (<code>locales/README.md</code>
+says how): Hausa in #98 (<code>Eh</code> or <code>I</code> for Yes; masculine &quot;ka&quot; forms), Swahili
+in #99 (mobile money wording, Kenya/Tanzania spelling), Wolof by a second
+speaker after the maintainer&#39;s corrections</li>
+<li><input checked="" disabled="" type="checkbox"> Bambara in Mali&#39;s default language order (<code>fr, bm</code>), released in
+<code>0.1.0-alpha.10</code></li>
+<li><input disabled="" type="checkbox"> Bambara draft locale, <code>locales/bm.draft.json</code>: parked on 24 Nov because
+<code>gemini-3.5-flash-lite</code> answered 503 and the free-tier key has no Pro
+quota. Retry with
+<code>node scripts/translate-locale.mjs bm --name Bambara --reference fr --model gemini-3.8-flash</code>,
+then the README row, a changelog entry and a &quot;Translation review: Bambara&quot;
+issue (sudoping01 / MALIBA-AI are the people to ask)</li>
+<li><input disabled="" type="checkbox"> Bambara on USSD: <code>ɛ</code>, <code>ɔ</code>, <code>ɲ</code>, <code>ŋ</code> collapse to <code>e</code>, <code>o</code>, <code>n</code>, so <code>ɛ</code>/<code>e</code>
+and <code>ɔ</code>/<code>o</code> can no longer be told apart; a speaker to say which words become
+ambiguous (normalization design). By SMS each one means 70 characters per
+segment</li>
+<li><input disabled="" type="checkbox"> Evaluate Bambara speech and translation before relying on any:
+Djelia (paid API: translation, speech to text, text to speech), MALIBA-AI
+(<code>bambara-asr</code>, <code>bambara-tts</code>, <code>maliba-llm</code>) and RobotsMali (<code>bam-vits</code>,
+ASR models). Their licences are not stated on the pages read on 24 Nov;
+read each model card. No Bambara language detector was found</li>
 </ul>
 <h2 id="version-04-channels">Version 0.4: channels<a class="anchor" href="#version-04-channels" aria-label="Link to this section">#</a></h2>
 <ul>
