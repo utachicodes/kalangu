@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kalangu: 0.3 languages design · Kalangu</title>
-<meta name="description" content="Status: draft for review. No language code exists, and none should be written until this document is reviewed. Date: 2026-11-17 (first draft 2026-11-16, revised">
+<meta name="description" content="Status: built and released, except a detector, which Kalangu does not ship (§6). What exists is in §9.4 and §9.5, the decisions taken while building are in §14,">
 <link rel="canonical" href="https://kalangu.utachi.website/docs/design/languages/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Kalangu">
 <meta property="og:title" content="Kalangu: 0.3 languages design">
-<meta property="og:description" content="Status: draft for review. No language code exists, and none should be written until this document is reviewed. Date: 2026-11-17 (first draft 2026-11-16, revised">
+<meta property="og:description" content="Status: built and released, except a detector, which Kalangu does not ship (§6). What exists is in §9.4 and §9.5, the decisions taken while building are in §14,">
 <meta property="og:url" content="https://kalangu.utachi.website/docs/design/languages/">
 <meta property="og:image" content="https://kalangu.utachi.website/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -38,8 +38,12 @@
   <main id="content">
     <article class="doc">
 <h1 id="kalangu-03-languages-design">Kalangu: 0.3 languages design</h1>
-<p>Status: <strong>draft for review. No language code exists, and none should be
-written until this document is reviewed.</strong>
+<p>Status: <strong>built and released</strong>, except a detector, which Kalangu does not
+ship (§6). What exists is in §9.4 and §9.5, the decisions taken while building
+are in §14, and what still needs a real detector, speakers or operators is in
+§12. Where an earlier section and §9.4–§9.5 differ, §9.4–§9.5 describe the
+code. Reviewed 24 Nov 2026 against the code and the first Wolof, Hausa,
+Swahili and Bambara work.
 Date: 2026-11-17 (first draft 2026-11-16, revised after reading CommonLingua&#39;s
 model card and checking the draft against the code). Scope: version 0.3 only:
 choosing the user&#39;s language, optional detection as a hint, per-language
@@ -152,6 +156,18 @@ Hausa as English or French. That is an announcement claim.</li>
 <td><code>c</code>, <code>e</code>, <code>o</code></td>
 </tr>
 <tr>
+<td><code>ɛ</code>, <code>ɔ</code></td>
+<td>Bambara</td>
+<td>outside GSM-7</td>
+<td><code>e</code>, <code>o</code></td>
+</tr>
+<tr>
+<td><code>ɲ</code>, <code>ŋ</code></td>
+<td>Bambara</td>
+<td>outside GSM-7</td>
+<td><code>ny</code>, <code>ng</code></td>
+</tr>
+<tr>
 <td>plain a–z</td>
 <td>Swahili</td>
 <td>GSM-7</td>
@@ -161,11 +177,20 @@ Hausa as English or French. That is an announcement claim.</li>
 <p>One character outside GSM-7 makes the whole SMS UCS-2: <strong>70 characters per
 segment instead of 160</strong> (67 instead of 153 when joined), so the 4-segment
 cap is 268 characters instead of 612. Wolof and Hausa text will usually be
-UCS-2; Swahili will not. On USSD, everything is reduced to ASCII, so
-<strong>Hausa&#39;s <code>ɓ</code>/<code>b</code>, <code>ɗ</code>/<code>d</code> and <code>ƙ</code>/<code>k</code>, which are different sounds, become
-the same letter.</strong> That is a limit of the gateway&#39;s &quot;no special characters&quot;
-rule (<code>design.md</code> §2), not something Kalangu can fix; it needs saying to
-anyone translating for USSD.</p>
+UCS-2; Swahili will not; Bambara written in its standard spelling always
+will. On USSD, everything is reduced to ASCII, and two kinds of change
+matter differently:</p>
+<ul>
+<li><strong>Letters that merge with another letter,</strong> so two words can become one:
+Hausa&#39;s <code>ɓ</code>/<code>b</code>, <code>ɗ</code>/<code>d</code> and <code>ƙ</code>/<code>k</code>, which are different sounds, and
+Bambara&#39;s vowels <code>ɛ</code>/<code>e</code> and <code>ɔ</code>/<code>o</code>.</li>
+<li><strong>Letters spelled out,</strong> which stay distinct: <code>ŋ</code> becomes <code>ng</code> and <code>ɲ</code>
+becomes <code>ny</code> (checked with <code>toUssdSafe</code>, 24 Nov 2026), as many writers
+already type them.</li>
+</ul>
+<p>That is a limit of the gateway&#39;s &quot;no special characters&quot; rule (<code>design.md</code>
+§2), not something Kalangu can fix; it needs saying to anyone translating for
+USSD, and a speaker has to say which merged words become ambiguous.</p>
 <hr>
 <h2 id="3-what-this-changes-in-the-first-draft">3. What this changes in the first draft<a class="anchor" href="#3-what-this-changes-in-the-first-draft" aria-label="Link to this section">#</a></h2>
 <p>The first draft was written before these facts. It said, and this revision
@@ -237,15 +262,16 @@ messages on SMS and WhatsApp, which are longer than keypad input. Never on
 a menu number.</li>
 <li><strong>What it does with a result:</strong> it never switches the language silently.
 It suggests: after a confident, long-enough result that differs from the
-stored locale, the agent offers the language menu once (&quot;Reply in
-Kiswahili? 1. Yes 2. No&quot;), and remembers a &quot;No&quot; for the session.</li>
+stored locale, the agent asks once, in the suggested language, &quot;Continue
+in {language}?&quot;, holding the typed answer until the user replies. A &quot;No&quot;
+is kept for good for that number (§9.5 has the built rules).</li>
 <li><strong>No default threshold.</strong> <code>confidence</code> means different things in different
 detectors, and CommonLingua&#39;s score is not documented as calibrated. The
 threshold is required configuration, and the project ships a way to
 measure one (§12) rather than a number to trust.</li>
-<li><strong>Per turn or once?</strong> Once per session is the proposal (§14, question 1):
-a user can switch by hand, and re-detecting every turn invites flip-flops
-on code-mixed text.</li>
+<li><strong>Per turn or once?</strong> At most one offer per conversation, as built
+(§14, decision 1): a user can switch by hand, and re-detecting every turn
+invites flip-flops on code-mixed text.</li>
 </ul>
 <hr>
 <h2 id="6-running-a-detector-from-typescript">6. Running a detector from TypeScript<a class="anchor" href="#6-running-a-detector-from-typescript" aria-label="Link to this section">#</a></h2>
@@ -288,11 +314,12 @@ ships with core.</p>
 <code>ctx.locale</code> is already on the handler&#39;s context, as in the clinic example.</p>
 <h3 id="72-opt-in-a-model-per-language">7.2 Opt-in: a model per language<a class="anchor" href="#72-opt-in-a-model-per-language" aria-label="Link to this section">#</a></h3>
 <pre><code class="language-ts">createAgent({
-  model: { fr: frenchModel, wo: wolofModel, default: multilingualModel },
+  models: { fr: frenchModel, wo: wolofModel, default: multilingualModel },
   // ...
 });
 </code></pre>
-<p>The model handle becomes a map keyed by locale, with a <code>default</code>. The engine
+<p><code>models</code> replaces <code>model</code> (passing both is a startup error): a map keyed by
+locale, with a <code>default</code>. The engine
 resolves <code>ctx.model</code> to the entry for <code>ctx.locale</code>, falling back to
 <code>default</code> and logging a warning when none matches. A missing entry never
 fails the turn. Keys must be languages the agent has locales for, checked at
@@ -337,9 +364,11 @@ The built-in locales are objects in <code>packages/core/src/locales.ts</code>.</
 <h3 id="92-what-03-adds">9.2 What 0.3 adds<a class="anchor" href="#92-what-03-adds" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><strong>A home for contributed locales</strong> that can be reviewed and versioned
-without touching <code>locales.ts</code>: a <code>locales/&lt;code&gt;.ts</code> file per language
-(§14, question 3), exporting <code>Partial&lt;Messages&gt;</code> and a header with who
-wrote it and who reviewed it.</li>
+without touching <code>locales.ts</code>. As built: <code>locales/&lt;code&gt;.draft.json</code> at the
+repository root, with a <code>_draft</code> header saying who or what wrote it, when,
+and whether it is reviewed. <strong>Kalangu does not load this folder</strong>: a
+developer passes a translation to <code>createAgent({ messages })</code> themselves.
+Where a <em>reviewed</em> locale goes is still open (§14, question A).</li>
 <li><strong>The checker (§8) in CI,</strong> so a locale cannot merge with a broken
 placeholder.</li>
 <li><strong>A contributor guide</strong> in <code>CONTRIBUTING.md</code>: copy the English file,
@@ -347,7 +376,8 @@ translate, run the checker, open a pull request.</li>
 <li><strong>Native-speaker review.</strong> A maintainer cannot judge a Wolof translation
 by reading it. A locale is marked <strong>reviewed</strong> only when a speaker of that
 language, other than the author, signed off, and the file says who. An
-unreviewed locale ships as <strong>experimental</strong> and the README says so.</li>
+unreviewed draft does not ship at all (§14, decision 7). Each language&#39;s
+review is tracked in a &quot;Translation review&quot; issue.</li>
 <li><strong>First languages: Wolof, Hausa, Swahili,</strong> in that order, then whatever
 contributors bring. English and French already ship.</li>
 </ul>
@@ -358,8 +388,30 @@ contributors bring. English and French already ship.</li>
 Wolof <code>ë</code>, <code>ŋ</code> and <code>ó</code> are flattened. Where that makes a word ambiguous,
 prefer a wording that survives it.</li>
 <li>Keep strings short. A USSD screen is 160 characters including the menu.</li>
+<li><strong>Address the reader the way the language expects.</strong> Some languages mark
+the reader&#39;s gender or number in the verb (Hausa &quot;za ka&quot; is masculine;
+&quot;za ki&quot; feminine). Use a neutral form where one exists; otherwise use the
+accepted default and say so in the review issue, so a speaker can decide.
+Keep one level of politeness across all strings.</li>
 <li>Fixed strings only. Agent content (menu titles, answers) is the
 developer&#39;s own and lives in <code>{ en: &quot;…&quot;, wo: &quot;…&quot; }</code> text.</li>
+</ul>
+<h3 id="931-translating-an-agent39s-own-text">9.3.1 Translating an agent&#39;s own text<a class="anchor" href="#931-translating-an-agent39s-own-text" aria-label="Link to this section">#</a></h3>
+<p>The same problems apply to an agent&#39;s menus and replies, and the toolkit does
+not check them. The Ndiédieng example (<code>examples/ndiedieng/src/strings.ts</code>)
+shows a pattern worth copying:</p>
+<ul>
+<li><strong>One file</strong> holds every string a user sees, each as <code>{ fr, wo }</code>. Menus
+take the pair directly; replies with values are filled from <code>{name}</code>
+templates by the caller&#39;s <code>ctx.locale</code>.</li>
+<li><strong>A test</strong> checks that every string exists in each language with the same
+placeholders.</li>
+<li><strong>A generated review sheet</strong> (<code>wolof-review.csv</code>: key, source, draft,
+correction, notes) gives a speaker everything in one spreadsheet, and a
+test fails when it falls out of step with the strings file.</li>
+<li>Messages sent <strong>outside a conversation</strong> (an SMS from an office, say) need
+the number&#39;s language too: read it from the session store
+(<code>SessionRecord.locale</code>), as the example&#39;s <code>languageOf</code> does.</li>
 </ul>
 <hr>
 <h2 id="94-as-built-17-nov-2026">9.4 As built (17 Nov 2026)<a class="anchor" href="#94-as-built-17-nov-2026" aria-label="Link to this section">#</a></h2>
@@ -482,7 +534,8 @@ free text typed later (optional)
 <h2 id="11-packages-and-engine-changes">11. Packages and engine changes<a class="anchor" href="#11-packages-and-engine-changes" aria-label="Link to this section">#</a></h2>
 <pre><code>packages/core       languageMenu() step, country-to-locales prior,
                     LanguageDetector port, model map resolution,
-                    `kalangu locale check`, locales/ directory
+                    `kalangu locale check`
+locales/            contributed drafts (repository only, not loaded)
 optional package    @kalangu/language-commonlingua (only if §12 passes)
 </code></pre>
 <p>Core keeps zero runtime dependencies. Engine changes: resolving <code>ctx.model</code>
@@ -491,6 +544,12 @@ suggest-once flag in the session record. Nothing about USSD or SMS rendering
 changes.</p>
 <hr>
 <h2 id="12-verify-first">12. Verify first<a class="anchor" href="#12-verify-first" aria-label="Link to this section">#</a></h2>
+<p>Status on 24 Nov 2026: items 1 to 4 wait for labelled samples from speakers
+and a candidate detector; nothing has been measured. Item 7 has started:
+Wolof is being reviewed by a speaker (the maintainer) through the Ndiédieng
+review sheet; Hausa and Swahili have review issues open (#98, #99). For
+Bambara (added 24 Nov), no detector was found at all, and its speech and
+translation resources are listed in TODO.md for evaluation.</p>
 <ol>
 <li><strong>Is Wolof, Hausa and Swahili in CommonLingua&#39;s 61?</strong> The card and press
 release do not say. Read the training data or run <code>predict.py</code> on known
@@ -535,26 +594,38 @@ per-language accuracy and the confusion matrix, so §12 item 2 can be
 answered repeatably rather than once.</li>
 </ol>
 <hr>
-<h2 id="14-open-questions">14. Open questions<a class="anchor" href="#14-open-questions" aria-label="Link to this section">#</a></h2>
-<p>Each has a recommendation so they can be settled quickly.</p>
+<h2 id="14-decisions-and-open-questions">14. Decisions and open questions<a class="anchor" href="#14-decisions-and-open-questions" aria-label="Link to this section">#</a></h2>
+<p>The seven questions of the first draft were settled by building. As built:</p>
 <ol>
-<li><strong>Detect once per session</strong> (recommended), or re-evaluate when the input
-language clearly changes?</li>
-<li><strong>Menu first, detection as a hint,</strong> and no detector in the first slice
-(recommended), or build detection first?</li>
-<li><strong>Where contributed locales live:</strong> <code>locales/&lt;code&gt;.ts</code> in this repo with
-a review header (recommended), a separate <code>@kalangu/locales</code> package, or
-a community repository?</li>
-<li><strong><code>kalangu locale check</code> as a core CLI</strong> (recommended, small and
-dependency-free), or a script in the repository only?</li>
-<li><strong>Model map in core</strong> (recommended, opt-in) or leave routing entirely to
-the developer&#39;s handler, since <code>ctx.locale</code> is already there?</li>
-<li><strong>Country-to-locales prior:</strong> a built-in table for the first markets
-(recommended, small and easy to correct) or developer-supplied only?</li>
-<li><strong>Experimental versus reviewed locales:</strong> ship unreviewed translations
-marked experimental (recommended) or hold them until a speaker has signed
-off?</li>
+<li><strong>Detection runs at most once per conversation,</strong> and a No is kept for
+good for that number (§9.5).</li>
+<li><strong>Menu first, detection as a hint;</strong> no detector ships (§9.4, §9.5).</li>
+<li><strong>Contributed drafts live in <code>locales/*.draft.json</code></strong> in this repository
+and are not loaded by Kalangu (§9.2). Where reviewed locales go is
+question A below.</li>
+<li><strong><code>kalangu locale check</code> is a core CLI,</strong> a separate file outside core&#39;s
+main entry (§9.4).</li>
+<li><strong>The model map is in core,</strong> opt-in, as <code>models</code> (§7.2, §9.5).</li>
+<li><strong>A built-in country table</strong> (<code>DEFAULT_LANGUAGE_PRIORS</code>), replaceable with
+<code>priors</code>; Mali became <code>fr, bm</code> in <code>0.1.0-alpha.10</code>.</li>
+<li><strong>Unreviewed translations do not ship,</strong> rather than shipping as
+experimental as first proposed. They wait in <code>locales/</code> until a speaker
+other than the author has reviewed them.</li>
 </ol>
+<p>Still open, each with a recommendation:</p>
+<ul>
+<li><strong>A. Where does a reviewed locale go?</strong> Into <code>packages/core/src/locales.ts</code>
+next to <code>en</code> and <code>fr</code>, so <code>languages: { supported }</code> works with no
+<code>messages</code> (recommended: one string table is small, and a reviewed
+translation is worth shipping), or a separate <code>@kalangu/locales</code> package,
+or stay in <code>locales/</code> for developers to copy?</li>
+<li><strong>B. The first SMS from a number that has not chosen a language is not
+kept</strong> (§9.5): the user gets the language menu, and their message is
+dropped. For an agent that takes free-text reports, the first report is
+lost and has to be sent again. Hold it and run it through the start step
+after the choice, the way a held answer is run after a language suggestion
+(recommended), or keep dropping it and say so in the docs?</li>
+</ul>
 
     </article>
     <footer class="foot">
@@ -562,7 +633,7 @@ off?</li>
       <span>Generated from <code>docs/languages-design.md</code></span>
     </footer>
   </main>
-  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-what-03-is">1. What 0.3 is</a></li><li><a href="#2-facts-read-17-nov-2026">2. Facts (read 17 Nov 2026)</a></li><li><a href="#3-what-this-changes-in-the-first-draft">3. What this changes in the first draft</a></li><li><a href="#4-choosing-the-language">4. Choosing the language</a></li><li><a href="#5-detection-as-a-hint">5. Detection, as a hint</a></li><li><a href="#6-running-a-detector-from-typescript">6. Running a detector from TypeScript</a></li><li><a href="#7-per-language-model-routing">7. Per-language model routing</a></li><li><a href="#8-text-that-must-fit-the-channel">8. Text that must fit the channel</a></li><li><a href="#9-community-translations">9. Community translations</a></li><li><a href="#94-as-built-17-nov-2026">9.4 As built (17 Nov 2026)</a></li><li><a href="#95-as-built-detection-and-the-model-map-17-nov-2026">9.5 As built: detection and the model map (17 Nov 2026)</a></li><li><a href="#10-how-the-pieces-fit">10. How the pieces fit</a></li><li><a href="#11-packages-and-engine-changes">11. Packages and engine changes</a></li><li><a href="#12-verify-first">12. Verify first</a></li><li><a href="#13-testing-plan-priority-order">13. Testing plan (priority order)</a></li><li><a href="#14-open-questions">14. Open questions</a></li></ul></nav>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-what-03-is">1. What 0.3 is</a></li><li><a href="#2-facts-read-17-nov-2026">2. Facts (read 17 Nov 2026)</a></li><li><a href="#3-what-this-changes-in-the-first-draft">3. What this changes in the first draft</a></li><li><a href="#4-choosing-the-language">4. Choosing the language</a></li><li><a href="#5-detection-as-a-hint">5. Detection, as a hint</a></li><li><a href="#6-running-a-detector-from-typescript">6. Running a detector from TypeScript</a></li><li><a href="#7-per-language-model-routing">7. Per-language model routing</a></li><li><a href="#8-text-that-must-fit-the-channel">8. Text that must fit the channel</a></li><li><a href="#9-community-translations">9. Community translations</a></li><li><a href="#94-as-built-17-nov-2026">9.4 As built (17 Nov 2026)</a></li><li><a href="#95-as-built-detection-and-the-model-map-17-nov-2026">9.5 As built: detection and the model map (17 Nov 2026)</a></li><li><a href="#10-how-the-pieces-fit">10. How the pieces fit</a></li><li><a href="#11-packages-and-engine-changes">11. Packages and engine changes</a></li><li><a href="#12-verify-first">12. Verify first</a></li><li><a href="#13-testing-plan-priority-order">13. Testing plan (priority order)</a></li><li><a href="#14-decisions-and-open-questions">14. Decisions and open questions</a></li></ul></nav>
 </div>
 <script>
 // On a phone the menu starts closed, so the page's content comes first. Without
