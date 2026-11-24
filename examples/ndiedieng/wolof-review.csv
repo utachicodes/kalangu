@@ -1,0 +1,73 @@
+key,french,wolof_draft,correction,notes
+menu.title,Mairie de Ndiédieng,Meeri Ndiédieng,,
+menu.breakdown,Signaler une panne,Yégle lu yàqu,,
+menu.birth,Déclarer une naissance,Yégle juddu,,
+menu.death,Déclarer un décès,Yégle dee,,
+menu.follow,Suivre un signalement,Topp sa yégle,,
+menu.message,Écrire un message,Bind bataaxal,,
+menu.language,Langue / Làkk,Làkk / Langue,,
+breakdown.type,Type d'équipement ?,Ci ban wàll?,,
+breakdown.water,Eau,Ndox,,
+breakdown.health,Santé,Wér-gu-yaram,,
+breakdown.school,École,Lekool,,
+breakdown.energy,Énergie (lampadaire),Mbëj (lampadeer),,
+breakdown.road,Piste coupée,Yoon wu dagg,,
+breakdown.which,Quel équipement ?,Lan moo yàqu?,,
+breakdown.urgency,Urgence ?,Ndax dafa jamp?,,
+breakdown.urgent,Urgent : service coupé,Jamp na: dafa taxaw,,
+breakdown.annoying,"Gênant, marche encore","Dafa sonal, waaye mu ngi dox",,
+breakdown.canWait,Peut attendre,Mën na xaar,,
+breakdown.done,"Signalement {code} enregistré : {what}, {village}, urgence {urgency}. Un SMS vous dira quand il est traité.","Yégle {code} bind nañu ko: {what}, {village}, {urgency}. Dinga jot SMS bu ñu ko defaree.",,
+civil.birthName,Prénom et nom de l'enfant ?,Turu xale bi ak santam?,,
+civil.deathName,Prénom et nom du défunt ?,Turu ki faatu ak santam?,,
+civil.birthDate,Date de naissance ? (JJ/MM/AAAA),Ban bis la juddu? (misaal: 14/11/2026),,
+civil.deathDate,Date du décès ? (JJ/MM/AAAA),Ban bis la faatu? (misaal: 14/11/2026),,
+civil.badDate,Date non valide.,Bis bi dëggul.,,
+civil.birthDone,Naissance pré-déclarée sous le numéro {code}. L'officier d'état civil vous contactera pour l'acte.,Juddu bi bind nañu ko ak limu {code}. Ofisiyeu état civil bi dina la woo ngir kayit bi.,,
+civil.deathDone,Décès pré-déclaré sous le numéro {code}. L'officier d'état civil vous contactera pour l'acte.,Dee bi bind nañu ko ak limu {code}. Ofisiyeu état civil bi dina la woo ngir kayit bi.,,
+follow.ask,Numéro de suivi ? (ex. S-0042),Limu yégle bi? (misaal: S-0042),,
+follow.unknown,Numéro inconnu pour votre village. Vérifiez le numéro reçu par SMS.,Lim bii nekkul ci sa dëkk. Seetal lim bi nga jot ci SMS bi.,,
+follow.status,{code} ({what}) : {status}.,{code} ({what}): {status}.,,
+message.ask,Décrivez le problème ou la déclaration :,Waxal jafe-jafe bi walla li ngay yégle:,,
+message.toCheck,Message reçu ({code}). La Mairie va le vérifier et vous répondra par SMS.,Bataaxal bi agsi na ({code}). Meeri bi dina ko seet te tontu la ci SMS.,,
+message.sorted,"Message reçu ({code}) : {what}, urgence {urgency}. Merci.","Bataaxal bi agsi na ({code}): {what}, {urgency}. Jërëjëf.",,
+notRegistered,Ce numéro n'est pas enregistré comme chef de village. Contactez la Mairie pour l'ajouter.,Nimero bii bindeesu ko ni njiitu dëkk. Jokkool ak Meeri bi ngir ñu yokk ko.,,
+sms.created,Mairie de Ndiédieng : nous avons enregistré le signalement {code} ({what}) pour votre village.,Meeri Ndiédieng: bind nañu yégle {code} ({what}) ngir sa dëkk.,,
+sms.inProgress,Mairie de Ndiédieng : votre signalement {code} ({what}) est pris en charge.,"Meeri Ndiédieng: sa yégle {code} ({what}), ñu ngi ci liggéey.",,
+sms.resolved,Mairie de Ndiédieng : votre signalement {code} ({what}) est résolu. Merci de l'avoir signalé.,"Meeri Ndiédieng: sa yégle {code} ({what}), defar nañu ko. Jërëjëf ci yégle bi.",,
+category.eau,eau,ndox,,
+category.sante,santé,wér-gu-yaram,,
+category.ecole,école,lekool,,
+category.energie,énergie,mbëj,,
+category.piste,piste,yoon,,
+category.naissance,naissance,juddu,,
+category.deces,décès,dee,,
+category.autre,autre,yeneen,,
+urgency.haute,haute,jamp na,,
+urgency.moyenne,moyenne,dafa sonal,,
+urgency.basse,basse,mën na xaar,,
+status.nouveau,reçu,agsi na,,
+status.a_verifier,en vérification,ñu ngi koy seet,,
+status.en_cours,en cours de traitement,ñu ngi ci liggéey,,
+status.resolu,résolu,defar nañu ko,,
+equipment.forage,forage,forage,,
+equipment.borne-fontaine,borne-fontaine,robine,,
+equipment.poste de sante,poste de santé,poste de santé,,
+equipment.case de sante,case de santé,case de santé,,
+equipment.salle de classe,salle de classe,néegu jàng,,
+equipment.latrines,latrines,wanag,,
+equipment.lampadaire solaire,lampadaire solaire,lampadeer,,
+equipment.piste,piste,yoon,,
+kalangu.common.more,Suite,Yok,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.back,Retour,Gane,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.yes,Oui,Waaw,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.no,Non,Déedéet,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.deferredNotice,Nous traitons votre question. Vous recevrez un SMS sous peu.,Ñu ngi topp sa laaj. Dina nga jot SMS su gën yàgg.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.invalidChoice,Choix invalide. Réessayez.,Tann bu baaxul. Jéemal kat.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.invalidNumber,Veuillez saisir un nombre.,Mbindal lim.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.typeAnswer,Veuillez saisir une réponse.,Bindal tontu.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.replyYesNo,Répondez {yes} ou {no},Tontul {yes} walla {no},,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.error,"Désolé, une erreur est survenue. Veuillez réessayer plus tard.","Baal ma, am na njumte. Jéemal bu ko defarule.",,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.expiredChoice,Ce choix a expiré.,Tann bi jeex na.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.language,Langue,Làkk,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.suggestLanguage,Continuer en {language} ?,Wowale ci {language}?,,Kalangu's own string: also fix locales/wo.draft.json

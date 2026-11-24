@@ -8,13 +8,14 @@
  * changes nothing. Nothing leaves the browser; `reset` starts over.
  */
 
-import { silentLogger } from "@kalangu/core";
+import { memoryStore, silentLogger } from "@kalangu/core";
 import { createNdiediengAgent } from "../src/agent.js";
 import { createApp } from "../src/app.js";
 import { geminiAssistant, ruleAssistant } from "../src/assistant.js";
 import { geminiClassifier, keywordClassifier } from "../src/classify.js";
 import { remoteGemini } from "../src/gemini.js";
 import { createCommune } from "../src/db.js";
+import { keepingLanguages } from "../src/keptLanguages.js";
 import { loadSqlJs, sqlJsDb } from "./sqljs.js";
 
 export type Api = (method: string, path: string, body?: unknown) => Promise<{ status: number; body: any }>;
@@ -25,6 +26,8 @@ interface Saved {
   savedAt: number;
   db: Uint8Array;
   inboxes: Array<[string, Array<{ from: string; text: string; at: string }>]>;
+  /** Each chief's chosen language, by number. Absent in copies saved before it was kept. */
+  languages?: Array<[string, string]>;
 }
 
 /** Bumped when the schema or the generated territory changes: older copies are dropped. */
@@ -108,7 +111,10 @@ export async function boot(): Promise<{ api: Api; restored: boolean }> {
   const gemini = await geminiAvailable();
   const call = gemini ? remoteGemini(GEMINI_URL) : null;
   const classifier = call ? geminiClassifier({ call, warn: () => {} }) : keywordClassifier();
-  const agent = createNdiediengAgent({ commune, classifier, channels: [], logger: silentLogger });
+  // The chiefs' languages survive a reload; their conversations in progress do not.
+  const languages = new Map(saved?.languages ?? []);
+  const sessionStore = await keepingLanguages(memoryStore(), languages);
+  const agent = createNdiediengAgent({ commune, classifier, channels: [], logger: silentLogger, sessionStore });
   const app = createApp({
     commune,
     agent,
@@ -126,6 +132,7 @@ export async function boot(): Promise<{ api: Api; restored: boolean }> {
       savedAt: Date.now(),
       db: db.bytes(),
       inboxes: [...inboxes].map(([tel, msgs]) => [tel, msgs.map((m) => ({ from: m.from, text: m.text, at: m.at.toISOString() }))]),
+      languages: [...languages],
     };
     try {
       await withStore("readwrite", (s) => s.put(copy, KEY));

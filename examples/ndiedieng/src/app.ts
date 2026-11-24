@@ -11,16 +11,18 @@
 
 import type { Agent } from "@kalangu/core";
 import { createPhone, type SimPhone } from "@kalangu/sim";
-import { NOT_REGISTERED, recordFreeText, VILLAGE_LABELS } from "./agent.js";
+import { recordFreeText, VILLAGE_LABELS, type NdiediengAgent } from "./agent.js";
 import type { Assistant } from "./assistant.js";
 import type { Classifier } from "./classify.js";
 import type { Categorie, Commune, Signalement, SignalementChange, Statut, Urgence } from "./db.js";
+import { CATEGORY, say, type Lang } from "./strings.js";
 
 export const USSD_CODE = "*123#";
 
 export interface AppOptions {
   commune: Commune;
-  agent: Agent;
+  /** With `languageOf` (createNdiediengAgent's), the Mairie's SMS follow each chief's language; French otherwise. */
+  agent: Agent & Partial<Pick<NdiediengAgent, "languageOf">>;
   assistant: Assistant;
   /** Sorts a transcribed voice message, as for a free SMS. */
   classifier: Classifier;
@@ -60,11 +62,12 @@ const view = (s: Signalement) => ({
   resoluLe: s.resoluLe,
 });
 
-/** What a chief is told when the Mairie moves a report on. */
-function statusSms(s: Signalement, statut: Statut): string | null {
-  const what = s.equipement ? s.equipement.split(",")[0] : VILLAGE_LABELS[s.categorie];
-  if (statut === "resolu") return `Mairie de Ndiédieng : votre signalement ${s.code} (${what}) est résolu. Merci de l'avoir signalé.`;
-  if (statut === "en_cours") return `Mairie de Ndiédieng : votre signalement ${s.code} (${what}) est pris en charge.`;
+/** What a chief is told when the Mairie moves a report on, in their language. */
+function statusSms(s: Signalement, statut: Statut, lang: Lang): string | null {
+  // The equipment's own name ("forage 2"), else the category.
+  const what = s.equipement ? s.equipement.split(",")[0]! : CATEGORY[s.categorie][lang];
+  if (statut === "resolu") return say(lang, "sms.resolved", { code: s.code, what });
+  if (statut === "en_cours") return say(lang, "sms.inProgress", { code: s.code, what });
   return null;
 }
 
@@ -101,6 +104,7 @@ const URGENCES: Urgence[] = ["haute", "moyenne", "basse"];
 
 export function createApp(options: AppOptions): (req: Request) => Promise<Response> {
   const { commune, agent, assistant } = options;
+  const languageOf = async (telephone: string): Promise<Lang> => (agent.languageOf ? agent.languageOf(telephone) : "fr");
   const phones = new Map<string, SimPhone>();
   const phoneFor = (telephone: string) => {
     let phone = phones.get(telephone);
@@ -160,7 +164,8 @@ export function createApp(options: AppOptions): (req: Request) => Promise<Respon
         });
         let sms: string | null = null;
         if (body["notify"] !== false) {
-          sms = `Mairie de Ndiédieng : nous avons enregistré le signalement ${created.code} (${VILLAGE_LABELS[created.categorie]}) pour votre village.`;
+          const lang = await languageOf(created.telephone);
+          sms = say(lang, "sms.created", { code: created.code, what: CATEGORY[created.categorie][lang] });
           await notify(created.telephone, sms);
         }
         return json({ signalement: view(created), sms }, 201);
@@ -182,7 +187,7 @@ export function createApp(options: AppOptions): (req: Request) => Promise<Respon
         const { change, error } = readChange(body, false);
         if (error) return json({ error }, 400);
         const updated = commune.updateSignalement(current.code, change)!;
-        const sms = body["notify"] !== false && updated.statut !== current.statut ? statusSms(updated, updated.statut) : null;
+        const sms = body["notify"] !== false && updated.statut !== current.statut ? statusSms(updated, updated.statut, await languageOf(updated.telephone)) : null;
         if (sms) await notify(updated.telephone, sms);
         return json({ signalement: view(updated), sms });
       }
@@ -204,8 +209,9 @@ export function createApp(options: AppOptions): (req: Request) => Promise<Respon
         } else if (body.action === "vocal") {
           // A voice message, already transcribed: recorded like a free SMS, confirmed by SMS.
           if (!text.trim()) return json({ error: "empty voice message" }, 400);
-          const done = await recordFreeText(commune, options.classifier, body.telephone, text, "vocal");
-          await notify(body.telephone, done ? done.reply : NOT_REGISTERED);
+          const lang = await languageOf(body.telephone);
+          const done = await recordFreeText(commune, options.classifier, body.telephone, text, "vocal", lang);
+          await notify(body.telephone, done ? done.reply : say(lang, "notRegistered"));
         } else if (body.action !== "inbox") return json({ error: `unknown action ${body.action}` }, 400);
         return json({ screen, inSession: phone.inSession, inbox: inboxOf(phone) });
       }
@@ -247,7 +253,7 @@ export function createApp(options: AppOptions): (req: Request) => Promise<Respon
           ...(body.categorie ? { categorie: body.categorie } : {}),
           ...(body.urgence ? { urgence: body.urgence } : {}),
         })!;
-        const sms = statusSms(updated, updated.statut)!;
+        const sms = statusSms(updated, updated.statut, await languageOf(updated.telephone))!;
         await notify(updated.telephone, sms);
         return json({ signalement: view(updated), sms });
       }

@@ -1,6 +1,6 @@
 {
   "name": "@kalangu/example-ndiedieng",
-  "version": "0.1.0-alpha.0",
+  "version": "0.0.0",
   "private": true,
   "description": "Prototype for the commune of Ndiédieng: village chiefs report breakdowns, births and deaths by USSD or SMS; the Mairie sees them sorted and asks questions of its records.",
   "license": "MIT",
@@ -14,7 +14,8 @@
     "test": "vitest run",
     "start": "node dist/server.js",
     "build:web": "node scripts/build-web.mjs",
-    "check:web": "node scripts/build-web.mjs --check"
+    "check:web": "node scripts/build-web.mjs --check",
+    "wolof:sheet": "node scripts/wolof-sheet.mjs"
   },
   "dependencies": {
     "@kalangu/core": "workspace:*",

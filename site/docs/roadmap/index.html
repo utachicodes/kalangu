@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TODO · Kalangu</title>
-<meta name="description" content="State as of 20 Nov 2026. Design reference: docs/design.md.">
+<meta name="description" content="State as of 24 Nov 2026. Design reference: docs/design.md.">
 <link rel="canonical" href="https://kalangu.utachi.website/docs/roadmap/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Kalangu">
 <meta property="og:title" content="TODO">
-<meta property="og:description" content="State as of 20 Nov 2026. Design reference: docs/design.md.">
+<meta property="og:description" content="State as of 24 Nov 2026. Design reference: docs/design.md.">
 <meta property="og:url" content="https://kalangu.utachi.website/docs/roadmap/">
 <meta property="og:image" content="https://kalangu.utachi.website/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -38,7 +38,7 @@
   <main id="content">
     <article class="doc">
 <h1 id="todo">TODO</h1>
-<p>State as of 20 Nov 2026. Design reference: <a href="/docs/design/">docs/design.md</a>.</p>
+<p>State as of 24 Nov 2026. Design reference: <a href="/docs/design/">docs/design.md</a>.</p>
 <h2 id="verify-first-checklist-before-announcing-anything">Verify-first checklist (before announcing anything)<a class="anchor" href="#verify-first-checklist-before-announcing-anything" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><input checked="" disabled="" type="checkbox"> Read the official Africa&#39;s Talking USSD and SMS docs: done; findings in
@@ -107,10 +107,11 @@ accept the fallback</li>
 simulator (needs an account and a public URL for the callbacks)</li>
 <li><input disabled="" type="checkbox"> Wolof in the example (Gemini already sorts Wolof SMS; everything else
 is French). Step 1, buildable now, with drafts clearly marked unreviewed:<ul>
-<li><input disabled="" type="checkbox"> Language choice at <code>*123#</code> (1. Français / 2. Wolof), remembered per
-number, with Kalangu&#39;s language menu</li>
-<li><input disabled="" type="checkbox"> The Ndiédieng menus and SMS replies in Wolof (about 40 strings),
-drafted with Gemini</li>
+<li><input checked="" disabled="" type="checkbox"> Language choice at <code>*123#</code> (1. Français / 2. Wolof), remembered per
+number, with Kalangu&#39;s language menu; entry 6 of the menu switches it</li>
+<li><input checked="" disabled="" type="checkbox"> The Ndiédieng menus, replies and the Mairie&#39;s SMS in Wolof (all in
+<code>examples/ndiedieng/src/strings.ts</code>), drafted and marked unreviewed. The
+Mairie&#39;s dashboard stays French</li>
 <li><input checked="" disabled="" type="checkbox"> The assistant answers in Wolof when asked in Wolof, written and
 spoken: Gemini reports the question&#39;s language and the answer and voice
 follow it. Tested with a question spoken by Gemini&#39;s own voice (&quot;ñaata
@@ -120,11 +121,17 @@ with a real speaker</li>
 not dictate Wolof). The assistant already listens through Gemini, and its
 transcription prompt accepts French or Wolof; quality to test with speakers</li>
 <li><input checked="" disabled="" type="checkbox"> Spoken answers in Wolof (the &quot;speak&quot; task takes the language)</li>
-<li><input disabled="" type="checkbox"> A review sheet (French | Wolof draft | correction) for a speaker</li>
+<li><input checked="" disabled="" type="checkbox"> A review sheet (French | Wolof draft | correction):
+<code>examples/ndiedieng/wolof-review.csv</code>, generated from <code>strings.ts</code> and
+checked in the tests</li>
 </ul>
 </li>
-<li><input disabled="" type="checkbox"> Step 2: a Wolof speaker reviews every string (and <code>locales/wo.draft.json</code>,
-where some entries already look wrong) before the field tests on 19 Dec</li>
+<li><input disabled="" type="checkbox"> Step 2: a Wolof speaker reviews every string in the sheet (and
+<code>locales/wo.draft.json</code>, where some entries already look wrong) before the
+field tests on 19 Dec. The maintainer speaks Wolof; a second speaker
+should still check what the maintainer corrects</li>
+<li><input checked="" disabled="" type="checkbox"> The website demo keeps each chief&#39;s language across reloads, with the
+reports and inboxes (a conversation in progress is not kept)</li>
 <li><input disabled="" type="checkbox"> Then Sérère, the same way; a speaker matters even more there</li>
 <li><input checked="" disabled="" type="checkbox"> Gemini&#39;s speech model speaks Wolof (confirmed by the maintainer, 20 Nov
 2026); quality still to judge with speakers</li>

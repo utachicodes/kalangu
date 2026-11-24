@@ -28,6 +28,8 @@ the maintainer; nothing here runs on its own.
 ## Each release
 
 1. Bump `version` in all four `packages/*/package.json` (same number).
+   The root and the examples are private, never published, and stay at
+   `0.0.0`.
    Alpha releases look like `0.1.0-alpha.1`. The packages ask for the
    `alpha` dist-tag (`publishConfig.tag`), but **on the first release npm's
    staged-publishing approval set `latest` instead and created no `alpha`

@@ -64,6 +64,8 @@ switching.</li>
 <h2 id="each-release">Each release<a class="anchor" href="#each-release" aria-label="Link to this section">#</a></h2>
 <ol>
 <li><p>Bump <code>version</code> in all four <code>packages/*/package.json</code> (same number).
+The root and the examples are private, never published, and stay at
+<code>0.0.0</code>.
 Alpha releases look like <code>0.1.0-alpha.1</code>. The packages ask for the
 <code>alpha</code> dist-tag (<code>publishConfig.tag</code>), but <strong>on the first release npm&#39;s
 staged-publishing approval set <code>latest</code> instead and created no <code>alpha</code>

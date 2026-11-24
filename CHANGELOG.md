@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The private root and example packages are versioned `0.0.0`: they are never
+  published, and their `0.1.0-alpha.0` looked like a release that lagged
+  behind the packages.
+
 ### Fixed
 
 - Ndiédieng's spoken answers no longer read their own instruction aloud
@@ -16,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Ndiédieng in Wolof: a chief chooses Français or Wolof at the first call or
+  SMS (Kalangu's language menu), it is remembered for the number, and entry 6
+  of the menu changes it. Menus, replies and the Mairie's SMS follow the
+  chief's language; the dashboard stays French. Every chief-facing string is
+  in `examples/ndiedieng/src/strings.ts`, and `wolof-review.csv` (French |
+  Wolof draft | correction) is generated from it for a speaker. **The Wolof
+  is a draft, not reviewed yet.** The website demo keeps each chief's
+  language across reloads.
 - A short paper, `papers/kalangu` (IEEE format, LaTeX and PDF): Kalangu's
   design, the Ndiédieng case study, and measurements on the built packages
   (fixed-menu latency, deferral timing, SMS encoding cost per language, screen

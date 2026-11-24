@@ -422,8 +422,9 @@ function fitPhone() {
 function renderTips() {
   const smart = state.device !== "simple";
   const tips = [
+    h("li", {}, "Au premier appel, choisissez la langue (", h("code", { text: "1" }), " Français, ", h("code", { text: "2" }), " Wolof) ; ensuite, l'entrée ", h("code", { text: "6" }), " du menu la change."),
     h("li", {}, "Composez ", h("code", { text: CODE }), ", puis ", h("code", { text: "1" }), " ", h("code", { text: "1" }), " ", h("code", { text: "1" }), " ", h("code", { text: "1" }), " : forage en panne, urgent."),
-    h("li", {}, "Tout en une fois : ", h("code", { text: "*123*1*4*3#" }), " (lampadaire, peut attendre)."),
+    h("li", {}, "Ensuite, tout en une fois : ", h("code", { text: "*123*1*4*3#" }), " (lampadaire, peut attendre)."),
     h("li", {}, smart ? "Onglet Messages : envoyez « bonjour », puis 5, puis votre message." : "Touche Messages, puis Écrire : « bonjour », puis 5, puis votre message."),
     smart ? h("li", {}, "Le micro de Messages enregistre un message vocal, transcrit par le navigateur.") : h("li", {}, "Le clavier de l'ordinateur marche quand le téléphone a le focus : Entrée appelle, Échap raccroche."),
     h("li", {}, "Côté Mairie, ouvrez un signalement et passez-le « Résolu » : le chef reçoit un SMS dans ce téléphone."),

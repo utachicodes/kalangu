@@ -1,6 +1,6 @@
 {
   "name": "@kalangu/example-clinic",
-  "version": "0.1.0-alpha.0",
+  "version": "0.0.0",
   "private": true,
   "description": "Example Kalangu agent: a clinic line on USSD and SMS, with a fake slow nurse model or a local Ollama model.",
   "license": "MIT",
