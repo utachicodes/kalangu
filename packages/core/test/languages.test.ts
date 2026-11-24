@@ -32,6 +32,8 @@ describe("orderLanguages", () => {
     expect(orderLanguages(all, "+221771234567").map((l) => l.code)).toEqual(["fr", "wo", "en", "sw", "ha"]);
     expect(orderLanguages(all, "+254700000001").map((l) => l.code)).toEqual(["sw", "en", "fr", "wo", "ha"]);
     expect(orderLanguages(all, "+234800000000").map((l) => l.code)).toEqual(["en", "ha", "fr", "wo", "sw"]);
+    const bm: Language = { code: "bm", name: "Bamanankan" };
+    expect(orderLanguages([...all, bm], "+22370000000").map((l) => l.code)).toEqual(["fr", "bm", "en", "wo", "sw", "ha"]);
   });
 
   it("keeps the given order when there is no prior for the number", () => {
