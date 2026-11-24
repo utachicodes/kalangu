@@ -29,7 +29,8 @@ function setup() {
 describe("the demo app", () => {
   it("takes a report from the phone to the dashboard, and the Mairie's answer back by SMS", async () => {
     const t = setup();
-    expect((await t.phone("dial", "*123#")).body.screen.text).toMatch(/^Mairie de Ndiedieng/);
+    expect((await t.phone("dial", "*123#")).body.screen.text).toMatch(/^Langue/);
+    expect((await t.phone("press", "1")).body.screen.text).toMatch(/^Mairie de Ndiedieng/);
     await t.phone("press", "1");
     await t.phone("press", "1");
     await t.phone("press", "1");
@@ -53,6 +54,7 @@ describe("the demo app", () => {
   it("lets the Mairie correct an unclear SMS, and tells the chief", async () => {
     const t = setup();
     await t.phone("sms", "bonjour");
+    await t.phone("sms", "1"); // Français
     await t.phone("sms", "5");
     await t.phone("sms", "venez vite svp");
     const pending = (await t.call("GET", "/api/signalements?statut=a_verifier")).body.signalements;
@@ -61,6 +63,17 @@ describe("the demo app", () => {
     expect(res.body.signalement).toMatchObject({ statut: "en_cours", categorie: "piste", urgence: "haute" });
     expect((await t.phone("inbox")).body.inbox.at(-1).text).toMatch(/est pris en charge\.$/);
     expect((await t.call("POST", `/api/signalements/${pending[0].code}/verifier`, { categorie: "meteo" })).status).toBe(400);
+  });
+
+  it("writes to a chief who chose Wolof in Wolof", async () => {
+    const t = setup();
+    await t.phone("dial", "*123#");
+    await t.phone("press", "2"); // Wolof
+    await t.phone("hangup");
+    const voice = (await t.phone("vocal", "lampadaire bi dafa fey")).body;
+    expect(voice.inbox.at(-1).text).toMatch(/^Bataaxal bi agsi na \(S-0001\)/);
+    await t.call("POST", "/api/signalements/S-0001/resoudre");
+    expect((await t.phone("inbox")).body.inbox.at(-1).text).toMatch(/^Meeri Ndiédieng: sa yégle S-0001 \(.+\), defar nañu ko\./);
   });
 
   it("answers the assistant's questions", async () => {

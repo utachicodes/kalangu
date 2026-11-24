@@ -1,6 +1,6 @@
 # TODO
 
-State as of 20 Nov 2026. Design reference: [docs/design.md](docs/design.md).
+State as of 24 Nov 2026. Design reference: [docs/design.md](docs/design.md).
 
 ## Verify-first checklist (before announcing anything)
 
@@ -71,10 +71,11 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
   simulator (needs an account and a public URL for the callbacks)
 - [ ] Wolof in the example (Gemini already sorts Wolof SMS; everything else
   is French). Step 1, buildable now, with drafts clearly marked unreviewed:
-  - [ ] Language choice at `*123#` (1. Français / 2. Wolof), remembered per
-    number, with Kalangu's language menu
-  - [ ] The Ndiédieng menus and SMS replies in Wolof (about 40 strings),
-    drafted with Gemini
+  - [x] Language choice at `*123#` (1. Français / 2. Wolof), remembered per
+    number, with Kalangu's language menu; entry 6 of the menu switches it
+  - [x] The Ndiédieng menus, replies and the Mairie's SMS in Wolof (all in
+    `examples/ndiedieng/src/strings.ts`), drafted and marked unreviewed. The
+    Mairie's dashboard stays French
   - [x] The assistant answers in Wolof when asked in Wolof, written and
     spoken: Gemini reports the question's language and the answer and voice
     follow it. Tested with a question spoken by Gemini's own voice ("ñaata
@@ -84,9 +85,15 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
     not dictate Wolof). The assistant already listens through Gemini, and its
     transcription prompt accepts French or Wolof; quality to test with speakers
   - [x] Spoken answers in Wolof (the "speak" task takes the language)
-  - [ ] A review sheet (French | Wolof draft | correction) for a speaker
-- [ ] Step 2: a Wolof speaker reviews every string (and `locales/wo.draft.json`,
-  where some entries already look wrong) before the field tests on 19 Dec
+  - [x] A review sheet (French | Wolof draft | correction):
+    `examples/ndiedieng/wolof-review.csv`, generated from `strings.ts` and
+    checked in the tests
+- [ ] Step 2: a Wolof speaker reviews every string in the sheet (and
+  `locales/wo.draft.json`, where some entries already look wrong) before the
+  field tests on 19 Dec. The maintainer speaks Wolof; a second speaker
+  should still check what the maintainer corrects
+- [ ] On the website the demo keeps each chief's language only until the page
+  reloads (sessions live in memory; the reports and inboxes are kept)
 - [ ] Then Sérère, the same way; a speaker matters even more there
 - [x] Gemini's speech model speaks Wolof (confirmed by the maintainer, 20 Nov
   2026); quality still to judge with speakers

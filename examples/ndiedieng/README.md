@@ -39,7 +39,9 @@ parle à l'API du serveur (et à Gemini ou à une vraie passerelle, ci-dessous).
   *téléphone simple* (le plus courant dans les villages : écran, touches
   programmables, clavier ; le clavier de l'ordinateur marche quand il a le
   focus), *Android* et *iPhone* (composeur, fenêtre USSD de chaque système,
-  application Messages). Composez `*123#` et suivez les menus ; un code
+  application Messages). Composez `*123#` et suivez les menus. Au premier
+  contact, le chef choisit sa langue (1. Français, 2. Wolof), retenue pour
+  son numéro et modifiable par l'entrée 6 du menu ; ensuite, un code
   complet comme `*123*1*1*1*1#` fait tout d'un coup (panne, eau, forage,
   urgent). Dans Messages, envoyez n'importe quel texte pour recevoir le menu,
   puis `5` pour écrire librement.
@@ -85,6 +87,27 @@ pnpm --filter @kalangu/example-ndiedieng start
 Seuls le texte du SMS et la question partent chez Google, jamais un numéro de
 téléphone. Ne collez jamais la clé dans une conversation ni dans un fichier du
 dépôt.
+
+## En wolof
+
+Tout ce que voit un chef (menus USSD, réponses, SMS de la Mairie) existe en
+français et en wolof, dans [src/strings.ts](src/strings.ts). Le tableau de
+bord de la Mairie reste en français. **Le wolof est un brouillon, pas encore
+relu par un locuteur** : à relire avant les essais sur le terrain.
+
+Pour relire : ouvrez [wolof-review.csv](wolof-review.csv) dans un tableur
+(une ligne par texte : français, brouillon wolof, correction), corrigez, puis
+reportez les corrections dans `src/strings.ts` (gardez chaque `{code}`,
+`{what}`…) et régénérez la feuille :
+
+```sh
+pnpm --filter @kalangu/example-ndiedieng build
+pnpm --filter @kalangu/example-ndiedieng wolof:sheet
+```
+
+Sur USSD, les accents disparaissent (`ñ` devient `n`, `ë` devient `e`) ; par
+SMS, ils restent, mais un `ë` fait passer le message à 70 caractères par SMS
+au lieu de 160.
 
 ## Avec une vraie passerelle
 

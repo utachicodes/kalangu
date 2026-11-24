@@ -42,6 +42,12 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/" rel="noopener">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="noopener">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
+<h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>The private root and example packages are versioned <code>0.0.0</code>: they are never
+published, and their <code>0.1.0-alpha.0</code> looked like a release that lagged
+behind the packages.</li>
+</ul>
 <h3 id="fixed">Fixed<a class="anchor" href="#fixed" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Ndiédieng&#39;s spoken answers no longer read their own instruction aloud
@@ -51,6 +57,13 @@ back, in French and in Wolof.</li>
 </ul>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>Ndiédieng in Wolof: a chief chooses Français or Wolof at the first call or
+SMS (Kalangu&#39;s language menu), it is remembered for the number, and entry 6
+of the menu changes it. Menus, replies and the Mairie&#39;s SMS follow the
+chief&#39;s language; the dashboard stays French. Every chief-facing string is
+in <code>examples/ndiedieng/src/strings.ts</code>, and <code>wolof-review.csv</code> (French |
+Wolof draft | correction) is generated from it for a speaker. <strong>The Wolof
+is a draft, not reviewed yet.</strong></li>
 <li>A short paper, <code>papers/kalangu</code> (IEEE format, LaTeX and PDF): Kalangu&#39;s
 design, the Ndiédieng case study, and measurements on the built packages
 (fixed-menu latency, deferral timing, SMS encoding cost per language, screen
@@ -188,7 +201,7 @@ shows them, run, and their output compared with the page&#39;s (in CI).</li>
 <li>Website: a sitemap, <code>robots.txt</code>, a favicon, canonical URLs and link
 previews on every page, and a 404 page, all generated with the docs.</li>
 </ul>
-<h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
+<h3 id="changed-1">Changed<a class="anchor" href="#changed-1" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>The four package READMEs (what npm shows): <code>npm install</code>, links to the
 website&#39;s docs, the store checks and the reference SQLite store, the
@@ -220,7 +233,7 @@ never sent; answers are cleaned and fitted to the SMS cap as for Ollama,
 whose shared pieces moved to <code>answer.ts</code>. <code>nurses.ts</code> picks Gemini, then
 Ollama, then the fake nurse.</li>
 </ul>
-<h3 id="changed-1">Changed<a class="anchor" href="#changed-1" aria-label="Link to this section">#</a></h3>
+<h3 id="changed-2">Changed<a class="anchor" href="#changed-2" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><code>@kalangu/sim</code>: typing something that is not a code at <code>Dial&gt;</code> (such as
 <code>1</code> after a USSD screen ended, or to answer an SMS) still gets the phone&#39;s
@@ -555,7 +568,7 @@ workflow (dry run by default, npm provenance), and <code>RELEASING.md</code>.
 Nothing is published yet.</p>
 </li>
 </ul>
-<h3 id="changed-2">Changed<a class="anchor" href="#changed-2" aria-label="Link to this section">#</a></h3>
+<h3 id="changed-3">Changed<a class="anchor" href="#changed-3" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>README: v0.1 status, package list, quick start, how to write an agent,
 and known limits. CONTRIBUTING updated for working on the code.</li>

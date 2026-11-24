@@ -6,25 +6,23 @@
  * must be a registered chief's. Every report gets a tracking number, and the
  * Mairie's answer comes back by SMS (see app.ts).
  */
-import { ask, createAgent, menu } from "@kalangu/core";
+import { ask, createAgent, languageMenu, memoryStore, menu, } from "@kalangu/core";
 import { REVIEW_BELOW } from "./classify.js";
-const LABELS = {
-    eau: "eau",
-    sante: "santé",
-    ecole: "école",
-    energie: "énergie",
-    piste: "piste",
-    naissance: "naissance",
-    deces: "décès",
-    autre: "autre",
-};
-export const NOT_REGISTERED = "Ce numéro n'est pas enregistré comme chef de village. Contactez la Mairie pour l'ajouter.";
+import { CATEGORY, equipmentName, KALANGU_WO, langOf, say, STATUS, TEXT, URGENCY } from "./strings.js";
+/** Categories as the Mairie reads them (French). */
+const LABELS = Object.fromEntries(Object.entries(CATEGORY).map(([k, v]) => [k, v.fr]));
+export const NOT_REGISTERED = TEXT.notRegistered.fr;
+/** The languages a chief chooses between at their first call, each named in itself. */
+export const LANGUAGES = [
+    { code: "fr", name: "Français" },
+    { code: "wo", name: "Wolof" },
+];
 /**
  * A free-text message from a chief (an SMS, or a voice message once
- * transcribed): sorted, recorded, and the reply to send back. Null when the
- * number is not a registered chief's.
+ * transcribed): sorted, recorded, and the reply to send back, in the chief's
+ * language. Null when the number is not a registered chief's.
  */
-export async function recordFreeText(commune, classifier, telephone, text, canal) {
+export async function recordFreeText(commune, classifier, telephone, text, canal, lang = "fr") {
     const chef = commune.chefByPhone(telephone);
     if (!chef)
         return null;
@@ -42,9 +40,10 @@ export async function recordFreeText(commune, classifier, telephone, text, canal
         statut: review ? "a_verifier" : "nouveau",
         confiance: c.confiance,
     });
+    const what = `${CATEGORY[c.categorie][lang]}${c.nature ? `, ${equipmentName(c.nature, lang)}` : ""}`;
     const reply = review
-        ? `Message reçu (${s.code}). La Mairie va le vérifier et vous répondra par SMS.`
-        : `Message reçu (${s.code}) : ${LABELS[c.categorie]}${c.nature ? `, ${c.nature}` : ""}, urgence ${c.urgence}. Merci.`;
+        ? say(lang, "message.toCheck", { code: s.code })
+        : say(lang, "message.sorted", { code: s.code, what, urgency: URGENCY[c.urgence][lang] });
     return { signalement: s, reply };
 }
 /** A date typed as JJ/MM/AAAA, not in the future, as YYYY-MM-DD; null otherwise. */
@@ -62,13 +61,16 @@ export function parseDate(text, today = new Date()) {
 }
 export function createNdiediengAgent(options) {
     const { commune, classifier, ...rest } = options;
+    const sessionStore = rest.sessionStore ?? memoryStore();
     const chefOf = (ctx) => commune.chefByPhone(ctx.phone);
     const canal = (ctx) => (ctx.channelKind === "ussd" ? "ussd" : "sms");
+    const lang = (ctx) => langOf(ctx.locale);
+    const notRegistered = (ctx) => say(lang(ctx), "notRegistered");
     // --- A breakdown: type, then equipment, then urgency.
     const recordBreakdown = (urgence) => (_, ctx) => {
         const chef = chefOf(ctx);
         if (!chef)
-            return NOT_REGISTERED;
+            return notRegistered(ctx);
         const type = String(ctx.session["type"] ?? "autre");
         const nature = String(ctx.session["nature"] ?? "");
         const equipement = nature ? commune.equipementFor(chef.villageId, nature) : null;
@@ -83,39 +85,38 @@ export function createNdiediengAgent(options) {
         });
         delete ctx.session["type"];
         delete ctx.session["nature"];
-        return `Signalement ${s.code} enregistré : ${nature || LABELS[type]}, ${chef.village}, urgence ${urgence}. Un SMS vous dira quand il est traité.`;
+        const l = lang(ctx);
+        return say(l, "breakdown.done", {
+            code: s.code,
+            what: nature ? equipmentName(nature, l) : CATEGORY[type][l],
+            village: chef.village,
+            urgency: URGENCY[urgence][l],
+        });
     };
-    const urgencyMenu = menu("Urgence ?", [
-        { label: "Urgent : service coupé", to: recordBreakdown("haute") },
-        { label: "Gênant, marche encore", to: recordBreakdown("moyenne") },
-        { label: "Peut attendre", to: recordBreakdown("basse") },
+    const urgencyMenu = menu(TEXT["breakdown.urgency"], [
+        { label: TEXT["breakdown.urgent"], to: recordBreakdown("haute") },
+        { label: TEXT["breakdown.annoying"], to: recordBreakdown("moyenne") },
+        { label: TEXT["breakdown.canWait"], to: recordBreakdown("basse") },
     ]);
     const choose = (type, nature) => (_, ctx) => {
         ctx.session["type"] = type;
         ctx.session["nature"] = nature;
         return urgencyMenu;
     };
-    const breakdown = menu("Type d'équipement ?", [
-        { label: "Eau", to: menu("Quel équipement ?", [
-                { label: "Forage", to: choose("eau", "forage") },
-                { label: "Borne-fontaine", to: choose("eau", "borne-fontaine") },
-            ]) },
-        { label: "Santé", to: menu("Quel équipement ?", [
-                { label: "Poste de santé", to: choose("sante", "poste de sante") },
-                { label: "Case de santé", to: choose("sante", "case de sante") },
-            ]) },
-        { label: "École", to: menu("Quel équipement ?", [
-                { label: "Salle de classe", to: choose("ecole", "salle de classe") },
-                { label: "Latrines", to: choose("ecole", "latrines") },
-            ]) },
-        { label: "Énergie (lampadaire)", to: choose("energie", "lampadaire solaire") },
-        { label: "Piste coupée", to: choose("piste", "piste") },
+    const kind = (nature) => ({ label: { fr: capital(equipmentName(nature, "fr")), wo: capital(equipmentName(nature, "wo")) } });
+    const which = (type, natures) => menu(TEXT["breakdown.which"], natures.map((n) => ({ ...kind(n), to: choose(type, n) })));
+    const breakdown = menu(TEXT["breakdown.type"], [
+        { label: TEXT["breakdown.water"], to: which("eau", ["forage", "borne-fontaine"]) },
+        { label: TEXT["breakdown.health"], to: which("sante", ["poste de sante", "case de sante"]) },
+        { label: TEXT["breakdown.school"], to: which("ecole", ["salle de classe", "latrines"]) },
+        { label: TEXT["breakdown.energy"], to: choose("energie", "lampadaire solaire") },
+        { label: TEXT["breakdown.road"], to: choose("piste", "piste") },
     ]);
     // --- A birth or a death: the name, then the date.
     const recordCivil = (categorie) => (text, ctx) => {
         const chef = chefOf(ctx);
         if (!chef)
-            return NOT_REGISTERED;
+            return notRegistered(ctx);
         const date = parseDate(text);
         if (!date)
             return categorie === "naissance" ? birthDateRetry : deathDateRetry;
@@ -129,46 +130,59 @@ export function createNdiediengAgent(options) {
             canal: canal(ctx),
         });
         delete ctx.session["nom"];
-        return `${categorie === "naissance" ? "Naissance" : "Décès"} pré-déclaré(e) sous le numéro ${s.code}. L'officier d'état civil vous contactera pour l'acte.`;
+        return say(lang(ctx), categorie === "naissance" ? "civil.birthDone" : "civil.deathDone", { code: s.code });
     };
-    const birthDate = ask("Date de naissance ? (JJ/MM/AAAA)", recordCivil("naissance"));
-    const birthDateRetry = ask("Date non valide. Date de naissance ? (JJ/MM/AAAA)", recordCivil("naissance"));
-    const deathDate = ask("Date du décès ? (JJ/MM/AAAA)", recordCivil("deces"));
-    const deathDateRetry = ask("Date non valide. Date du décès ? (JJ/MM/AAAA)", recordCivil("deces"));
+    const retry = (question) => ({
+        fr: `${TEXT["civil.badDate"].fr} ${question.fr}`,
+        wo: `${TEXT["civil.badDate"].wo} ${question.wo}`,
+    });
+    const birthDate = ask(TEXT["civil.birthDate"], recordCivil("naissance"));
+    const birthDateRetry = ask(retry(TEXT["civil.birthDate"]), recordCivil("naissance"));
+    const deathDate = ask(TEXT["civil.deathDate"], recordCivil("deces"));
+    const deathDateRetry = ask(retry(TEXT["civil.deathDate"]), recordCivil("deces"));
     const askName = (question, next) => ask(question, (name, ctx) => {
         if (!chefOf(ctx))
-            return NOT_REGISTERED;
+            return notRegistered(ctx);
         ctx.session["nom"] = name.trim().slice(0, 80);
         return next;
     });
     // --- Following a report from the same village.
-    const follow = ask("Numéro de suivi ? (ex. S-0042)", (code, ctx) => {
+    const follow = ask(TEXT["follow.ask"], (code, ctx) => {
         const chef = chefOf(ctx);
         if (!chef)
-            return NOT_REGISTERED;
+            return notRegistered(ctx);
+        const l = lang(ctx);
         const s = commune.signalement(code.replace(/\s/g, "").replace(/^s(\d)/i, "S-$1"));
         if (!s || s.villageId !== chef.villageId)
-            return "Numéro inconnu pour votre village. Vérifiez le numéro reçu par SMS.";
-        const statut = { nouveau: "reçu", a_verifier: "en vérification", en_cours: "en cours de traitement", resolu: "résolu" }[s.statut];
-        return `${s.code} (${LABELS[s.categorie]}) : ${statut}.`;
+            return say(l, "follow.unknown");
+        return say(l, "follow.status", { code: s.code, what: CATEGORY[s.categorie][l], status: STATUS[s.statut][l] });
     });
     // --- Free text, sorted by the classifier.
-    const message = ask("Décrivez le problème ou la déclaration :", async (text, ctx) => {
-        const done = await recordFreeText(commune, classifier, ctx.phone, text, canal(ctx));
-        return done ? done.reply : NOT_REGISTERED;
+    const message = ask(TEXT["message.ask"], async (text, ctx) => {
+        const done = await recordFreeText(commune, classifier, ctx.phone, text, canal(ctx), lang(ctx));
+        return done ? done.reply : notRegistered(ctx);
     });
-    const start = menu("Mairie de Ndiédieng", [
-        { label: "Signaler une panne", to: breakdown },
-        { label: "Déclarer une naissance", to: askName("Prénom et nom de l'enfant ?", birthDate) },
-        { label: "Déclarer un décès", to: askName("Prénom et nom du défunt ?", deathDate) },
-        { label: "Suivre un signalement", to: follow },
-        { label: "Écrire un message", to: message },
+    const start = menu(TEXT["menu.title"], [
+        { label: TEXT["menu.breakdown"], to: breakdown },
+        { label: TEXT["menu.birth"], to: askName(TEXT["civil.birthName"], birthDate) },
+        { label: TEXT["menu.death"], to: askName(TEXT["civil.deathName"], deathDate) },
+        { label: TEXT["menu.follow"], to: follow },
+        { label: TEXT["menu.message"], to: message },
+        { label: TEXT["menu.language"], to: languageMenu() },
     ]);
-    return createAgent({
+    const agent = createAgent({
         start,
         steps: [urgencyMenu, birthDate, birthDateRetry, deathDate, deathDateRetry],
         defaultLocale: "fr",
+        // Asked once per number, at the first call or SMS, and remembered.
+        languages: { supported: LANGUAGES },
+        messages: { wo: KALANGU_WO },
         ...rest,
+        sessionStore,
+    });
+    return Object.assign(agent, {
+        languageOf: async (telephone) => langOf((await sessionStore.load(telephone))?.locale),
     });
 }
+const capital = (s) => s[0].toUpperCase() + s.slice(1);
 export const VILLAGE_LABELS = LABELS;
