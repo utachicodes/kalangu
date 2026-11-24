@@ -7,13 +7,14 @@
  * dashboard and the assistant's page see the same reports, and a reload
  * changes nothing. Nothing leaves the browser; `reset` starts over.
  */
-import { silentLogger } from "@kalangu/core";
+import { memoryStore, silentLogger } from "@kalangu/core";
 import { createNdiediengAgent } from "../src/agent.js";
 import { createApp } from "../src/app.js";
 import { geminiAssistant, ruleAssistant } from "../src/assistant.js";
 import { geminiClassifier, keywordClassifier } from "../src/classify.js";
 import { remoteGemini } from "../src/gemini.js";
 import { createCommune } from "../src/db.js";
+import { keepingLanguages } from "../src/keptLanguages.js";
 import { loadSqlJs, sqlJsDb } from "./sqljs.js";
 /** Bumped when the schema or the generated territory changes: older copies are dropped. */
 const VERSION = 2;
@@ -96,7 +97,10 @@ export async function boot() {
     const gemini = await geminiAvailable();
     const call = gemini ? remoteGemini(GEMINI_URL) : null;
     const classifier = call ? geminiClassifier({ call, warn: () => { } }) : keywordClassifier();
-    const agent = createNdiediengAgent({ commune, classifier, channels: [], logger: silentLogger });
+    // The chiefs' languages survive a reload; their conversations in progress do not.
+    const languages = new Map(saved?.languages ?? []);
+    const sessionStore = await keepingLanguages(memoryStore(), languages);
+    const agent = createNdiediengAgent({ commune, classifier, channels: [], logger: silentLogger, sessionStore });
     const app = createApp({
         commune,
         agent,
@@ -113,6 +117,7 @@ export async function boot() {
             savedAt: Date.now(),
             db: db.bytes(),
             inboxes: [...inboxes].map(([tel, msgs]) => [tel, msgs.map((m) => ({ from: m.from, text: m.text, at: m.at.toISOString() }))]),
+            languages: [...languages],
         };
         try {
             await withStore("readwrite", (s) => s.put(copy, KEY));

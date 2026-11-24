@@ -28,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   chief's language; the dashboard stays French. Every chief-facing string is
   in `examples/ndiedieng/src/strings.ts`, and `wolof-review.csv` (French |
   Wolof draft | correction) is generated from it for a speaker. **The Wolof
-  is a draft, not reviewed yet.**
+  is a draft, not reviewed yet.** The website demo keeps each chief's
+  language across reloads.
 - A short paper, `papers/kalangu` (IEEE format, LaTeX and PDF): Kalangu's
   design, the Ndiédieng case study, and measurements on the built packages
   (fixed-menu latency, deferral timing, SMS encoding cost per language, screen

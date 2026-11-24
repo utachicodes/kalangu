@@ -92,8 +92,8 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
   `locales/wo.draft.json`, where some entries already look wrong) before the
   field tests on 19 Dec. The maintainer speaks Wolof; a second speaker
   should still check what the maintainer corrects
-- [ ] On the website the demo keeps each chief's language only until the page
-  reloads (sessions live in memory; the reports and inboxes are kept)
+- [x] The website demo keeps each chief's language across reloads, with the
+  reports and inboxes (a conversation in progress is not kept)
 - [ ] Then Sérère, the same way; a speaker matters even more there
 - [x] Gemini's speech model speaks Wolof (confirmed by the maintainer, 20 Nov
   2026); quality still to judge with speakers
