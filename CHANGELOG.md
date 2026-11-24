@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Hausa and Swahili drafts (`locales/ha.draft.json`,
+  `locales/sw.draft.json`) have their clear errors fixed by hand: in Swahili,
+  a stray leading space, "arrived" for "reached" the daily limit, and "mobile
+  money" lost from the unknown-operator message; in Hausa, "Za ka" spelling,
+  a missing "ɗ", plural "you" where the rest is singular, and stiff wording.
+  Neither has been reviewed by a native speaker.
 - The Wolof draft of Kalangu's payment strings (`locales/wo.draft.json`) is
   redrafted by hand: "Nothing was charged" now reads "nothing was taken from
   your money", the confirmation asks "do you want to pay…?", "contact

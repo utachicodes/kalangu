@@ -9,9 +9,9 @@ languages later ship inside `@kalangu/core` is still open (languages design
 
 | File | Language | Status |
 |---|---|---|
-| `wo.draft.json` | Wolof | Machine draft (Gemini, 19 Nov 2026), **not reviewed** |
-| `ha.draft.json` | Hausa | Machine draft (Gemini, 19 Nov 2026), **not reviewed** |
-| `sw.draft.json` | Swahili | Machine draft (Gemini, 19 Nov 2026), **not reviewed** |
+| `wo.draft.json` | Wolof | Machine draft (Gemini, 19 Nov 2026), redrafted by hand by a Wolof speaker (24 Nov), **not reviewed by a second speaker** |
+| `ha.draft.json` | Hausa | Machine draft (Gemini, 19 Nov 2026), clear errors fixed by a non-speaker (24 Nov), **not reviewed** |
+| `sw.draft.json` | Swahili | Machine draft (Gemini, 19 Nov 2026), clear errors fixed by a non-speaker (24 Nov), **not reviewed** |
 
 A `.draft.json` file is a starting point for a native speaker, never a
 translation to use as it is: models are much weaker in these languages than
