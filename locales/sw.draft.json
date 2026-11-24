@@ -4,6 +4,7 @@
     "by": "Machine draft by gemini-3.5-flash-lite",
     "date": "2026-11-19",
     "reviewed": false,
+    "revised": "Clear errors and awkward wording fixed by hand on 2026-11-24, by someone who is not a native speaker; still needs one",
     "note": "Not reviewed. A native speaker must check every string before this ships; until then it is experimental."
   },
   "messages": {
@@ -31,13 +32,13 @@
     "payments.alreadyStarted": "Malipo yako yanashughulikiwa tayari.",
     "payments.unavailable": "Malipo hayapatikani sasa hivi. Hakuna kilichokatwa. Jaribu baadaye.",
     "payments.paid": "Malipo yamepokelewa. Asante.",
-    "payments.refusal.currency": "Malipo kwa {currency} hayaruhusiwi.",
+    "payments.refusal.currency": "Malipo kwa {currency} hayakubaliwi.",
     "payments.refusal.per-payment": "Malipo haya yanazidi kikomo kinachoruhusiwa.",
-    "payments.refusal.per-day": " Umefika kikomo cha malipo cha siku.",
-    "payments.refusal.pending-limit": "Una malipo yanayoendelea. Maliza hayo kwanza.",
-    "payments.refusal.provider-closed": "Malipo ya mtandao wako hayapatikani kwa sasa. Jaribu baadaye.",
-    "payments.refusal.amount-bounds": "Kiasi hiki hakihimiliwi na mtandao wako.",
-    "payments.refusal.decimals": "Kiasi hiki hakihimiliwi na mtandao wako.",
-    "payments.refusal.unknown-operator": "Hatukuweza kutambua mtandao wako wa simu."
+    "payments.refusal.per-day": "Umefikia kikomo cha malipo kwa siku.",
+    "payments.refusal.pending-limit": "Una malipo yanayoendelea. Yakamilishe kwanza.",
+    "payments.refusal.provider-closed": "Malipo kupitia mtandao wako hayapatikani kwa sasa. Jaribu baadaye.",
+    "payments.refusal.amount-bounds": "Kiasi hiki hakikubaliwi na mtandao wako.",
+    "payments.refusal.decimals": "Kiasi hiki hakikubaliwi na mtandao wako.",
+    "payments.refusal.unknown-operator": "Hatukuweza kutambua huduma yako ya pesa kwa simu."
   }
 }
