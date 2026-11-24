@@ -219,8 +219,12 @@ above).
 - [ ] Hands-on detector evaluation on short keypad-typed text in Wolof, Hausa
   and Swahili (languages design §12): needs labelled samples from speakers,
   then one run of the harness per candidate detector
-- [ ] Review the languages design, especially §4 (ask first, detection as a
-  hint) and the seven open questions in §14
+- [x] Review the languages design (24 Nov 2026): brought in line with the
+  code, the seven questions of §14 recorded as decisions, Bambara in §2.3,
+  guidance on gender and politeness and on translating an agent's own text
+- [ ] Decide the two questions still open in the languages design §14:
+  where reviewed locales go (A), and keeping the first SMS of a number that
+  has not chosen a language (B)
 - [x] Per-language model routing design (languages design §7)
 - [x] Detector port and model map built (languages design §9.5), tested with
   a fake detector; no real detector ships
@@ -260,10 +264,10 @@ above).
   `node scripts/translate-locale.mjs bm --name Bambara --reference fr --model gemini-3.8-flash`,
   then the README row, a changelog entry and a "Translation review: Bambara"
   issue (sudoping01 / MALIBA-AI are the people to ask)
-- [ ] Bambara on USSD: `ɛ`, `ɔ`, `ɲ`, `ŋ` collapse to `e`, `o`, `n`, so `ɛ`/`e`
-  and `ɔ`/`o` can no longer be told apart; a speaker to say which words become
-  ambiguous (normalization design). By SMS each one means 70 characters per
-  segment
+- [ ] Bambara on USSD: `ɛ` and `ɔ` become `e` and `o`, so `ɛ`/`e` and `ɔ`/`o`
+  can no longer be told apart (`ɲ` and `ŋ` become `ny` and `ng`, which stay
+  distinct); a speaker to say which words become ambiguous (normalization
+  design). By SMS any of them means 70 characters per segment
 - [ ] Evaluate Bambara speech and translation before relying on any:
   Djelia (paid API: translation, speech to text, text to speech), MALIBA-AI
   (`bambara-asr`, `bambara-tts`, `maliba-llm`) and RobotsMali (`bam-vits`,

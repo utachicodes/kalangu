@@ -1,7 +1,11 @@
 # Kalangu: 0.3 languages design
 
-Status: **draft for review. No language code exists, and none should be
-written until this document is reviewed.**
+Status: **built and released**, except a detector, which Kalangu does not
+ship (§6). What exists is in §9.4 and §9.5, the decisions taken while building
+are in §14, and what still needs a real detector, speakers or operators is in
+§12. Where an earlier section and §9.4–§9.5 differ, §9.4–§9.5 describe the
+code. Reviewed 24 Nov 2026 against the code and the first Wolof, Hausa,
+Swahili and Bambara work.
 Date: 2026-11-17 (first draft 2026-11-16, revised after reading CommonLingua's
 model card and checking the draft against the code). Scope: version 0.3 only:
 choosing the user's language, optional detection as a hint, per-language
@@ -95,16 +99,27 @@ Using the core's own `gsmClass` and `toUssdSafe`:
 | `ñ`, `à`, `é` | Wolof | GSM-7 | `n`, `a`, `e` |
 | `ɓ`, `ɗ`, `ƙ` | Hausa | outside GSM-7 | `b`, `d`, `k` |
 | `ç`, `ê`, `ô` | French | outside GSM-7 | `c`, `e`, `o` |
+| `ɛ`, `ɔ` | Bambara | outside GSM-7 | `e`, `o` |
+| `ɲ`, `ŋ` | Bambara | outside GSM-7 | `ny`, `ng` |
 | plain a–z | Swahili | GSM-7 | unchanged |
 
 One character outside GSM-7 makes the whole SMS UCS-2: **70 characters per
 segment instead of 160** (67 instead of 153 when joined), so the 4-segment
 cap is 268 characters instead of 612. Wolof and Hausa text will usually be
-UCS-2; Swahili will not. On USSD, everything is reduced to ASCII, so
-**Hausa's `ɓ`/`b`, `ɗ`/`d` and `ƙ`/`k`, which are different sounds, become
-the same letter.** That is a limit of the gateway's "no special characters"
-rule (`design.md` §2), not something Kalangu can fix; it needs saying to
-anyone translating for USSD.
+UCS-2; Swahili will not; Bambara written in its standard spelling always
+will. On USSD, everything is reduced to ASCII, and two kinds of change
+matter differently:
+
+- **Letters that merge with another letter,** so two words can become one:
+  Hausa's `ɓ`/`b`, `ɗ`/`d` and `ƙ`/`k`, which are different sounds, and
+  Bambara's vowels `ɛ`/`e` and `ɔ`/`o`.
+- **Letters spelled out,** which stay distinct: `ŋ` becomes `ng` and `ɲ`
+  becomes `ny` (checked with `toUssdSafe`, 24 Nov 2026), as many writers
+  already type them.
+
+That is a limit of the gateway's "no special characters" rule (`design.md`
+§2), not something Kalangu can fix; it needs saying to anyone translating for
+USSD, and a speaker has to say which merged words become ambiguous.
 
 ---
 
@@ -185,15 +200,16 @@ interface LanguageDetector {
   a menu number.
 - **What it does with a result:** it never switches the language silently.
   It suggests: after a confident, long-enough result that differs from the
-  stored locale, the agent offers the language menu once ("Reply in
-  Kiswahili? 1. Yes 2. No"), and remembers a "No" for the session.
+  stored locale, the agent asks once, in the suggested language, "Continue
+  in {language}?", holding the typed answer until the user replies. A "No"
+  is kept for good for that number (§9.5 has the built rules).
 - **No default threshold.** `confidence` means different things in different
   detectors, and CommonLingua's score is not documented as calibrated. The
   threshold is required configuration, and the project ships a way to
   measure one (§12) rather than a number to trust.
-- **Per turn or once?** Once per session is the proposal (§14, question 1):
-  a user can switch by hand, and re-detecting every turn invites flip-flops
-  on code-mixed text.
+- **Per turn or once?** At most one offer per conversation, as built
+  (§14, decision 1): a user can switch by hand, and re-detecting every turn
+  invites flip-flops on code-mixed text.
 
 ---
 
@@ -224,12 +240,13 @@ The developer's `model` handles every language. Nothing in core changes:
 
 ```ts
 createAgent({
-  model: { fr: frenchModel, wo: wolofModel, default: multilingualModel },
+  models: { fr: frenchModel, wo: wolofModel, default: multilingualModel },
   // ...
 });
 ```
 
-The model handle becomes a map keyed by locale, with a `default`. The engine
+`models` replaces `model` (passing both is a startup error): a map keyed by
+locale, with a `default`. The engine
 resolves `ctx.model` to the entry for `ctx.locale`, falling back to
 `default` and logging a warning when none matches. A missing entry never
 fails the turn. Keys must be languages the agent has locales for, checked at
@@ -288,9 +305,11 @@ The built-in locales are objects in `packages/core/src/locales.ts`.
 ### 9.2 What 0.3 adds
 
 - **A home for contributed locales** that can be reviewed and versioned
-  without touching `locales.ts`: a `locales/<code>.ts` file per language
-  (§14, question 3), exporting `Partial<Messages>` and a header with who
-  wrote it and who reviewed it.
+  without touching `locales.ts`. As built: `locales/<code>.draft.json` at the
+  repository root, with a `_draft` header saying who or what wrote it, when,
+  and whether it is reviewed. **Kalangu does not load this folder**: a
+  developer passes a translation to `createAgent({ messages })` themselves.
+  Where a *reviewed* locale goes is still open (§14, question A).
 - **The checker (§8) in CI,** so a locale cannot merge with a broken
   placeholder.
 - **A contributor guide** in `CONTRIBUTING.md`: copy the English file,
@@ -298,7 +317,8 @@ The built-in locales are objects in `packages/core/src/locales.ts`.
 - **Native-speaker review.** A maintainer cannot judge a Wolof translation
   by reading it. A locale is marked **reviewed** only when a speaker of that
   language, other than the author, signed off, and the file says who. An
-  unreviewed locale ships as **experimental** and the README says so.
+  unreviewed draft does not ship at all (§14, decision 7). Each language's
+  review is tracked in a "Translation review" issue.
 - **First languages: Wolof, Hausa, Swahili,** in that order, then whatever
   contributors bring. English and French already ship.
 
@@ -309,8 +329,31 @@ The built-in locales are objects in `packages/core/src/locales.ts`.
   Wolof `ë`, `ŋ` and `ó` are flattened. Where that makes a word ambiguous,
   prefer a wording that survives it.
 - Keep strings short. A USSD screen is 160 characters including the menu.
+- **Address the reader the way the language expects.** Some languages mark
+  the reader's gender or number in the verb (Hausa "za ka" is masculine;
+  "za ki" feminine). Use a neutral form where one exists; otherwise use the
+  accepted default and say so in the review issue, so a speaker can decide.
+  Keep one level of politeness across all strings.
 - Fixed strings only. Agent content (menu titles, answers) is the
   developer's own and lives in `{ en: "…", wo: "…" }` text.
+
+### 9.3.1 Translating an agent's own text
+
+The same problems apply to an agent's menus and replies, and the toolkit does
+not check them. The Ndiédieng example (`examples/ndiedieng/src/strings.ts`)
+shows a pattern worth copying:
+
+- **One file** holds every string a user sees, each as `{ fr, wo }`. Menus
+  take the pair directly; replies with values are filled from `{name}`
+  templates by the caller's `ctx.locale`.
+- **A test** checks that every string exists in each language with the same
+  placeholders.
+- **A generated review sheet** (`wolof-review.csv`: key, source, draft,
+  correction, notes) gives a speaker everything in one spreadsheet, and a
+  test fails when it falls out of step with the strings file.
+- Messages sent **outside a conversation** (an SMS from an office, say) need
+  the number's language too: read it from the session store
+  (`SessionRecord.locale`), as the example's `languageOf` does.
 
 ---
 
@@ -441,7 +484,8 @@ free text typed later (optional)
 ```
 packages/core       languageMenu() step, country-to-locales prior,
                     LanguageDetector port, model map resolution,
-                    `kalangu locale check`, locales/ directory
+                    `kalangu locale check`
+locales/            contributed drafts (repository only, not loaded)
 optional package    @kalangu/language-commonlingua (only if §12 passes)
 ```
 
@@ -453,6 +497,13 @@ changes.
 ---
 
 ## 12. Verify first
+
+Status on 24 Nov 2026: items 1 to 4 wait for labelled samples from speakers
+and a candidate detector; nothing has been measured. Item 7 has started:
+Wolof is being reviewed by a speaker (the maintainer) through the Ndiédieng
+review sheet; Hausa and Swahili have review issues open (#98, #99). For
+Bambara (added 24 Nov), no detector was found at all, and its speech and
+translation resources are listed in TODO.md for evaluation.
 
 1. **Is Wolof, Hausa and Swahili in CommonLingua's 61?** The card and press
    release do not say. Read the training data or run `predict.py` on known
@@ -499,23 +550,35 @@ changes.
 
 ---
 
-## 14. Open questions
+## 14. Decisions and open questions
 
-Each has a recommendation so they can be settled quickly.
+The seven questions of the first draft were settled by building. As built:
 
-1. **Detect once per session** (recommended), or re-evaluate when the input
-   language clearly changes?
-2. **Menu first, detection as a hint,** and no detector in the first slice
-   (recommended), or build detection first?
-3. **Where contributed locales live:** `locales/<code>.ts` in this repo with
-   a review header (recommended), a separate `@kalangu/locales` package, or
-   a community repository?
-4. **`kalangu locale check` as a core CLI** (recommended, small and
-   dependency-free), or a script in the repository only?
-5. **Model map in core** (recommended, opt-in) or leave routing entirely to
-   the developer's handler, since `ctx.locale` is already there?
-6. **Country-to-locales prior:** a built-in table for the first markets
-   (recommended, small and easy to correct) or developer-supplied only?
-7. **Experimental versus reviewed locales:** ship unreviewed translations
-   marked experimental (recommended) or hold them until a speaker has signed
-   off?
+1. **Detection runs at most once per conversation,** and a No is kept for
+   good for that number (§9.5).
+2. **Menu first, detection as a hint;** no detector ships (§9.4, §9.5).
+3. **Contributed drafts live in `locales/*.draft.json`** in this repository
+   and are not loaded by Kalangu (§9.2). Where reviewed locales go is
+   question A below.
+4. **`kalangu locale check` is a core CLI,** a separate file outside core's
+   main entry (§9.4).
+5. **The model map is in core,** opt-in, as `models` (§7.2, §9.5).
+6. **A built-in country table** (`DEFAULT_LANGUAGE_PRIORS`), replaceable with
+   `priors`; Mali became `fr, bm` in `0.1.0-alpha.10`.
+7. **Unreviewed translations do not ship,** rather than shipping as
+   experimental as first proposed. They wait in `locales/` until a speaker
+   other than the author has reviewed them.
+
+Still open, each with a recommendation:
+
+- **A. Where does a reviewed locale go?** Into `packages/core/src/locales.ts`
+  next to `en` and `fr`, so `languages: { supported }` works with no
+  `messages` (recommended: one string table is small, and a reviewed
+  translation is worth shipping), or a separate `@kalangu/locales` package,
+  or stay in `locales/` for developers to copy?
+- **B. The first SMS from a number that has not chosen a language is not
+  kept** (§9.5): the user gets the language menu, and their message is
+  dropped. For an agent that takes free-text reports, the first report is
+  lost and has to be sent again. Hold it and run it through the start step
+  after the choice, the way a held answer is run after a language suggestion
+  (recommended), or keep dropping it and say so in the docs?
