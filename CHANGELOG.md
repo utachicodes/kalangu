@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Wolof draft of Kalangu's fixed strings (`locales/wo.draft.json`, and the
+  Ndiédieng example's copy) is redrafted by hand: "More" is "Li ci des" (it
+  read "add"), "Back" is "Dellu", "Continue in…?" is "Ndax nu wéy ci…?", and
+  the deferral, error and invalid-answer messages are rewritten. Still not
+  reviewed by a second speaker.
 - The private root and example packages are versioned `0.0.0`: they are never
   published, and their `0.1.0-alpha.0` looked like a release that lagged
   behind the packages.

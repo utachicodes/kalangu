@@ -123,24 +123,25 @@ export const EQUIPMENT = {
     piste: { fr: "piste", wo: "yoon" },
 };
 /**
- * Kalangu's own fixed strings in Wolof (More, Back, invalid choice…), from
- * locales/wo.draft.json, a machine draft that is not reviewed either.
+ * Kalangu's own fixed strings in Wolof (More, Back, invalid choice…), the
+ * same as the common.* entries of locales/wo.draft.json: redrafted by hand,
+ * not reviewed by a second speaker yet.
  * Corrections belong in both places.
  */
 export const KALANGU_WO = {
-    "common.more": "Yok",
-    "common.back": "Gane",
+    "common.more": "Li ci des",
+    "common.back": "Dellu",
     "common.yes": "Waaw",
     "common.no": "Déedéet",
-    "common.deferredNotice": "Ñu ngi topp sa laaj. Dina nga jot SMS su gën yàgg.",
-    "common.invalidChoice": "Tann bu baaxul. Jéemal kat.",
-    "common.invalidNumber": "Mbindal lim.",
-    "common.typeAnswer": "Bindal tontu.",
-    "common.replyYesNo": "Tontul {yes} walla {no}",
-    "common.error": "Baal ma, am na njumte. Jéemal bu ko defarule.",
-    "common.expiredChoice": "Tann bi jeex na.",
+    "common.deferredNotice": "Ñu ngi seet sa laaj. Dinga jot SMS léegi.",
+    "common.invalidChoice": "Tann bi baaxul. Jéemaatal.",
+    "common.invalidNumber": "Bindal ab lim.",
+    "common.typeAnswer": "Bindal sa tontu.",
+    "common.replyYesNo": "Tontuwal {yes} walla {no}",
+    "common.error": "Baal nu, am na jafe-jafe. Jéemaatal ci kanam.",
+    "common.expiredChoice": "Tann boobu jeex na.",
     "common.language": "Làkk",
-    "common.suggestLanguage": "Wowale ci {language}?",
+    "common.suggestLanguage": "Ndax nu wéy ci {language}?",
 };
 /** `TEXT[key]` in `lang`, with each `{name}` replaced from `vars`. */
 export function say(lang, key, vars = {}) {
