@@ -77,7 +77,7 @@ Three ideas do the reconciling (full details in the design doc):
 
 | Version | Ships | Proves | Status (20 Nov 2026) |
 |---|---|---|---|
-| 0.1 | core, ussd (Africa's Talking), sms, terminal keypad simulator, one example agent | A model-backed agent works on USSD despite the time limit | Built and published (latest `0.1.0-alpha.9`). Not yet tested on real operators |
+| 0.1 | core, ussd (Africa's Talking), sms, terminal keypad simulator, one example agent | A model-backed agent works on USSD despite the time limit | Built and published (latest `0.1.0-alpha.10`). Not yet tested on real operators |
 | 0.2 | pay turns, policy layer, pawaPay sandbox adapter | An agent can take money safely | Engine built and tested against a fake provider. The pawaPay adapter waits for a sandbox account and its terms |
 | 0.3 | language detection, per-language model routing, language test command | The agent holds up outside English and French | Language menu, `kalangu locale check`, detector port and model map built. Wolof, Hausa and Swahili translations and a real detector wait for native speakers and data |
 | 0.4 | WhatsApp adapter + Chat SDK community adapter | One agent, every channel | Designed ([docs/whatsapp-design.md](docs/whatsapp-design.md)). Code waits for a Meta test number |
