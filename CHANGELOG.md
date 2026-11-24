@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Ndiédieng's Wolof strings, second draft: "faatu" (respectful) for a death,
+  "yàkkamti" for urgent, "lampu mbedd" for a street lamp, the Mairie rather
+  than an invented "Ofisiyeu" calling about a certificate, and smaller fixes
+  (spelling, "su" for "when", "leneen" for "other"). Still not reviewed by a
+  second speaker.
 - The Wolof draft of Kalangu's fixed strings (`locales/wo.draft.json`, and the
   Ndiédieng example's copy) is redrafted by hand: "More" is "Li ci des" (it
   read "add"), "Back" is "Dellu", "Continue in…?" is "Ndax nu wéy ci…?", and
