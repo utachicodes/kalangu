@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Wolof draft of Kalangu's payment strings (`locales/wo.draft.json`) is
+  redrafted by hand: "Nothing was charged" now reads "nothing was taken from
+  your money", the confirmation asks "do you want to pay…?", "contact
+  {payee} before paying again" says so, and the limit refusals say "more than
+  allowed". Still not reviewed by a second speaker.
 - Ndiédieng's Wolof strings, second draft: "faatu" (respectful) for a death,
   "yàkkamti" for urgent, "lampu mbedd" for a street lamp, the Mairie rather
   than an invented "Ofisiyeu" calling about a certificate, and smaller fixes
