@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Mali's default language order is French, then Bambara (`bm`): an agent that
+  offers Bambara lists it second for a +223 number, instead of after every
+  other language. It only orders the menu; every language is still listed,
+  and Kalangu ships no Bambara strings yet.
 - The Hausa and Swahili drafts (`locales/ha.draft.json`,
   `locales/sw.draft.json`) have their clear errors fixed by hand: in Swahili,
   a stray leading space, "arrived" for "reached" the daily limit, and "mobile

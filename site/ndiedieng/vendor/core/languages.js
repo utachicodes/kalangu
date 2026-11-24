@@ -14,7 +14,7 @@
 export const DEFAULT_LANGUAGE_PRIORS = {
     "220": ["en", "wo"], // Gambia
     "221": ["fr", "wo", "en"], // Senegal
-    "223": ["fr"], // Mali
+    "223": ["fr", "bm"], // Mali
     "224": ["fr"], // Guinea
     "225": ["fr"], // Côte d'Ivoire
     "226": ["fr"], // Burkina Faso
