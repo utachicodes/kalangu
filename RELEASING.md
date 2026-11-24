@@ -149,8 +149,11 @@ packing.
     when the session keeps changing; the four arrived one at a time, about
     four and a half minutes after approval), `0.1.0-alpha.8` (the simulator
     explains a number typed where a dial code was expected) and
-    `0.1.0-alpha.9`, `latest` (store contract checks, SMS costs in the
-    simulator, and its types no longer need `@types/node`; the first release
-    checked by `pnpm pack:check` before publishing).
+    `0.1.0-alpha.9` (store contract checks, SMS costs in the simulator, and
+    its types no longer need `@types/node`; the first release checked by
+    `pnpm pack:check` before publishing).
+  - 24 Nov 2026: `0.1.0-alpha.10`, `latest` (Mali's default language order
+    is French, then Bambara; npm homepages point to the website). All four
+    downloaded as soon as they were approved.
 - Move to `1.0` only after the verify-first checklist in `TODO.md` is done
   on real operators.
