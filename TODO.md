@@ -89,7 +89,8 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
     `examples/ndiedieng/wolof-review.csv`, generated from `strings.ts` and
     checked in the tests
 - [ ] Step 2: a Wolof speaker reviews every string in the sheet (and
-  `locales/wo.draft.json`, where some entries already look wrong) before the
+  `locales/wo.draft.json`, whose `common.*` entries were redrafted on
+  24 Nov; its `payments.*` entries are still the machine draft) before the
   field tests on 19 Dec. The maintainer speaks Wolof; a second speaker
   should still check what the maintainer corrects
 - [x] The website demo keeps each chief's language across reloads, with the

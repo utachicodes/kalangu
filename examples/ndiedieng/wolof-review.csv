@@ -58,16 +58,16 @@ equipment.salle de classe,salle de classe,néegu jàng,,
 equipment.latrines,latrines,wanag,,
 equipment.lampadaire solaire,lampadaire solaire,lampadeer,,
 equipment.piste,piste,yoon,,
-kalangu.common.more,Suite,Yok,,Kalangu's own string: also fix locales/wo.draft.json
-kalangu.common.back,Retour,Gane,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.more,Suite,Li ci des,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.back,Retour,Dellu,,Kalangu's own string: also fix locales/wo.draft.json
 kalangu.common.yes,Oui,Waaw,,Kalangu's own string: also fix locales/wo.draft.json
 kalangu.common.no,Non,Déedéet,,Kalangu's own string: also fix locales/wo.draft.json
-kalangu.common.deferredNotice,Nous traitons votre question. Vous recevrez un SMS sous peu.,Ñu ngi topp sa laaj. Dina nga jot SMS su gën yàgg.,,Kalangu's own string: also fix locales/wo.draft.json
-kalangu.common.invalidChoice,Choix invalide. Réessayez.,Tann bu baaxul. Jéemal kat.,,Kalangu's own string: also fix locales/wo.draft.json
-kalangu.common.invalidNumber,Veuillez saisir un nombre.,Mbindal lim.,,Kalangu's own string: also fix locales/wo.draft.json
-kalangu.common.typeAnswer,Veuillez saisir une réponse.,Bindal tontu.,,Kalangu's own string: also fix locales/wo.draft.json
-kalangu.common.replyYesNo,Répondez {yes} ou {no},Tontul {yes} walla {no},,Kalangu's own string: also fix locales/wo.draft.json
-kalangu.common.error,"Désolé, une erreur est survenue. Veuillez réessayer plus tard.","Baal ma, am na njumte. Jéemal bu ko defarule.",,Kalangu's own string: also fix locales/wo.draft.json
-kalangu.common.expiredChoice,Ce choix a expiré.,Tann bi jeex na.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.deferredNotice,Nous traitons votre question. Vous recevrez un SMS sous peu.,Ñu ngi seet sa laaj. Dinga jot SMS léegi.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.invalidChoice,Choix invalide. Réessayez.,Tann bi baaxul. Jéemaatal.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.invalidNumber,Veuillez saisir un nombre.,Bindal ab lim.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.typeAnswer,Veuillez saisir une réponse.,Bindal sa tontu.,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.replyYesNo,Répondez {yes} ou {no},Tontuwal {yes} walla {no},,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.error,"Désolé, une erreur est survenue. Veuillez réessayer plus tard.","Baal nu, am na jafe-jafe. Jéemaatal ci kanam.",,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.expiredChoice,Ce choix a expiré.,Tann boobu jeex na.,,Kalangu's own string: also fix locales/wo.draft.json
 kalangu.common.language,Langue,Làkk,,Kalangu's own string: also fix locales/wo.draft.json
-kalangu.common.suggestLanguage,Continuer en {language} ?,Wowale ci {language}?,,Kalangu's own string: also fix locales/wo.draft.json
+kalangu.common.suggestLanguage,Continuer en {language} ?,Ndax nu wéy ci {language}?,,Kalangu's own string: also fix locales/wo.draft.json
