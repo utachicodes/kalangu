@@ -19,24 +19,24 @@ export const TEXT = {
     "menu.title": { fr: "Mairie de Ndiédieng", wo: "Meeri Ndiédieng" },
     "menu.breakdown": { fr: "Signaler une panne", wo: "Yégle lu yàqu" },
     "menu.birth": { fr: "Déclarer une naissance", wo: "Yégle juddu" },
-    "menu.death": { fr: "Déclarer un décès", wo: "Yégle dee" },
+    "menu.death": { fr: "Déclarer un décès", wo: "Yégle ku faatu" },
     "menu.follow": { fr: "Suivre un signalement", wo: "Topp sa yégle" },
     "menu.message": { fr: "Écrire un message", wo: "Bind bataaxal" },
     "menu.language": { fr: "Langue / Làkk", wo: "Làkk / Langue" },
     "breakdown.type": { fr: "Type d'équipement ?", wo: "Ci ban wàll?" },
     "breakdown.water": { fr: "Eau", wo: "Ndox" },
-    "breakdown.health": { fr: "Santé", wo: "Wér-gu-yaram" },
+    "breakdown.health": { fr: "Santé", wo: "Wér-gi-yaram" },
     "breakdown.school": { fr: "École", wo: "Lekool" },
-    "breakdown.energy": { fr: "Énergie (lampadaire)", wo: "Mbëj (lampadeer)" },
+    "breakdown.energy": { fr: "Énergie (lampadaire)", wo: "Mbëj (lampu mbedd)" },
     "breakdown.road": { fr: "Piste coupée", wo: "Yoon wu dagg" },
     "breakdown.which": { fr: "Quel équipement ?", wo: "Lan moo yàqu?" },
-    "breakdown.urgency": { fr: "Urgence ?", wo: "Ndax dafa jamp?" },
-    "breakdown.urgent": { fr: "Urgent : service coupé", wo: "Jamp na: dafa taxaw" },
+    "breakdown.urgency": { fr: "Urgence ?", wo: "Ndax dafa yàkkamti?" },
+    "breakdown.urgent": { fr: "Urgent : service coupé", wo: "Dafa yàkkamti: dafa dog" },
     "breakdown.annoying": { fr: "Gênant, marche encore", wo: "Dafa sonal, waaye mu ngi dox" },
     "breakdown.canWait": { fr: "Peut attendre", wo: "Mën na xaar" },
     "breakdown.done": {
         fr: "Signalement {code} enregistré : {what}, {village}, urgence {urgency}. Un SMS vous dira quand il est traité.",
-        wo: "Yégle {code} bind nañu ko: {what}, {village}, {urgency}. Dinga jot SMS bu ñu ko defaree.",
+        wo: "Yégle {code} bind nañu ko: {what}, {village}, {urgency}. Dinga jot SMS su ñu ko defaree.",
     },
     "civil.birthName": { fr: "Prénom et nom de l'enfant ?", wo: "Turu xale bi ak santam?" },
     "civil.deathName": { fr: "Prénom et nom du défunt ?", wo: "Turu ki faatu ak santam?" },
@@ -45,11 +45,11 @@ export const TEXT = {
     "civil.badDate": { fr: "Date non valide.", wo: "Bis bi dëggul." },
     "civil.birthDone": {
         fr: "Naissance pré-déclarée sous le numéro {code}. L'officier d'état civil vous contactera pour l'acte.",
-        wo: "Juddu bi bind nañu ko ak limu {code}. Ofisiyeu état civil bi dina la woo ngir kayit bi.",
+        wo: "Juddu bi, bind nañu ko ak limu {code}. Meeri bi dina la woo ngir kayit bi.",
     },
     "civil.deathDone": {
         fr: "Décès pré-déclaré sous le numéro {code}. L'officier d'état civil vous contactera pour l'acte.",
-        wo: "Dee bi bind nañu ko ak limu {code}. Ofisiyeu état civil bi dina la woo ngir kayit bi.",
+        wo: "Yégle bi, bind nañu ko ak limu {code}. Meeri bi dina la woo ngir kayit bi.",
     },
     "follow.ask": { fr: "Numéro de suivi ? (ex. S-0042)", wo: "Limu yégle bi? (misaal: S-0042)" },
     "follow.unknown": {
@@ -57,7 +57,7 @@ export const TEXT = {
         wo: "Lim bii nekkul ci sa dëkk. Seetal lim bi nga jot ci SMS bi.",
     },
     "follow.status": { fr: "{code} ({what}) : {status}.", wo: "{code} ({what}): {status}." },
-    "message.ask": { fr: "Décrivez le problème ou la déclaration :", wo: "Waxal jafe-jafe bi walla li ngay yégle:" },
+    "message.ask": { fr: "Décrivez le problème ou la déclaration :", wo: "Bindal jafe-jafe bi walla li ngay yégle:" },
     "message.toCheck": {
         fr: "Message reçu ({code}). La Mairie va le vérifier et vous répondra par SMS.",
         wo: "Bataaxal bi agsi na ({code}). Meeri bi dina ko seet te tontu la ci SMS.",
@@ -68,7 +68,7 @@ export const TEXT = {
     },
     notRegistered: {
         fr: "Ce numéro n'est pas enregistré comme chef de village. Contactez la Mairie pour l'ajouter.",
-        wo: "Nimero bii bindeesu ko ni njiitu dëkk. Jokkool ak Meeri bi ngir ñu yokk ko.",
+        wo: "Nimero bii bindeesu ko ci njiiti dëkk yi. Jokkool ak Meeri bi ngir ñu yokk ko.",
     },
     "sms.created": {
         fr: "Mairie de Ndiédieng : nous avons enregistré le signalement {code} ({what}) pour votre village.",
@@ -86,17 +86,17 @@ export const TEXT = {
 /** A category, as a chief reads it in a reply. */
 export const CATEGORY = {
     eau: { fr: "eau", wo: "ndox" },
-    sante: { fr: "santé", wo: "wér-gu-yaram" },
+    sante: { fr: "santé", wo: "wér-gi-yaram" },
     ecole: { fr: "école", wo: "lekool" },
     energie: { fr: "énergie", wo: "mbëj" },
     piste: { fr: "piste", wo: "yoon" },
     naissance: { fr: "naissance", wo: "juddu" },
-    deces: { fr: "décès", wo: "dee" },
-    autre: { fr: "autre", wo: "yeneen" },
+    deces: { fr: "décès", wo: "ku faatu" },
+    autre: { fr: "autre", wo: "leneen" },
 };
 /** An urgency, as it follows "urgence" in French; whole in Wolof. */
 export const URGENCY = {
-    haute: { fr: "haute", wo: "jamp na" },
+    haute: { fr: "haute", wo: "yàkkamti na" },
     moyenne: { fr: "moyenne", wo: "dafa sonal" },
     basse: { fr: "basse", wo: "mën na xaar" },
 };
@@ -119,7 +119,7 @@ export const EQUIPMENT = {
     "case de sante": { fr: "case de santé", wo: "case de santé" },
     "salle de classe": { fr: "salle de classe", wo: "néegu jàng" },
     latrines: { fr: "latrines", wo: "wanag" },
-    "lampadaire solaire": { fr: "lampadaire solaire", wo: "lampadeer" },
+    "lampadaire solaire": { fr: "lampadaire solaire", wo: "lampu mbedd" },
     piste: { fr: "piste", wo: "yoon" },
 };
 /**

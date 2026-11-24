@@ -121,7 +121,7 @@ describe("Wolof", () => {
     for (const s of screens) expect(s.text.length).toBeLessThanOrEqual(160);
     expect(screens[3]!.text).toBe(plain(`${TEXT["breakdown.urgency"].wo}\n1. ${TEXT["breakdown.urgent"].wo}\n2. ${TEXT["breakdown.annoying"].wo}\n3. ${TEXT["breakdown.canWait"].wo}`));
     const done = await phone.press("1");
-    expect(done.text).toBe("Yegle S-0001 bind nanu ko: forage, Village 07, jamp na. Dinga jot SMS bu nu ko defaree.");
+    expect(done.text).toBe("Yegle S-0001 bind nanu ko: forage, Village 07, yakkamti na. Dinga jot SMS su nu ko defaree.");
     // The Mairie's record stays in French.
     expect(commune.signalement("S-0001")).toMatchObject({ categorie: "eau", urgence: "haute", description: "forage en panne" });
   });
@@ -132,7 +132,7 @@ describe("Wolof", () => {
     expect((await phone.press("2")).text).toBe(plain(TEXT["civil.birthName"].wo));
     await phone.press("Awa Diop");
     expect((await phone.press("demain")).text).toMatch(/^Bis bi deggul\. Ban bis la juddu\?/);
-    expect((await phone.press("14/11/2026")).text).toMatch(/^Juddu bi bind nanu ko ak limu S-0001\./);
+    expect((await phone.press("14/11/2026")).text).toMatch(/^Juddu bi, bind nanu ko ak limu S-0001\. Meeri bi dina la woo/);
     await phone.dial("*123#");
     await phone.press("4");
     expect((await phone.press("S-0001")).text).toBe("S-0001 (juddu): agsi na.");
