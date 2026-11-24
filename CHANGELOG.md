@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The private root and example packages are versioned `0.0.0`: they are never
+  published, and their `0.1.0-alpha.0` looked like a release that lagged
+  behind the packages.
+
 ### Fixed
 
 - Ndiédieng's spoken answers no longer read their own instruction aloud
