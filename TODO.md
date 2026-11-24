@@ -83,15 +83,21 @@ Code and French README in [examples/ndiedieng](examples/ndiedieng).
     with a real speaker
   - [ ] Wolof voice messages through Gemini audio transcription (browsers do
     not dictate Wolof). The assistant already listens through Gemini, and its
-    transcription prompt accepts French or Wolof; quality to test with speakers
+    transcription prompt accepts French or Wolof; quality to test with speakers.
+    Open alternatives to compare: `whosper` (CAYTU's Whisper fine-tune for
+    Wolof) and Adia TTS (CONCREE), both packaged by sudoping01; read their
+    licences first
   - [x] Spoken answers in Wolof (the "speak" task takes the language)
   - [x] A review sheet (French | Wolof draft | correction):
     `examples/ndiedieng/wolof-review.csv`, generated from `strings.ts` and
     checked in the tests
-- [ ] Step 2: a Wolof speaker reviews every string in the sheet (and
-  `locales/wo.draft.json`, redrafted by hand on 24 Nov, payments included)
-  before the field tests on 19 Dec. The maintainer speaks Wolof; a second speaker
-  should still check what the maintainer corrects
+- [x] Second draft of the Ndiédieng Wolof strings (24 Nov): "faatu" for a
+  death, "yàkkamti" for urgent, no invented words
+- [ ] Step 2: the maintainer reviews every string in
+  `examples/ndiedieng/wolof-review.csv` (fill the `correction` column; the
+  corrections then go into `src/strings.ts`, and the `kalangu.*` rows into
+  `locales/wo.draft.json` too) before the field tests on 19 Dec. A second
+  speaker should still check what the maintainer corrects
 - [x] The website demo keeps each chief's language across reloads, with the
   reports and inboxes (a conversation in progress is not kept)
 - [ ] Then Sérère, the same way; a speaker matters even more there
@@ -230,6 +236,9 @@ above).
   CONTRIBUTING.md): drafts only, marked unreviewed
 - [x] Wolof, Hausa and Swahili machine drafts (Gemini, 19 Nov 2026), through
   the checker and checked in CI: `locales/*.draft.json`, marked not reviewed
+- [x] Second pass on the drafts (24 Nov 2026): Wolof redrafted by hand by a
+  speaker, `common.*` and `payments.*`; Hausa and Swahili clear errors fixed
+  by a non-speaker. Still unreviewed
 - [x] Draft the text normalization design:
   [docs/normalization-design.md](docs/normalization-design.md) (fold,
   render for USSD, canonicalize; Gemini offline only; own repo later)
@@ -239,8 +248,27 @@ above).
   the label (normalization design §11 step 1)
 - [ ] Review the normalization design and its questions for native speakers
   (§10, §12)
-- [ ] Native speakers to review the Wolof, Hausa and Swahili drafts in
-  `locales/` (`locales/README.md` says how)
+- [ ] Native speakers to review the drafts in `locales/` (`locales/README.md`
+  says how): Hausa in #98 (`Eh` or `I` for Yes; masculine "ka" forms), Swahili
+  in #99 (mobile money wording, Kenya/Tanzania spelling), Wolof by a second
+  speaker after the maintainer's corrections
+- [x] Bambara in Mali's default language order (`fr, bm`), released in
+  `0.1.0-alpha.10`
+- [ ] Bambara draft locale, `locales/bm.draft.json`: parked on 24 Nov because
+  `gemini-3.5-flash-lite` answered 503 and the free-tier key has no Pro
+  quota. Retry with
+  `node scripts/translate-locale.mjs bm --name Bambara --reference fr --model gemini-3.8-flash`,
+  then the README row, a changelog entry and a "Translation review: Bambara"
+  issue (sudoping01 / MALIBA-AI are the people to ask)
+- [ ] Bambara on USSD: `ɛ`, `ɔ`, `ɲ`, `ŋ` collapse to `e`, `o`, `n`, so `ɛ`/`e`
+  and `ɔ`/`o` can no longer be told apart; a speaker to say which words become
+  ambiguous (normalization design). By SMS each one means 70 characters per
+  segment
+- [ ] Evaluate Bambara speech and translation before relying on any:
+  Djelia (paid API: translation, speech to text, text to speech), MALIBA-AI
+  (`bambara-asr`, `bambara-tts`, `maliba-llm`) and RobotsMali (`bam-vits`,
+  ASR models). Their licences are not stated on the pages read on 24 Nov;
+  read each model card. No Bambara language detector was found
 
 ## Version 0.4: channels
 
