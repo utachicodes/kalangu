@@ -21,7 +21,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, posix, relative, resolve, sep } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
@@ -50,22 +50,23 @@ export const POST = handle;
 /** The function's modules, as .mjs so they load as ES modules wherever the function's root is. */
 const FUNCTION_MODULES = ["geminiFunction", "gemini", "schema"];
 
-/** Every file under `dir`, as paths relative to it. */
+/** Every file under `dir`, as paths relative to it, with forward slashes on every platform. */
 function walk(dir, base = dir) {
   return readdirSync(dir).flatMap((name) => {
     const full = join(dir, name);
-    return statSync(full).isDirectory() ? walk(full, base) : [relative(base, full)];
+    return statSync(full).isDirectory() ? walk(full, base) : [relative(base, full).split(sep).join("/")];
   });
 }
 
 export function build() {
+  // Keys are site paths with forward slashes, the same on Windows: posix.join, never join.
   const files = new Map();
   const tmp = mkdtempSync(join(tmpdir(), "ndiedieng-web-"));
   try {
     // TypeScript's own entry, run with this Node: node_modules/.bin/tsc is a shell
     // script that Windows cannot execute directly.
     execFileSync(process.execPath, [TSC, "-p", "tsconfig.web.json", "--outDir", tmp], { cwd: HERE, stdio: "pipe" });
-    for (const file of walk(tmp)) files.set(join("app", file), readFileSync(join(tmp, file), "utf8"));
+    for (const file of walk(tmp)) files.set(posix.join("app", file), readFileSync(join(tmp, file), "utf8"));
   } catch (err) {
     throw new Error(`tsc failed:\n${err.stdout ?? ""}${err.stderr ?? ""}${err.stdout || err.stderr ? "" : err.message}`);
   } finally {
@@ -76,19 +77,19 @@ export function build() {
   if (!existsSync(join(core, "index.js"))) throw new Error("Build the packages first: pnpm build");
   for (const file of walk(core)) {
     // The command-line tool uses Node's file system; the browser never loads it.
-    if (file.endsWith(".js") && file !== "cli.js") files.set(join("vendor", "core", file), readFileSync(join(core, file), "utf8"));
+    if (file.endsWith(".js") && file !== "cli.js") files.set(posix.join("vendor", "core", file), readFileSync(join(core, file), "utf8"));
   }
-  files.set(join("vendor", "sim", "phone.js"), readFileSync(join(ROOT, "packages", "sim", "dist", "phone.js"), "utf8"));
+  files.set(posix.join("vendor", "sim", "phone.js"), readFileSync(join(ROOT, "packages", "sim", "dist", "phone.js"), "utf8"));
 
   // The function: its modules from the same compile, imports pointed at .mjs.
   const api = new Map([["gemini.mjs", ENTRY]]);
   for (const name of FUNCTION_MODULES) {
-    const js = files.get(join("app", "src", `${name}.js`));
+    const js = files.get(posix.join("app", "src", `${name}.js`));
     if (!js) throw new Error(`${name}.js was not compiled`);
-    api.set(join("_lib", `${name}.mjs`), js.replace(/from "\.\/([a-zA-Z]+)\.js"/g, 'from "./$1.mjs"').replace(/\n\/\/# sourceMappingURL=.*$/m, ""));
+    api.set(posix.join("_lib", `${name}.mjs`), js.replace(/from "\.\/([a-zA-Z]+)\.js"/g, 'from "./$1.mjs"').replace(/\n\/\/# sourceMappingURL=.*$/m, ""));
   }
   // The function is server code: the page never loads it.
-  files.delete(join("app", "src", "geminiFunction.js"));
+  files.delete(posix.join("app", "src", "geminiFunction.js"));
 
   for (const file of ["index.html", "styles.css", "common.js", "ui.js", "assistant/index.html", "assistant.css", "assistant.js"]) files.set(file, readFileSync(join(HERE, "web", file), "utf8"));
   // Source maps point at files outside the site; drop the comment.
