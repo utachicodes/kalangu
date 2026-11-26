@@ -68,3 +68,15 @@ from a machine draft.
   release is maintained by the maintainer.
 - No payment code until the 0.2 design is reviewed; money code should not be
   rushed.
+
+## Pull requests
+
+- Every change reaches `main` through a pull request from a branch; nothing
+  is pushed to `main` directly.
+- Every pull request adds an entry under `## [Unreleased]` in
+  [CHANGELOG.md](CHANGELOG.md). CI fails one that does not.
+- Turn on the repository's hook once per clone, so a push that breaks either
+  rule is refused before it leaves your machine:
+  `git config core.hooksPath .githooks`.
+- [AGENTS.md](AGENTS.md) has the full rules, for people and AI coding agents
+  alike.

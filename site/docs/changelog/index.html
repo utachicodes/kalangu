@@ -42,6 +42,17 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/" rel="noopener">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="noopener">Semantic Versioning</a>.</p>
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
+<h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><code>AGENTS.md</code>: the rules for AI coding agents (and people) working in the
+repository: never push to <code>main</code>, every change through a pull request with
+a CHANGELOG.md entry, the checks to run, the generated files and their
+scripts, the design rules, and the writing style (no em dashes, no emojis).</li>
+<li>The rules are enforced: a <code>pre-push</code> hook (<code>.githooks/pre-push</code>, on with
+<code>git config core.hooksPath .githooks</code>) refuses pushes to <code>main</code> and
+branches that do not change CHANGELOG.md, and CI fails a pull request that
+does not change it (Dependabot&#39;s are exempt).</li>
+</ul>
 <h2 id="010-alpha10---2026-11-24">[0.1.0-alpha.10] - 2026-11-24<a class="anchor" href="#010-alpha10---2026-11-24" aria-label="Link to this section">#</a></h2>
 <h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
 <ul>
@@ -81,7 +92,7 @@ behind the packages.</li>
 gets only the words to say. Checked by transcribing the generated speech
 back, in French and in Wolof.</li>
 </ul>
-<h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
+<h3 id="added-1">Added<a class="anchor" href="#added-1" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Ndiédieng in Wolof: a chief chooses Français or Wolof at the first call or
 SMS (Kalangu&#39;s language menu), it is remembered for the number, and entry 6
@@ -192,7 +203,7 @@ checked and run read-only. A demo page puts a simulated chief&#39;s phone beside
 the dashboard.</li>
 </ul>
 <h2 id="010-alpha9---2026-11-19">[0.1.0-alpha.9] - 2026-11-19<a class="anchor" href="#010-alpha9---2026-11-19" aria-label="Link to this section">#</a></h2>
-<h3 id="added-1">Added<a class="anchor" href="#added-1" aria-label="Link to this section">#</a></h3>
+<h3 id="added-2">Added<a class="anchor" href="#added-2" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><code>checkSessionStore(makeStore)</code> and <code>checkPaymentStore(makeStore)</code>: the
 session and payment store contracts, runnable against a store you write,
@@ -252,7 +263,7 @@ longer shrinks, GitHub hides below 440 px (it is in every page&#39;s footer)
 and Contributing below 360 px (it is in the sidebar).</li>
 </ul>
 <h2 id="010-alpha8---2026-11-19">[0.1.0-alpha.8] - 2026-11-19<a class="anchor" href="#010-alpha8---2026-11-19" aria-label="Link to this section">#</a></h2>
-<h3 id="added-2">Added<a class="anchor" href="#added-2" aria-label="Link to this section">#</a></h3>
+<h3 id="added-3">Added<a class="anchor" href="#added-3" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>The clinic example can answer with Gemini: <code>GEMINI_MODEL=gemini-3.5-flash-lite pnpm demo</code> with <code>GEMINI_API_KEY</code> exported (and the same for the server).
 The key goes in a header, never the URL; the model&#39;s thinking parts are
@@ -292,7 +303,7 @@ answer no longer strips <code>*</code> and <code>#</code> from USSD codes such a
 answers: past the timeout it moves on, as Kalangu does.</li>
 </ul>
 <h2 id="010-alpha6---2026-11-18">[0.1.0-alpha.6] - 2026-11-18<a class="anchor" href="#010-alpha6---2026-11-18" aria-label="Link to this section">#</a></h2>
-<h3 id="added-3">Added<a class="anchor" href="#added-3" aria-label="Link to this section">#</a></h3>
+<h3 id="added-4">Added<a class="anchor" href="#added-4" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><code>scripts/eval-detector.mjs</code>: measures a language detector on labelled
 samples the way Kalangu uses it: per-language accuracy, a confusion
@@ -313,7 +324,7 @@ what the handler changed after the deadline, with a version check, and
 keeps a newer turn&#39;s place.</li>
 </ul>
 <h2 id="010-alpha5---2026-11-18">[0.1.0-alpha.5] - 2026-11-18<a class="anchor" href="#010-alpha5---2026-11-18" aria-label="Link to this section">#</a></h2>
-<h3 id="added-4">Added<a class="anchor" href="#added-4" aria-label="Link to this section">#</a></h3>
+<h3 id="added-5">Added<a class="anchor" href="#added-5" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Language detection now also reads the SMS that starts a conversation
 (languages design §5). A number with no language yet gets the language
@@ -347,7 +358,7 @@ to the newer session without running the handler again, and keeps the
 user&#39;s place if they are answering a question (payments design §9).</li>
 </ul>
 <h2 id="010-alpha4---2026-11-18">[0.1.0-alpha.4] - 2026-11-18<a class="anchor" href="#010-alpha4---2026-11-18" aria-label="Link to this section">#</a></h2>
-<h3 id="added-5">Added<a class="anchor" href="#added-5" aria-label="Link to this section">#</a></h3>
+<h3 id="added-6">Added<a class="anchor" href="#added-6" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Documentation on the website (kalangu.utachi.website/docs/): a quick start,
 a guide to building agents, guides (the Africa&#39;s Talking sandbox,
@@ -413,7 +424,7 @@ error is reported in one line.</li>
 saved response in words, with an exit status, instead of crashing.</li>
 </ul>
 <h2 id="010-alpha2---2026-11-17">[0.1.0-alpha.2] - 2026-11-17<a class="anchor" href="#010-alpha2---2026-11-17" aria-label="Link to this section">#</a></h2>
-<h3 id="added-6">Added<a class="anchor" href="#added-6" aria-label="Link to this section">#</a></h3>
+<h3 id="added-7">Added<a class="anchor" href="#added-7" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Language detection as a hint (docs/languages-design.md §9.5):
 <code>languages.detection: { detector, threshold, minChars, timeoutMs? }</code> with
@@ -462,7 +473,7 @@ It now says to install without a tag and to check the tags after approving.</li>
 <h2 id="010-alpha0---2026-11-17">[0.1.0-alpha.0] - 2026-11-17<a class="anchor" href="#010-alpha0---2026-11-17" aria-label="Link to this section">#</a></h2>
 <p>First publish of <code>@kalangu/core</code>, <code>@kalangu/ussd</code>, <code>@kalangu/sms</code> and
 <code>@kalangu/sim</code>. Everything below was in it.</p>
-<h3 id="added-7">Added<a class="anchor" href="#added-7" aria-label="Link to this section">#</a></h3>
+<h3 id="added-8">Added<a class="anchor" href="#added-8" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><p>Payments in <code>@kalangu/core</code> (prep, no real provider yet): the <code>pay</code> step,
 <code>createAgent({ payments })</code> with a mandatory policy, the confirm screen
