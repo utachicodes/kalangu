@@ -44,6 +44,13 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="n
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>One-command setup for contributors, Windows included: <code>node scripts/setup.mjs</code>
+checks Node, installs every package with the pinned pnpm (through <code>npx</code> when
+pnpm is missing), builds, and does nothing when nothing changed. VS Code
+runs it when the folder opens, recommends EditorConfig and Vitest, offers
+demo, test, typecheck and Ndiédieng tasks, and opens generated files
+read-only. <code>.gitattributes</code> keeps LF line endings, which the generated-file
+checks need. CI now runs the setup and the tests on Windows.</li>
 <li><code>AGENTS.md</code>: the rules for AI coding agents (and people) working in the
 repository: never push to <code>main</code>, every change through a pull request with
 a CHANGELOG.md entry, the checks to run, the generated files and their

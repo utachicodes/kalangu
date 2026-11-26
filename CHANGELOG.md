@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- One-command setup for contributors, Windows included: `node scripts/setup.mjs`
+  checks Node, installs every package with the pinned pnpm (through `npx` when
+  pnpm is missing), builds, and does nothing when nothing changed. VS Code
+  runs it when the folder opens, recommends EditorConfig and Vitest, offers
+  demo, test, typecheck and Ndiédieng tasks, and opens generated files
+  read-only. `.gitattributes` keeps LF line endings, which the generated-file
+  checks need. CI now runs the setup and the tests on Windows.
 - `AGENTS.md`: the rules for AI coding agents (and people) working in the
   repository: never push to `main`, every change through a pull request with
   a CHANGELOG.md entry, the checks to run, the generated files and their

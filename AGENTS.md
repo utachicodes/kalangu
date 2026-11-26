@@ -47,12 +47,16 @@ git config core.hooksPath .githooks
 ## Setting up and checking your work
 
 Node 22.13 or later (the packages run on 20; the Ndiédieng example needs
-22.13) and pnpm, at the version pinned in `package.json`.
+22.13). Then, on Windows, macOS or Linux:
 
 ```sh
-pnpm install
-pnpm build
+node scripts/setup.mjs
 ```
+
+It installs every package with the pnpm version pinned in `package.json`
+(through `npx` if pnpm is missing) and builds; run it again after a pull that
+changed the packages. VS Code runs it when the folder opens (the "Kalangu: set
+up" task), and offers tasks for the demo, tests and typecheck.
 
 Before pushing, run what CI runs:
 
@@ -102,6 +106,10 @@ A new docs page needs an entry in the page list in `scripts/build-site.mjs`.
   one framework or runtime.
 - **TypeScript strict mode, with `noUncheckedIndexedAccess`.** A screen that
   a channel would cut off must be impossible, not unlikely.
+- **Works on Windows.** Contributors use Windows: build and test scripts use
+  Node's `path` functions, compare paths with forward slashes, run tools
+  through `process.execPath` rather than `node_modules/.bin`, and keep LF line
+  endings (`.gitattributes`). CI runs the setup and the tests on Windows.
 - **Never cut text silently.** Every USSD screen and SMS goes through the
   budgeter; text that does not fit is paginated or refused, never truncated.
 - **Payments are experimental.** Nothing touches a real payment provider

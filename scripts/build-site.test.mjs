@@ -83,12 +83,14 @@ describe("discoverability", () => {
 
   it("gives each page a canonical URL and a preview title", async () => {
     const { files } = await build();
-    const [path, html] = [...files].find(([p]) => p.endsWith("/docs/agents/index.html"));
+    // File paths use the platform's separator (backslashes on Windows); compare with forward slashes.
+    const slash = (p) => p.replaceAll("\\", "/");
+    const [path, html] = [...files].find(([p]) => slash(p).endsWith("/docs/agents/index.html"));
     assert.ok(path);
     assert.match(html, new RegExp(`<link rel="canonical" href="${SITE_URL}/docs/agents/">`));
     assert.match(html, /<meta property="og:title" content="Agents">/);
     assert.match(html, /<link rel="icon" href="\/favicon.svg"/);
-    assert.ok([...files.keys()].some((p) => p.endsWith("/favicon.svg")));
+    assert.ok([...files.keys()].some((p) => slash(p).endsWith("/favicon.svg")));
     assert.ok(FAVICON.startsWith("<svg"));
   });
 });
