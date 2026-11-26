@@ -102,6 +102,7 @@ export const PAGES = [
   { group: "Design", label: "Payments", src: "docs/payments-design.md", url: "/docs/design/payments/" },
   { group: "Design", label: "Languages", src: "docs/languages-design.md", url: "/docs/design/languages/" },
   { group: "Design", label: "WhatsApp", src: "docs/whatsapp-design.md", url: "/docs/design/whatsapp/" },
+  { group: "Design", label: "First message", src: "docs/first-message-design.md", url: "/docs/design/first-message/" },
   { group: "Design", label: "Text normalization", src: "docs/normalization-design.md", url: "/docs/design/normalization/" },
   { group: "Design", label: "Prior art", src: "docs/prior-art.md", url: "/docs/design/prior-art/" },
   { group: "Project", label: "Contributing", src: "CONTRIBUTING.md", url: "/contributing/" },

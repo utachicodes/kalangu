@@ -45,6 +45,8 @@ works the way it does, including what has not been verified yet.
 - [Payments](payments-design.md): experimental, against a fake provider.
 - [Languages](languages-design.md): the language menu, detection, models.
 - [WhatsApp](whatsapp-design.md): designed, not built.
+- [First message](first-message-design.md): taking a conversation's first
+  SMS as input; draft for review.
 - [Text normalization](normalization-design.md): African languages on
   keypads and USSD.
 - [Prior art](prior-art.md): what else exists.

@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalangu: taking a conversation&amp;#39;s first SMS as input · Kalangu</title>
+<meta name="description" content="Status: draft for review. No code until it is reviewed. Date: 2026-11-24. Scope: SMS (and, later, WhatsApp text) only. USSD, payments and language detection are">
+<link rel="canonical" href="https://kalangu.utachi.website/docs/design/first-message/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Kalangu">
+<meta property="og:title" content="Kalangu: taking a conversation&amp;#39;s first SMS as input">
+<meta property="og:description" content="Status: draft for review. No code until it is reviewed. Date: 2026-11-24. Scope: SMS (and, later, WhatsApp text) only. USSD, payments and language detection are">
+<meta property="og:url" content="https://kalangu.utachi.website/docs/design/first-message/">
+<meta property="og:image" content="https://kalangu.utachi.website/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Kalangu: AI agents for every phone. USSD and SMS, keypad phones included. Open source.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="/assets/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/docs/docs.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="top">
+  <a class="brand" href="/"><i></i>kalangu</a>
+  <nav class="top-r" aria-label="Site">
+    <!-- Only what the sidebar doesn't already list: no link twice on a page. -->
+    <a href="/components/">Components</a>
+    <a href="https://github.com/utachicodes/kalangu">GitHub</a>
+  </nav>
+</header>
+<div class="layout">
+  <details class="side" open>
+    <summary>Menu</summary>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/first-message/" aria-current="page">First message</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/security/">Security</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+  </details>
+  <main id="content">
+    <article class="doc">
+<h1 id="kalangu-taking-a-conversation39s-first-sms-as-input">Kalangu: taking a conversation&#39;s first SMS as input</h1>
+<p>Status: <strong>draft for review. No code until it is reviewed.</strong>
+Date: 2026-11-24. Scope: SMS (and, later, WhatsApp text) only. USSD, payments
+and language detection are unchanged except where §5 says.</p>
+<hr>
+<h2 id="1-the-problem">1. The problem<a class="anchor" href="#1-the-problem" aria-label="Link to this section">#</a></h2>
+<p>An SMS that starts a conversation is never read as input. Whatever it says,
+the agent answers with its start: the language menu for a number that has not
+chosen a language, the start step for one that has. The text is used only as
+a hint for language detection (languages design §9.5).</p>
+<p>That suits an agent built as a menu, where the first SMS is &quot;hi&quot;. It does not
+suit one that takes free-text reports. In the Ndiédieng example a village
+chief who texts &quot;the borehole is broken&quot; gets the menu back, answers <code>5</code>
+(&quot;write a message&quot;), and has to send the report again: three SMS, and the
+first one, which already said everything, is thrown away. On a basic phone,
+each SMS is typing, a cost, and a chance to give up.</p>
+<h2 id="2-what-the-code-does-today">2. What the code does today<a class="anchor" href="#2-what-the-code-does-today" aria-label="Link to this section">#</a></h2>
+<p>Read from <code>packages/core/src/agent.ts</code> on 24 Nov 2026.</p>
+<ul>
+<li><strong>What counts as a conversation-starting SMS:</strong> an SMS that arrives when
+nothing is waiting for an answer: no turn on screen, or a final <code>say</code>. A
+waiting question also lapses after <code>resumeWindowMs</code> (default 5 minutes)
+without activity, so an SMS after that starts a conversation too.</li>
+<li><strong>What happens to it</strong> (<code>startFromMessage</code>): a number without a language
+gets the language menu, with the language its message looks like listed
+first if a detector is configured. A number with a language gets the start
+step, or first a &quot;Continue in {language}?&quot; offer if a detector places the
+text in another of the agent&#39;s languages. In every case <strong>the text answers
+nothing.</strong></li>
+<li><strong>An SMS while a question is waiting</strong> is that question&#39;s answer: a menu
+number or label, an <code>ask</code> answer, a Yes or No. Free text sent to a waiting
+menu is an invalid choice.</li>
+<li><strong>USSD</strong> never has this problem: its first input is the dial, and a dial
+string (<code>*123*1*4#</code>) already carries choices, which are replayed.</li>
+</ul>
+<p>So the language menu is not the cause; it adds one screen before the same
+behaviour every number already gets.</p>
+<h2 id="3-options">3. Options<a class="anchor" href="#3-options" aria-label="Link to this section">#</a></h2>
+<div class="table"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>How</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>A. An <code>ask</code> start step answers itself</strong></td>
+<td>If the start step is an <code>ask</code>, a conversation-starting SMS is its answer</td>
+<td>Breaks every agent whose start is an <code>ask</code> and whose users open with &quot;hi&quot;. Implicit: a developer could not see from the tree that SMS behaves differently from USSD. Rejected</td>
+</tr>
+<tr>
+<td><strong>B. An <code>onMessage</code> handler</strong></td>
+<td><code>createAgent({ onMessage })</code> is called with the text of a conversation-starting SMS; its reply decides what follows, and &quot;nothing&quot; means the start, as today</td>
+<td>Opt-in, backwards compatible, and the developer decides what a first message means (a report, a keyword, a greeting). <strong>Recommended</strong></td>
+</tr>
+<tr>
+<td><strong>C. A separate SMS start step</strong></td>
+<td><code>createAgent({ start, smsStart })</code></td>
+<td>Only moves the problem: a step still cannot see the text that started it</td>
+</tr>
+</tbody></table></div>
+<h2 id="4-proposal-onmessage">4. Proposal: <code>onMessage</code><a class="anchor" href="#4-proposal-onmessage" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-ts">createAgent({
+  start,
+  onMessage: async (text, ctx) =&gt; {
+    // A report in one SMS: record it and reply. Anything short (&quot;hi&quot;, &quot;menu&quot;):
+    // return nothing, and the agent shows its start as today.
+    if (text.length &lt; 15) return;
+    const report = await recordReport(ctx.phone, text, ctx.locale);
+    return `Report received (${report.code}). Thank you.`;
+  },
+  // ...
+});
+</code></pre>
+<ul>
+<li><strong>Signature:</strong> a <code>Handler</code>, <code>(text, ctx) =&gt; Reply</code>, like any other: the
+trimmed text of the SMS, and the usual <code>ctx</code> (<code>phone</code>, <code>session</code>,
+<code>locale</code>, <code>t</code>, <code>model</code>, <code>logger</code>).</li>
+<li><strong>When it is called:</strong> for a conversation-starting SMS (§2), on an SMS
+channel, and later for a WhatsApp text message. Never on USSD, never for an
+SMS that answers a waiting question, and never while a deferred answer is
+still on its way (that keeps its notice, as today).</li>
+<li><strong>What its reply does:</strong> the same as any handler&#39;s (<code>docs/agents.md</code>,
+Handlers): a string or <code>say</code> is the reply SMS and ends the conversation; a
+step is shown next, so a handler can ask a follow-up question; <strong>nothing
+shows the start</strong>, exactly as today. An agent that does not set
+<code>onMessage</code> behaves exactly as today.</li>
+<li><strong>Errors:</strong> a handler that throws gets the usual <code>common.error</code> reply, and
+the session is left at the start, as for any handler.</li>
+<li><strong>No deadline:</strong> SMS is not a live channel, so there is nothing to defer;
+the handler may take as long as it needs, as an SMS <code>ask</code> handler already
+may.</li>
+</ul>
+<h2 id="5-with-languages">5. With languages<a class="anchor" href="#5-with-languages" aria-label="Link to this section">#</a></h2>
+<p>The language menu still comes first for a number that has not chosen, so the
+reply can be in its language. The message is <strong>held</strong> and run once the
+choice is made, the same mechanism as an answer held during a language
+suggestion (languages design §9.5):</p>
+<pre><code>first SMS &quot;forage bi dafa yàqu&quot; from a new number
+  → language menu (Wolof listed first, if a detector says so)   message held
+  → &quot;2&quot; (Wolof)                                                  language set
+  → onMessage(&quot;forage bi dafa yàqu&quot;, ctx with locale &quot;wo&quot;)       held message used
+  → its reply, in Wolof; or the start step if it returns nothing
+</code></pre>
+<ul>
+<li><strong>Where it is held:</strong> in the session record, like a held answer, with the
+same lifetime: cleared once used, and dropped when the position resets
+after <code>resumeWindowMs</code>. A number that never chooses a language never has it
+run.</li>
+<li><strong>A &quot;Continue in {language}?&quot; offer</strong> on a first message (a number that
+has a language): today the offer holds nothing and either answer starts the
+conversation. With <code>onMessage</code>, the message is held instead, and the answer
+runs it in the language chosen.</li>
+<li><strong>Detection is unchanged:</strong> the message is still only a hint for which
+language to list first or offer. It never chooses.</li>
+<li>Only one message is held. A second SMS before the choice is read as the
+answer to the language menu, as today.</li>
+</ul>
+<h2 id="6-ndiédieng-with-it">6. Ndiédieng, with it<a class="anchor" href="#6-ndiédieng-with-it" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-ts">onMessage: async (text, ctx) =&gt; {
+  if (text.length &lt; 15 || /^(menu|aide|help)$/i.test(text)) return; // the menu, as today
+  const done = await recordFreeText(commune, classifier, ctx.phone, text, &quot;sms&quot;, langOf(ctx.locale));
+  return done ? done.reply : say(langOf(ctx.locale), &quot;notRegistered&quot;);
+},
+</code></pre>
+<p>A chief&#39;s report becomes one SMS and one reply, in their language. &quot;menu&quot; or
+a greeting still opens the menu, so nothing a chief does today stops working.</p>
+<h2 id="7-testing-plan">7. Testing plan<a class="anchor" href="#7-testing-plan" aria-label="Link to this section">#</a></h2>
+<ol>
+<li>Without <code>onMessage</code>: every existing SMS test passes unchanged.</li>
+<li>A conversation-starting SMS calls <code>onMessage</code> with the trimmed text; a
+string reply is sent and ends the conversation; a step is shown; nothing
+shows the start.</li>
+<li>Not called: on USSD (including a dial string), for an SMS that answers a
+waiting question, during a deferral.</li>
+<li>A waiting question that lapsed after <code>resumeWindowMs</code>: the next SMS calls
+<code>onMessage</code>.</li>
+<li>A new number with <code>languages</code>: the message is held through the language
+menu and runs with the chosen locale; a second SMS answers the menu; a
+reset drops the held message.</li>
+<li>A &quot;Continue in…?&quot; offer on a first message holds it and runs it after Yes
+and after No, each in the right language.</li>
+<li>A handler that throws: <code>common.error</code>, session at the start.</li>
+<li>Two SMS racing on the same held message run <code>onMessage</code> once (the claim
+used for held answers).</li>
+</ol>
+<h2 id="8-open-questions">8. Open questions<a class="anchor" href="#8-open-questions" aria-label="Link to this section">#</a></h2>
+<p>Each with a recommendation.</p>
+<ol>
+<li><strong>The name:</strong> <code>onMessage</code> (recommended: it says when it runs), or
+<code>firstMessage</code>, or a <code>start: { sms: handler }</code> form?</li>
+<li><strong>A number as the first SMS</strong> (<code>&quot;5&quot;</code> from someone who knows the menu):
+pass it to <code>onMessage</code> like any text (recommended: the developer decides,
+and Ndiédieng&#39;s length check already sends it to the menu), or have core
+treat a first SMS that is a valid menu number as a menu choice?</li>
+<li><strong>Free text sent to a waiting menu</strong> (inside the resume window): keep it
+an invalid choice (recommended: a waiting question is answered), or route
+text that matches no option to <code>onMessage</code> too? The second would make the
+rules depend on what the menu happens to contain.</li>
+</ol>
+
+    </article>
+    <footer class="foot">
+      <a href="https://github.com/utachicodes/kalangu/blob/main/docs/first-message-design.md">Edit this page on GitHub</a>
+      <span>Generated from <code>docs/first-message-design.md</code></span>
+    </footer>
+  </main>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-the-problem">1. The problem</a></li><li><a href="#2-what-the-code-does-today">2. What the code does today</a></li><li><a href="#3-options">3. Options</a></li><li><a href="#4-proposal-onmessage">4. Proposal: onMessage</a></li><li><a href="#5-with-languages">5. With languages</a></li><li><a href="#6-ndiédieng-with-it">6. Ndiédieng, with it</a></li><li><a href="#7-testing-plan">7. Testing plan</a></li><li><a href="#8-open-questions">8. Open questions</a></li></ul></nav>
+</div>
+<script>
+// On a phone the menu starts closed, so the page's content comes first. Without
+// JavaScript it simply stays open.
+if (matchMedia("(max-width: 760px)").matches) document.querySelector(".side").open = false;
+</script>
+</body>
+</html>

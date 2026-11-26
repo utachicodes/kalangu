@@ -33,7 +33,7 @@
 <div class="layout">
   <details class="side" open>
     <summary>Menu</summary>
-    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/security/">Security</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/" aria-current="page">Changelog</a></li></ul></div></nav>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/first-message/">First message</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/security/">Security</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/" aria-current="page">Changelog</a></li></ul></div></nav>
   </details>
   <main id="content">
     <article class="doc">
@@ -44,6 +44,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="n
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li>A design note for taking a conversation&#39;s first SMS as input
+(<a href="/docs/design/first-message/">First message</a>, draft for review): an
+opt-in <code>onMessage</code> handler, so an agent that takes free-text reports can
+read the SMS that starts a conversation instead of answering it with the
+menu. In Ndiédieng a chief&#39;s report would take one SMS instead of three.
+No code until it is reviewed.</li>
 <li>One-command setup for contributors, Windows included: <code>node scripts/setup.mjs</code>
 checks Node, installs every package with the pinned pnpm (through <code>npx</code> when
 pnpm is missing), builds, and does nothing when nothing changed. VS Code
@@ -60,8 +66,15 @@ scripts, the design rules, and the writing style (no em dashes, no emojis).</li>
 branches that do not change CHANGELOG.md, and CI fails a pull request that
 does not change it (Dependabot&#39;s are exempt).</li>
 </ul>
-<h2 id="010-alpha10---2026-11-24">[0.1.0-alpha.10] - 2026-11-24<a class="anchor" href="#010-alpha10---2026-11-24" aria-label="Link to this section">#</a></h2>
 <h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>The languages design&#39;s open questions: reviewed locales will go into core
+next to <code>en</code> and <code>fr</code> (decided), and the claim that the language menu drops
+a new number&#39;s first SMS is corrected: every conversation-starting SMS is
+only a trigger today, which the new first-message design addresses.</li>
+</ul>
+<h2 id="010-alpha10---2026-11-24">[0.1.0-alpha.10] - 2026-11-24<a class="anchor" href="#010-alpha10---2026-11-24" aria-label="Link to this section">#</a></h2>
+<h3 id="changed-1">Changed<a class="anchor" href="#changed-1" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>Mali&#39;s default language order is French, then Bambara (<code>bm</code>): an agent that
 offers Bambara lists it second for a +223 number, instead of after every
@@ -246,7 +259,7 @@ shows them, run, and their output compared with the page&#39;s (in CI).</li>
 <li>Website: a sitemap, <code>robots.txt</code>, a favicon, canonical URLs and link
 previews on every page, and a 404 page, all generated with the docs.</li>
 </ul>
-<h3 id="changed-1">Changed<a class="anchor" href="#changed-1" aria-label="Link to this section">#</a></h3>
+<h3 id="changed-2">Changed<a class="anchor" href="#changed-2" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>The four package READMEs (what npm shows): <code>npm install</code>, links to the
 website&#39;s docs, the store checks and the reference SQLite store, the
@@ -278,7 +291,7 @@ never sent; answers are cleaned and fitted to the SMS cap as for Ollama,
 whose shared pieces moved to <code>answer.ts</code>. <code>nurses.ts</code> picks Gemini, then
 Ollama, then the fake nurse.</li>
 </ul>
-<h3 id="changed-2">Changed<a class="anchor" href="#changed-2" aria-label="Link to this section">#</a></h3>
+<h3 id="changed-3">Changed<a class="anchor" href="#changed-3" aria-label="Link to this section">#</a></h3>
 <ul>
 <li><code>@kalangu/sim</code>: typing something that is not a code at <code>Dial&gt;</code> (such as
 <code>1</code> after a USSD screen ended, or to answer an SMS) still gets the phone&#39;s
@@ -613,7 +626,7 @@ workflow (dry run by default, npm provenance), and <code>RELEASING.md</code>.
 Nothing is published yet.</p>
 </li>
 </ul>
-<h3 id="changed-3">Changed<a class="anchor" href="#changed-3" aria-label="Link to this section">#</a></h3>
+<h3 id="changed-4">Changed<a class="anchor" href="#changed-4" aria-label="Link to this section">#</a></h3>
 <ul>
 <li>README: v0.1 status, package list, quick start, how to write an agent,
 and known limits. CONTRIBUTING updated for working on the code.</li>
