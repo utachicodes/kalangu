@@ -1,0 +1,40 @@
+#!/bin/sh
+# Refuses a push that breaks the repository's rules (AGENTS.md):
+#   1. nothing is pushed to main: every change reaches it through a pull request;
+#   2. every pushed branch changes CHANGELOG.md.
+# Tags (releases) are allowed. Turn it on once per clone:
+#   git config core.hooksPath .githooks
+# Git for Windows runs this with its own sh, so it works there too.
+
+remote="$1"
+zero=0000000000000000000000000000000000000000
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/tags/*) continue ;;
+  esac
+  # Deleting a remote branch pushes nothing.
+  [ "$local_sha" = "$zero" ] && continue
+
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "pre-push: refusing to push to main. Push a branch and open a pull request." >&2
+    exit 1
+  fi
+
+  # Compare with the repository the pull request goes to: upstream/main in a
+  # fork (when that remote exists), else the main of the remote pushed to.
+  main_ref="refs/remotes/$remote/main"
+  git show-ref --verify --quiet refs/remotes/upstream/main && main_ref=refs/remotes/upstream/main
+  base=$(git merge-base "$local_sha" "$main_ref" 2>/dev/null)
+  if [ -z "$base" ]; then
+    echo "pre-push: cannot find ${main_ref#refs/remotes/} to compare with; run 'git fetch' and push again." >&2
+    exit 1
+  fi
+  if ! git diff --name-only "$base" "$local_sha" | grep -Fqx "CHANGELOG.md"; then
+    echo "pre-push: ${remote_ref#refs/heads/} does not change CHANGELOG.md." >&2
+    echo "Add an entry under '## [Unreleased]' describing the change, commit it, and push again." >&2
+    exit 1
+  fi
+done
+
+exit 0

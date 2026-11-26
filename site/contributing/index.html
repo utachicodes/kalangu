@@ -137,6 +137,18 @@ release is maintained by the maintainer.</li>
 <li>No payment code until the 0.2 design is reviewed; money code should not be
 rushed.</li>
 </ul>
+<h2 id="pull-requests">Pull requests<a class="anchor" href="#pull-requests" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>Every change reaches <code>main</code> through a pull request from a branch; nothing
+is pushed to <code>main</code> directly.</li>
+<li>Every pull request adds an entry under <code>## [Unreleased]</code> in
+<code>CHANGELOG.md</code>. CI fails one that does not.</li>
+<li>Turn on the repository&#39;s hook once per clone, so a push that breaks either
+rule is refused before it leaves your machine:
+<code>git config core.hooksPath .githooks</code>.</li>
+<li><a href="https://github.com/utachicodes/kalangu/blob/main/AGENTS.md" rel="noopener">AGENTS.md</a> has the full rules, for people and AI coding agents
+alike.</li>
+</ul>
 
     </article>
     <footer class="foot">
@@ -144,7 +156,7 @@ rushed.</li>
       <span>Generated from <code>CONTRIBUTING.md</code></span>
     </footer>
   </main>
-  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#reviewing-the-design">Reviewing the design</a></li><li><a href="#working-on-the-docs">Working on the docs</a></li><li><a href="#setting-up">Setting up</a></li><li><a href="#working-on-the-code">Working on the code</a></li><li><a href="#contributing-a-translation">Contributing a translation</a></li><li><a href="#house-rules">House rules</a></li></ul></nav>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#reviewing-the-design">Reviewing the design</a></li><li><a href="#working-on-the-docs">Working on the docs</a></li><li><a href="#setting-up">Setting up</a></li><li><a href="#working-on-the-code">Working on the code</a></li><li><a href="#contributing-a-translation">Contributing a translation</a></li><li><a href="#house-rules">House rules</a></li><li><a href="#pull-requests">Pull requests</a></li></ul></nav>
 </div>
 <script>
 // On a phone the menu starts closed, so the page's content comes first. Without

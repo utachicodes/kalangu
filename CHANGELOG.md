@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   demo, test, typecheck and Ndiédieng tasks, and opens generated files
   read-only. `.gitattributes` keeps LF line endings, which the generated-file
   checks need. CI now runs the setup and the tests on Windows.
+- `AGENTS.md`: the rules for AI coding agents (and people) working in the
+  repository: never push to `main`, every change through a pull request with
+  a CHANGELOG.md entry, the checks to run, the generated files and their
+  scripts, the design rules, and the writing style (no em dashes, no emojis).
+- The rules are enforced: a `pre-push` hook (`.githooks/pre-push`, on with
+  `git config core.hooksPath .githooks`) refuses pushes to `main` and
+  branches that do not change CHANGELOG.md, and CI fails a pull request that
+  does not change it (Dependabot's are exempt).
 
 ## [0.1.0-alpha.10] - 2026-11-24
 

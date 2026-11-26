@@ -51,6 +51,14 @@ runs it when the folder opens, recommends EditorConfig and Vitest, offers
 demo, test, typecheck and Ndiédieng tasks, and opens generated files
 read-only. <code>.gitattributes</code> keeps LF line endings, which the generated-file
 checks need. CI now runs the setup and the tests on Windows.</li>
+<li><code>AGENTS.md</code>: the rules for AI coding agents (and people) working in the
+repository: never push to <code>main</code>, every change through a pull request with
+a CHANGELOG.md entry, the checks to run, the generated files and their
+scripts, the design rules, and the writing style (no em dashes, no emojis).</li>
+<li>The rules are enforced: a <code>pre-push</code> hook (<code>.githooks/pre-push</code>, on with
+<code>git config core.hooksPath .githooks</code>) refuses pushes to <code>main</code> and
+branches that do not change CHANGELOG.md, and CI fails a pull request that
+does not change it (Dependabot&#39;s are exempt).</li>
 </ul>
 <h2 id="010-alpha10---2026-11-24">[0.1.0-alpha.10] - 2026-11-24<a class="anchor" href="#010-alpha10---2026-11-24" aria-label="Link to this section">#</a></h2>
 <h3 id="changed">Changed<a class="anchor" href="#changed" aria-label="Link to this section">#</a></h3>
