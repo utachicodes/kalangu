@@ -110,7 +110,7 @@ from a machine draft.
 - Every change reaches `main` through a pull request from a branch; nothing
   is pushed to `main` directly.
 - Every pull request adds an entry under `## [Unreleased]` in
-  [CHANGELOG.md](CHANGELOG.md). CI fails one that does not.
+  `CHANGELOG.md`. CI fails one that does not.
 - Turn on the repository's hook once per clone, so a push that breaks either
   rule is refused before it leaves your machine:
   `git config core.hooksPath .githooks`.

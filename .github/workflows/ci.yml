@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
       - name: The pull request changes CHANGELOG.md
         run: |
-          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qx CHANGELOG.md; then
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -Fqx CHANGELOG.md; then
             echo "CHANGELOG.md is updated."
           else
             echo "::error file=CHANGELOG.md::This pull request does not change CHANGELOG.md. Add an entry under '## [Unreleased]'."

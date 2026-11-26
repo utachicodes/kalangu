@@ -21,12 +21,16 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     exit 1
   fi
 
-  base=$(git merge-base "$local_sha" "refs/remotes/$remote/main" 2>/dev/null)
+  # Compare with the repository the pull request goes to: upstream/main in a
+  # fork (when that remote exists), else the main of the remote pushed to.
+  main_ref="refs/remotes/$remote/main"
+  git show-ref --verify --quiet refs/remotes/upstream/main && main_ref=refs/remotes/upstream/main
+  base=$(git merge-base "$local_sha" "$main_ref" 2>/dev/null)
   if [ -z "$base" ]; then
-    echo "pre-push: cannot find $remote/main to compare with; run 'git fetch $remote' and push again." >&2
+    echo "pre-push: cannot find ${main_ref#refs/remotes/} to compare with; run 'git fetch' and push again." >&2
     exit 1
   fi
-  if ! git diff --name-only "$base" "$local_sha" | grep -qx "CHANGELOG.md"; then
+  if ! git diff --name-only "$base" "$local_sha" | grep -Fqx "CHANGELOG.md"; then
     echo "pre-push: ${remote_ref#refs/heads/} does not change CHANGELOG.md." >&2
     echo "Add an entry under '## [Unreleased]' describing the change, commit it, and push again." >&2
     exit 1
