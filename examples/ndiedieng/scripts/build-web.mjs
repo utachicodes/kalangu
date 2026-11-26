@@ -22,10 +22,13 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } 
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = resolve(HERE, "../..");
+/** TypeScript's command-line entry, resolved from the repository's own install. */
+const TSC = join(dirname(createRequire(join(ROOT, "package.json")).resolve("typescript/package.json")), "bin", "tsc");
 const OUT = join(ROOT, "site", "ndiedieng");
 /** The Gemini function, deployed next to the site (`/api/ndiedieng/gemini`). */
 const API = join(ROOT, "site", "api", "ndiedieng");
@@ -59,10 +62,12 @@ export function build() {
   const files = new Map();
   const tmp = mkdtempSync(join(tmpdir(), "ndiedieng-web-"));
   try {
-    execFileSync(join(ROOT, "node_modules", ".bin", "tsc"), ["-p", "tsconfig.web.json", "--outDir", tmp], { cwd: HERE, stdio: "pipe" });
+    // TypeScript's own entry, run with this Node: node_modules/.bin/tsc is a shell
+    // script that Windows cannot execute directly.
+    execFileSync(process.execPath, [TSC, "-p", "tsconfig.web.json", "--outDir", tmp], { cwd: HERE, stdio: "pipe" });
     for (const file of walk(tmp)) files.set(join("app", file), readFileSync(join(tmp, file), "utf8"));
   } catch (err) {
-    throw new Error(`tsc failed:\n${err.stdout ?? ""}${err.stderr ?? ""}`);
+    throw new Error(`tsc failed:\n${err.stdout ?? ""}${err.stderr ?? ""}${err.stdout || err.stderr ? "" : err.message}`);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
