@@ -1,0 +1,44 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Kalangu: set up",
+      "detail": "Install every package and build (quick when nothing changed). Runs when the folder opens.",
+      "type": "shell",
+      "command": "node scripts/setup.mjs",
+      "runOptions": { "runOn": "folderOpen" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Kalangu: demo",
+      "detail": "A keypad phone in the terminal: dial *384*1#",
+      "type": "shell",
+      "command": "pnpm demo",
+      "presentation": { "reveal": "always", "focus": true, "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Kalangu: test",
+      "detail": "Every package's tests",
+      "type": "shell",
+      "command": "pnpm test",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Kalangu: typecheck",
+      "type": "shell",
+      "command": "pnpm typecheck",
+      "problemMatcher": []
+    },
+    {
+      "label": "Kalangu: Ndiédieng example",
+      "detail": "The commune's dashboard and phones on http://localhost:3000",
+      "type": "shell",
+      "command": "pnpm --filter @kalangu/example-ndiedieng start",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}

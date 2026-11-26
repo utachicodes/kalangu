@@ -68,10 +68,46 @@ every block introduced by &quot;Create <code>&lt;file&gt;</code>&quot;, runs the
 <code>node &lt;file&gt;</code>&quot;, and fails if the output differs from the block the page
 shows. If you change the quick start&#39;s code or its output, keep them in
 step.</p>
+<h2 id="setting-up">Setting up<a class="anchor" href="#setting-up" aria-label="Link to this section">#</a></h2>
+<p>Windows, macOS and Linux work the same way. You need <strong>Git</strong> and <strong>Node 22.13
+or later</strong> (the packages run on Node 20; the Ndiédieng example needs 22.13).</p>
+<ol>
+<li><p><strong>Install Node and Git</strong> if you don&#39;t have them. On Windows, in
+PowerShell: <code>winget install OpenJS.NodeJS.LTS</code> and <code>winget install Git.Git</code>,
+then open a new terminal. Elsewhere: <a href="https://nodejs.org" rel="noopener">https://nodejs.org</a> and
+<a href="https://git-scm.com" rel="noopener">https://git-scm.com</a>.</p>
+</li>
+<li><p><strong>Clone and set up:</strong></p>
+<pre><code class="language-sh">git clone https://github.com/utachicodes/kalangu.git
+cd kalangu
+node scripts/setup.mjs
+</code></pre>
+<p>The script checks Node, installs every package with the pnpm version the
+repository pins (through <code>npx</code> if pnpm isn&#39;t installed, and it tells you
+how to install it for good: <code>npm install -g pnpm@12.6.0</code>), and builds. Run
+it again any time: when nothing changed it says so at once.</p>
+</li>
+<li><p><strong>In VS Code,</strong> open the <code>kalangu</code> folder:</p>
+<ul>
+<li>Accept the <strong>recommended extensions</strong> (EditorConfig, Vitest) when asked.</li>
+<li>The first time, VS Code asks whether to allow the folder&#39;s automatic
+task: choose <strong>Allow and run</strong>. From then on, <strong>Kalangu: set up</strong> runs
+each time the folder opens, so a <code>git pull</code> that changed the packages
+is installed for you.</li>
+<li><strong>Terminal → Run Task</strong> lists the others: <em>Kalangu: demo</em>, <em>test</em>,
+<em>typecheck</em>, and the <em>Ndiédieng example</em>.</li>
+<li>Generated files (the website under <code>site/</code>, the Wolof review sheet)
+open read-only: change their source and rebuild instead.</li>
+</ul>
+</li>
+</ol>
+<p>Line endings are LF on every platform (<code>.gitattributes</code>): several checks
+compare generated files byte for byte, so don&#39;t change Git&#39;s settings to
+check files out with CRLF.</p>
 <h2 id="working-on-the-code">Working on the code<a class="anchor" href="#working-on-the-code" aria-label="Link to this section">#</a></h2>
 <ul>
-<li><code>pnpm install</code>, then <code>pnpm test</code>, <code>pnpm typecheck</code> and <code>pnpm build</code> at the
-root. <code>pnpm demo</code> runs the example on the simulator.</li>
+<li><code>pnpm test</code>, <code>pnpm typecheck</code> and <code>pnpm build</code> at the root (or the VS Code
+tasks). <code>pnpm demo</code> runs the example on the simulator.</li>
 <li>Build order and test priorities are in <code>docs/design.md</code> §10 and §13.
 <code>@kalangu/core</code> must keep <strong>zero runtime dependencies</strong> and must never
 import a model SDK or a gateway SDK.</li>
@@ -108,7 +144,7 @@ rushed.</li>
       <span>Generated from <code>CONTRIBUTING.md</code></span>
     </footer>
   </main>
-  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#reviewing-the-design">Reviewing the design</a></li><li><a href="#working-on-the-docs">Working on the docs</a></li><li><a href="#working-on-the-code">Working on the code</a></li><li><a href="#contributing-a-translation">Contributing a translation</a></li><li><a href="#house-rules">House rules</a></li></ul></nav>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#reviewing-the-design">Reviewing the design</a></li><li><a href="#working-on-the-docs">Working on the docs</a></li><li><a href="#setting-up">Setting up</a></li><li><a href="#working-on-the-code">Working on the code</a></li><li><a href="#contributing-a-translation">Contributing a translation</a></li><li><a href="#house-rules">House rules</a></li></ul></nav>
 </div>
 <script>
 // On a phone the menu starts closed, so the page's content comes first. Without

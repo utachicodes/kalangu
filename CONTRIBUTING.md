@@ -34,10 +34,46 @@ every block introduced by "Create `<file>`", runs the one after "Run it with
 shows. If you change the quick start's code or its output, keep them in
 step.
 
+## Setting up
+
+Windows, macOS and Linux work the same way. You need **Git** and **Node 22.13
+or later** (the packages run on Node 20; the Ndiédieng example needs 22.13).
+
+1. **Install Node and Git** if you don't have them. On Windows, in
+   PowerShell: `winget install OpenJS.NodeJS.LTS` and `winget install Git.Git`,
+   then open a new terminal. Elsewhere: <https://nodejs.org> and
+   <https://git-scm.com>.
+2. **Clone and set up:**
+
+   ```sh
+   git clone https://github.com/utachicodes/kalangu.git
+   cd kalangu
+   node scripts/setup.mjs
+   ```
+
+   The script checks Node, installs every package with the pnpm version the
+   repository pins (through `npx` if pnpm isn't installed, and it tells you
+   how to install it for good: `npm install -g pnpm@12.6.0`), and builds. Run
+   it again any time: when nothing changed it says so at once.
+3. **In VS Code,** open the `kalangu` folder:
+   - Accept the **recommended extensions** (EditorConfig, Vitest) when asked.
+   - The first time, VS Code asks whether to allow the folder's automatic
+     task: choose **Allow and run**. From then on, **Kalangu: set up** runs
+     each time the folder opens, so a `git pull` that changed the packages
+     is installed for you.
+   - **Terminal → Run Task** lists the others: *Kalangu: demo*, *test*,
+     *typecheck*, and the *Ndiédieng example*.
+   - Generated files (the website under `site/`, the Wolof review sheet)
+     open read-only: change their source and rebuild instead.
+
+Line endings are LF on every platform (`.gitattributes`): several checks
+compare generated files byte for byte, so don't change Git's settings to
+check files out with CRLF.
+
 ## Working on the code
 
-- `pnpm install`, then `pnpm test`, `pnpm typecheck` and `pnpm build` at the
-  root. `pnpm demo` runs the example on the simulator.
+- `pnpm test`, `pnpm typecheck` and `pnpm build` at the root (or the VS Code
+  tasks). `pnpm demo` runs the example on the simulator.
 - Build order and test priorities are in `docs/design.md` §10 and §13.
   `@kalangu/core` must keep **zero runtime dependencies** and must never
   import a model SDK or a gateway SDK.

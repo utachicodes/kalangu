@@ -4,7 +4,9 @@ Kalangu builds AI agents that work on any phone, keypad phones included, over
 USSD and SMS. This page gets you from nothing to an agent you can talk to in
 a few minutes, with no account and no API key.
 
-You need Node 20 or later.
+You need Node 20 or later, and pnpm. No pnpm, or on Windows and unsure?
+Run `node scripts/setup.mjs` in the cloned folder instead of `pnpm install`:
+it needs nothing but Node.
 
 ## 1. See it work
 

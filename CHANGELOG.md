@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- One-command setup for contributors, Windows included: `node scripts/setup.mjs`
+  checks Node, installs every package with the pinned pnpm (through `npx` when
+  pnpm is missing), builds, and does nothing when nothing changed. VS Code
+  runs it when the folder opens, recommends EditorConfig and Vitest, offers
+  demo, test, typecheck and Ndiédieng tasks, and opens generated files
+  read-only. `.gitattributes` keeps LF line endings, which the generated-file
+  checks need. CI now runs the setup and the tests on Windows.
+
 ## [0.1.0-alpha.10] - 2026-11-24
 
 ### Changed
