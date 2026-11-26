@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A design note for taking a conversation's first SMS as input
+  ([First message](docs/first-message-design.md), draft for review): an
+  opt-in `onMessage` handler, so an agent that takes free-text reports can
+  read the SMS that starts a conversation instead of answering it with the
+  menu. In Ndiédieng a chief's report would take one SMS instead of three.
+  No code until it is reviewed.
 - One-command setup for contributors, Windows included: `node scripts/setup.mjs`
   checks Node, installs every package with the pinned pnpm (through `npx` when
   pnpm is missing), builds, and does nothing when nothing changed. VS Code
@@ -24,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `git config core.hooksPath .githooks`) refuses pushes to `main` and
   branches that do not change CHANGELOG.md, and CI fails a pull request that
   does not change it (Dependabot's are exempt).
+
+### Changed
+
+- The languages design's open questions: reviewed locales will go into core
+  next to `en` and `fr` (decided), and the claim that the language menu drops
+  a new number's first SMS is corrected: every conversation-starting SMS is
+  only a trigger today, which the new first-message design addresses.
 
 ## [0.1.0-alpha.10] - 2026-11-24
 

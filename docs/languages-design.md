@@ -569,16 +569,16 @@ The seven questions of the first draft were settled by building. As built:
    experimental as first proposed. They wait in `locales/` until a speaker
    other than the author has reviewed them.
 
-Still open, each with a recommendation:
+Decided after the review (24 Nov 2026):
 
-- **A. Where does a reviewed locale go?** Into `packages/core/src/locales.ts`
-  next to `en` and `fr`, so `languages: { supported }` works with no
-  `messages` (recommended: one string table is small, and a reviewed
-  translation is worth shipping), or a separate `@kalangu/locales` package,
-  or stay in `locales/` for developers to copy?
-- **B. The first SMS from a number that has not chosen a language is not
-  kept** (§9.5): the user gets the language menu, and their message is
-  dropped. For an agent that takes free-text reports, the first report is
-  lost and has to be sent again. Hold it and run it through the start step
-  after the choice, the way a held answer is run after a language suggestion
-  (recommended), or keep dropping it and say so in the docs?
+- **A. A reviewed locale goes into core,** in `packages/core/src/locales.ts`
+  next to `en` and `fr`, so `languages: { supported }` works for it with no
+  `messages`. Nothing moves until a locale has been reviewed by a speaker
+  other than its author.
+- **B. Corrected.** The review said the language menu drops a new number's
+  first SMS. It does not drop anything that would otherwise be kept: an SMS
+  that starts a conversation never answers anything, for any number (§9.5:
+  "the message answers nothing"); the language menu only adds a screen before
+  the same behaviour. Taking that first message as input is a broader
+  question, for every SMS agent, and has its own design:
+  [First message](first-message-design.md).

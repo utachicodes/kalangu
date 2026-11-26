@@ -33,7 +33,7 @@
 <div class="layout">
   <details class="side" open>
     <summary>Menu</summary>
-    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/security/">Security</a></li><li><a href="/docs/roadmap/" aria-current="page">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/first-message/">First message</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/security/">Security</a></li><li><a href="/docs/roadmap/" aria-current="page">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
   </details>
   <main id="content">
     <article class="doc">
@@ -263,9 +263,11 @@ then one run of the harness per candidate detector</li>
 <li><input checked="" disabled="" type="checkbox"> Review the languages design (24 Nov 2026): brought in line with the
 code, the seven questions of §14 recorded as decisions, Bambara in §2.3,
 guidance on gender and politeness and on translating an agent&#39;s own text</li>
-<li><input disabled="" type="checkbox"> Decide the two questions still open in the languages design §14:
-where reviewed locales go (A), and keeping the first SMS of a number that
-has not chosen a language (B)</li>
+<li><input checked="" disabled="" type="checkbox"> Languages design §14 A: a reviewed locale goes into core next to <code>en</code>
+and <code>fr</code> (decided 24 Nov 2026)</li>
+<li><input disabled="" type="checkbox"> Review the <a href="/docs/design/first-message/">first-message design</a>
+(taking a conversation&#39;s first SMS as input, <code>onMessage</code>), then build it;
+Ndiédieng&#39;s reports would take one SMS instead of three</li>
 <li><input checked="" disabled="" type="checkbox"> Per-language model routing design (languages design §7)</li>
 <li><input checked="" disabled="" type="checkbox"> Detector port and model map built (languages design §9.5), tested with
 a fake detector; no real detector ships</li>

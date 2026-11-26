@@ -222,9 +222,11 @@ above).
 - [x] Review the languages design (24 Nov 2026): brought in line with the
   code, the seven questions of §14 recorded as decisions, Bambara in §2.3,
   guidance on gender and politeness and on translating an agent's own text
-- [ ] Decide the two questions still open in the languages design §14:
-  where reviewed locales go (A), and keeping the first SMS of a number that
-  has not chosen a language (B)
+- [x] Languages design §14 A: a reviewed locale goes into core next to `en`
+  and `fr` (decided 24 Nov 2026)
+- [ ] Review the [first-message design](docs/first-message-design.md)
+  (taking a conversation's first SMS as input, `onMessage`), then build it;
+  Ndiédieng's reports would take one SMS instead of three
 - [x] Per-language model routing design (languages design §7)
 - [x] Detector port and model map built (languages design §9.5), tested with
   a fake detector; no real detector ships

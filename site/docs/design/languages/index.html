@@ -33,7 +33,7 @@
 <div class="layout">
   <details class="side" open>
     <summary>Menu</summary>
-    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/" aria-current="page">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/security/">Security</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
+    <nav aria-label="Documentation"><div class="group"><p class="group-name">Start here</p><ul><li><a href="/docs/">Overview</a></li><li><a href="/docs/quick-start/">Quick start</a></li><li><a href="/docs/agents/">Agents</a></li><li><a href="/docs/providers/">Providers</a></li></ul></div><div class="group"><p class="group-name">Guides</p><ul><li><a href="/docs/guides/sandbox/">Africa&#39;s Talking sandbox</a></li><li><a href="/docs/guides/translating/">Translating</a></li><li><a href="/docs/guides/detector/">Measuring a detector</a></li><li><a href="/docs/guides/releasing/">Releasing</a></li></ul></div><div class="group"><p class="group-name">Design</p><ul><li><a href="/docs/design/">Core design</a></li><li><a href="/docs/design/payments/">Payments</a></li><li><a href="/docs/design/languages/" aria-current="page">Languages</a></li><li><a href="/docs/design/whatsapp/">WhatsApp</a></li><li><a href="/docs/design/first-message/">First message</a></li><li><a href="/docs/design/normalization/">Text normalization</a></li><li><a href="/docs/design/prior-art/">Prior art</a></li></ul></div><div class="group"><p class="group-name">Project</p><ul><li><a href="/contributing/">Contributing</a></li><li><a href="/security/">Security</a></li><li><a href="/docs/roadmap/">Roadmap and to-do</a></li><li><a href="/docs/changelog/">Changelog</a></li></ul></div></nav>
   </details>
   <main id="content">
     <article class="doc">
@@ -612,19 +612,19 @@ main entry (§9.4).</li>
 experimental as first proposed. They wait in <code>locales/</code> until a speaker
 other than the author has reviewed them.</li>
 </ol>
-<p>Still open, each with a recommendation:</p>
+<p>Decided after the review (24 Nov 2026):</p>
 <ul>
-<li><strong>A. Where does a reviewed locale go?</strong> Into <code>packages/core/src/locales.ts</code>
-next to <code>en</code> and <code>fr</code>, so <code>languages: { supported }</code> works with no
-<code>messages</code> (recommended: one string table is small, and a reviewed
-translation is worth shipping), or a separate <code>@kalangu/locales</code> package,
-or stay in <code>locales/</code> for developers to copy?</li>
-<li><strong>B. The first SMS from a number that has not chosen a language is not
-kept</strong> (§9.5): the user gets the language menu, and their message is
-dropped. For an agent that takes free-text reports, the first report is
-lost and has to be sent again. Hold it and run it through the start step
-after the choice, the way a held answer is run after a language suggestion
-(recommended), or keep dropping it and say so in the docs?</li>
+<li><strong>A. A reviewed locale goes into core,</strong> in <code>packages/core/src/locales.ts</code>
+next to <code>en</code> and <code>fr</code>, so <code>languages: { supported }</code> works for it with no
+<code>messages</code>. Nothing moves until a locale has been reviewed by a speaker
+other than its author.</li>
+<li><strong>B. Corrected.</strong> The review said the language menu drops a new number&#39;s
+first SMS. It does not drop anything that would otherwise be kept: an SMS
+that starts a conversation never answers anything, for any number (§9.5:
+&quot;the message answers nothing&quot;); the language menu only adds a screen before
+the same behaviour. Taking that first message as input is a broader
+question, for every SMS agent, and has its own design:
+<a href="/docs/design/first-message/">First message</a>.</li>
 </ul>
 
     </article>
