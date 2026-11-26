@@ -1,0 +1,27 @@
+{
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "[markdown]": { "files.trimTrailingWhitespace": false },
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "search.exclude": {
+    "**/dist": true,
+    "pnpm-lock.yaml": true,
+    "site/ndiedieng/app": true,
+    "site/ndiedieng/vendor": true,
+    "site/api": true
+  },
+  "files.readonlyInclude": {
+    "site/docs/**": true,
+    "site/contributing/**": true,
+    "site/security/**": true,
+    "site/ndiedieng/**": true,
+    "site/api/ndiedieng/**": true,
+    "site/sitemap.xml": true,
+    "examples/ndiedieng/wolof-review.csv": true
+  },
+  "files.readonlyMessage": {
+    "value": "Generated file: change its source and rebuild (pnpm site:build, or the build:web and wolof:sheet scripts of examples/ndiedieng)."
+  }
+}

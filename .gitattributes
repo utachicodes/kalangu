@@ -1,0 +1,11 @@
+# Keep LF line endings on every platform. Generated files (the website, the
+# Ndiédieng demo, the review sheet) are checked byte for byte in CI and in the
+# tests, and Git on Windows would otherwise check them out with CRLF.
+* text=auto eol=lf
+
+*.pdf binary
+*.docx binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.wasm binary

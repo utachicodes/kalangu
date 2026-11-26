@@ -54,3 +54,24 @@ jobs:
       # The packages as npm users get them: packed, installed in an empty project,
       # the CLI run, imported, typechecked against the published types, and an agent run.
       - run: node scripts/pack-check.mjs
+
+  windows-setup:
+    name: Windows setup and tests (Node 24)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # A fresh clone on Windows, as CONTRIBUTING.md describes: no pnpm yet, so the
+      # setup script uses the pinned pnpm through npx. Run twice: the second run
+      # must find nothing to do.
+      - run: node scripts/setup.mjs
+      - run: node scripts/setup.mjs
+      - run: npm install -g pnpm@12.6.0
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: node --test "scripts/**/*.test.mjs"
+      # Byte-for-byte checks of generated files: they pass only with LF checkouts (.gitattributes).
+      - run: pnpm site:check
+      - run: pnpm --filter @kalangu/example-ndiedieng check:web

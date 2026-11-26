@@ -112,6 +112,11 @@ pnpm install
 pnpm demo
 ```
 
+No pnpm yet, or setting up to contribute (Windows included)? Run
+`node scripts/setup.mjs` instead: it installs and builds with nothing but
+Node. [CONTRIBUTING.md](CONTRIBUTING.md#setting-up) has the full setup,
+VS Code included.
+
 Dial `*384*1#`, choose `2`, and ask a question. The example's fake nurse
 takes 6 seconds and the deadline is 4, so the screen says the answer will
 come by SMS, and a couple of seconds later it does. `x` hangs up mid-session
