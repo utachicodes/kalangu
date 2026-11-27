@@ -69,6 +69,31 @@ what happens next:
 | `ctx.model` | Your model: `model`, or the entry for the user's language from `models` |
 | `ctx.logger` | The agent's logger |
 
+## The first SMS
+
+An SMS that starts a conversation (nothing is waiting for an answer) shows the
+agent's start, whatever it says. An agent that takes free-text reports can
+read it instead with `onMessage`:
+
+```js
+createAgent({
+  start,
+  onMessage: async (text, ctx) => {
+    if (text.length < 15) return;            // "hi", "menu": the start, as before
+    const report = await saveReport(ctx.phone, text);
+    return `Report ${report.code} received. Thank you.`;
+  },
+  // ...
+});
+```
+
+Its reply works like any handler's: a string ends the conversation, a step is
+shown next, and nothing shows the start. It is never called on USSD, for an
+SMS that answers a waiting question, or while a deferred answer is on its way.
+For a number that has not chosen a language, the message waits through the
+language menu and runs in the language chosen. The
+[first-message design](first-message-design.md) has the details.
+
 ## How screens are made
 
 - **USSD:** each screen fits 160 characters (`maxScreenChars` on the

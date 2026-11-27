@@ -44,6 +44,15 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html" rel="n
 <h2 id="unreleased">[Unreleased]<a class="anchor" href="#unreleased" aria-label="Link to this section">#</a></h2>
 <h3 id="added">Added<a class="anchor" href="#added" aria-label="Link to this section">#</a></h3>
 <ul>
+<li><code>createAgent({ onMessage })</code>: an agent can read the SMS that starts a
+conversation instead of answering it with the start. Its reply works like
+any handler&#39;s, and returning nothing shows the start as before. Never called
+on USSD, for an answer to a waiting question, or during a deferral. A new
+number&#39;s message is held through the language menu (and through a
+&quot;Continue in…?&quot; offer) and runs in the language chosen, once.</li>
+<li>Ndiédieng: a chief&#39;s report takes one SMS instead of three. A first SMS of
+15 characters or more is sorted and recorded at once; a greeting or &quot;menu&quot;
+still opens the menu.</li>
 <li>A design note for taking a conversation&#39;s first SMS as input
 (<a href="/docs/design/first-message/">First message</a>, draft for review): an
 opt-in <code>onMessage</code> handler, so an agent that takes free-text reports can

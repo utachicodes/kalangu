@@ -1,6 +1,8 @@
 # Kalangu: taking a conversation's first SMS as input
 
-Status: **draft for review. No code until it is reviewed.**
+Status: **built**, as recommended here, in `@kalangu/core` (unreleased at the
+time of writing) and used by the Ndiédieng example. The three questions of §8
+were decided on 26 Nov 2026.
 Date: 2026-11-24. Scope: SMS (and, later, WhatsApp text) only. USSD, payments
 and language detection are unchanged except where §5 says.
 
@@ -145,17 +147,18 @@ a greeting still opens the menu, so nothing a chief does today stops working.
 8. Two SMS racing on the same held message run `onMessage` once (the claim
    used for held answers).
 
-## 8. Open questions
+## 8. Decisions (26 Nov 2026)
 
-Each with a recommendation.
+The maintainer took the recommendation on each question.
 
-1. **The name:** `onMessage` (recommended: it says when it runs), or
-   `firstMessage`, or a `start: { sms: handler }` form?
-2. **A number as the first SMS** (`"5"` from someone who knows the menu):
-   pass it to `onMessage` like any text (recommended: the developer decides,
-   and Ndiédieng's length check already sends it to the menu), or have core
-   treat a first SMS that is a valid menu number as a menu choice?
-3. **Free text sent to a waiting menu** (inside the resume window): keep it
-   an invalid choice (recommended: a waiting question is answered), or route
-   text that matches no option to `onMessage` too? The second would make the
-   rules depend on what the menu happens to contain.
+1. **The name is `onMessage`:** it says when it runs.
+2. **A number as the first SMS** (`"5"` from someone who knows the menu) is
+   passed to `onMessage` like any text. The developer decides what it means;
+   Ndiédieng's length check sends it to the menu.
+3. **Free text sent to a waiting menu** (inside the resume window) stays an
+   invalid choice: a waiting question is answered, and the rules do not
+   depend on what a menu happens to contain.
+
+One detail settled while building: a message held through the language menu
+is dropped if the language is then chosen over USSD, since `onMessage` never
+runs on USSD.

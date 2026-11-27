@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kalangu: taking a conversation&amp;#39;s first SMS as input · Kalangu</title>
-<meta name="description" content="Status: draft for review. No code until it is reviewed. Date: 2026-11-24. Scope: SMS (and, later, WhatsApp text) only. USSD, payments and language detection are">
+<meta name="description" content="Status: built, as recommended here, in @kalangu/core (unreleased at the time of writing) and used by the Ndiédieng example. The three questions of §8 were decid">
 <link rel="canonical" href="https://kalangu.utachi.website/docs/design/first-message/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Kalangu">
 <meta property="og:title" content="Kalangu: taking a conversation&amp;#39;s first SMS as input">
-<meta property="og:description" content="Status: draft for review. No code until it is reviewed. Date: 2026-11-24. Scope: SMS (and, later, WhatsApp text) only. USSD, payments and language detection are">
+<meta property="og:description" content="Status: built, as recommended here, in @kalangu/core (unreleased at the time of writing) and used by the Ndiédieng example. The three questions of §8 were decid">
 <meta property="og:url" content="https://kalangu.utachi.website/docs/design/first-message/">
 <meta property="og:image" content="https://kalangu.utachi.website/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -38,7 +38,9 @@
   <main id="content">
     <article class="doc">
 <h1 id="kalangu-taking-a-conversation39s-first-sms-as-input">Kalangu: taking a conversation&#39;s first SMS as input</h1>
-<p>Status: <strong>draft for review. No code until it is reviewed.</strong>
+<p>Status: <strong>built</strong>, as recommended here, in <code>@kalangu/core</code> (unreleased at the
+time of writing) and used by the Ndiédieng example. The three questions of §8
+were decided on 26 Nov 2026.
 Date: 2026-11-24. Scope: SMS (and, later, WhatsApp text) only. USSD, payments
 and language detection are unchanged except where §5 says.</p>
 <hr>
@@ -184,20 +186,20 @@ and after No, each in the right language.</li>
 <li>Two SMS racing on the same held message run <code>onMessage</code> once (the claim
 used for held answers).</li>
 </ol>
-<h2 id="8-open-questions">8. Open questions<a class="anchor" href="#8-open-questions" aria-label="Link to this section">#</a></h2>
-<p>Each with a recommendation.</p>
+<h2 id="8-decisions-26-nov-2026">8. Decisions (26 Nov 2026)<a class="anchor" href="#8-decisions-26-nov-2026" aria-label="Link to this section">#</a></h2>
+<p>The maintainer took the recommendation on each question.</p>
 <ol>
-<li><strong>The name:</strong> <code>onMessage</code> (recommended: it says when it runs), or
-<code>firstMessage</code>, or a <code>start: { sms: handler }</code> form?</li>
-<li><strong>A number as the first SMS</strong> (<code>&quot;5&quot;</code> from someone who knows the menu):
-pass it to <code>onMessage</code> like any text (recommended: the developer decides,
-and Ndiédieng&#39;s length check already sends it to the menu), or have core
-treat a first SMS that is a valid menu number as a menu choice?</li>
-<li><strong>Free text sent to a waiting menu</strong> (inside the resume window): keep it
-an invalid choice (recommended: a waiting question is answered), or route
-text that matches no option to <code>onMessage</code> too? The second would make the
-rules depend on what the menu happens to contain.</li>
+<li><strong>The name is <code>onMessage</code>:</strong> it says when it runs.</li>
+<li><strong>A number as the first SMS</strong> (<code>&quot;5&quot;</code> from someone who knows the menu) is
+passed to <code>onMessage</code> like any text. The developer decides what it means;
+Ndiédieng&#39;s length check sends it to the menu.</li>
+<li><strong>Free text sent to a waiting menu</strong> (inside the resume window) stays an
+invalid choice: a waiting question is answered, and the rules do not
+depend on what a menu happens to contain.</li>
 </ol>
+<p>One detail settled while building: a message held through the language menu
+is dropped if the language is then chosen over USSD, since <code>onMessage</code> never
+runs on USSD.</p>
 
     </article>
     <footer class="foot">
@@ -205,7 +207,7 @@ rules depend on what the menu happens to contain.</li>
       <span>Generated from <code>docs/first-message-design.md</code></span>
     </footer>
   </main>
-  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-the-problem">1. The problem</a></li><li><a href="#2-what-the-code-does-today">2. What the code does today</a></li><li><a href="#3-options">3. Options</a></li><li><a href="#4-proposal-onmessage">4. Proposal: onMessage</a></li><li><a href="#5-with-languages">5. With languages</a></li><li><a href="#6-ndiédieng-with-it">6. Ndiédieng, with it</a></li><li><a href="#7-testing-plan">7. Testing plan</a></li><li><a href="#8-open-questions">8. Open questions</a></li></ul></nav>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#1-the-problem">1. The problem</a></li><li><a href="#2-what-the-code-does-today">2. What the code does today</a></li><li><a href="#3-options">3. Options</a></li><li><a href="#4-proposal-onmessage">4. Proposal: onMessage</a></li><li><a href="#5-with-languages">5. With languages</a></li><li><a href="#6-ndiédieng-with-it">6. Ndiédieng, with it</a></li><li><a href="#7-testing-plan">7. Testing plan</a></li><li><a href="#8-decisions-26-nov-2026">8. Decisions (26 Nov 2026)</a></li></ul></nav>
 </div>
 <script>
 // On a phone the menu starts closed, so the page's content comes first. Without

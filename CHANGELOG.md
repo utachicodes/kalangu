@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `createAgent({ onMessage })`: an agent can read the SMS that starts a
+  conversation instead of answering it with the start. Its reply works like
+  any handler's, and returning nothing shows the start as before. Never called
+  on USSD, for an answer to a waiting question, or during a deferral. A new
+  number's message is held through the language menu (and through a
+  "Continue in…?" offer) and runs in the language chosen, once.
+- Ndiédieng: a chief's report takes one SMS instead of three. A first SMS of
+  15 characters or more is sorted and recorded at once; a greeting or "menu"
+  still opens the menu.
 - A design note for taking a conversation's first SMS as input
   ([First message](docs/first-message-design.md), draft for review): an
   opt-in `onMessage` handler, so an agent that takes free-text reports can

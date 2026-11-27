@@ -224,9 +224,9 @@ above).
   guidance on gender and politeness and on translating an agent's own text
 - [x] Languages design §14 A: a reviewed locale goes into core next to `en`
   and `fr` (decided 24 Nov 2026)
-- [ ] Review the [first-message design](docs/first-message-design.md)
-  (taking a conversation's first SMS as input, `onMessage`), then build it;
-  Ndiédieng's reports would take one SMS instead of three
+- [x] Review the [first-message design](docs/first-message-design.md)
+  (taking a conversation's first SMS as input), then build it: `onMessage`
+  in core (26 Nov 2026); Ndiédieng's reports take one SMS instead of three
 - [x] Per-language model routing design (languages design §7)
 - [x] Detector port and model map built (languages design §9.5), tested with
   a fake detector; no real detector ships

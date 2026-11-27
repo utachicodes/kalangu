@@ -43,8 +43,9 @@ parle à l'API du serveur (et à Gemini ou à une vraie passerelle, ci-dessous).
   contact, le chef choisit sa langue (1. Français, 2. Wolof), retenue pour
   son numéro et modifiable par l'entrée 6 du menu ; ensuite, un code
   complet comme `*123*1*1*1*1#` fait tout d'un coup (panne, eau, forage,
-  urgent). Dans Messages, envoyez n'importe quel texte pour recevoir le menu,
-  puis `5` pour écrire librement.
+  urgent). Dans Messages, écrivez directement votre signalement : il est
+  classé et enregistré en un seul SMS. Un message court (« bonjour »,
+  « menu ») renvoie le menu, puis `5` pour écrire librement.
 - **Message vocal** (Android, iPhone) : le micro de Messages dicte un message,
   transcrit par le navigateur puis classé comme un SMS libre. C'est une
   simulation : en vrai, un message vocal passerait par l'opérateur et une

@@ -425,7 +425,7 @@ function renderTips() {
     h("li", {}, "Au premier appel, choisissez la langue (", h("code", { text: "1" }), " Français, ", h("code", { text: "2" }), " Wolof) ; ensuite, l'entrée ", h("code", { text: "6" }), " du menu la change."),
     h("li", {}, "Composez ", h("code", { text: CODE }), ", puis ", h("code", { text: "1" }), " ", h("code", { text: "1" }), " ", h("code", { text: "1" }), " ", h("code", { text: "1" }), " : forage en panne, urgent."),
     h("li", {}, "Ensuite, tout en une fois : ", h("code", { text: "*123*1*4*3#" }), " (lampadaire, peut attendre)."),
-    h("li", {}, smart ? "Onglet Messages : envoyez « bonjour », puis 5, puis votre message." : "Touche Messages, puis Écrire : « bonjour », puis 5, puis votre message."),
+    h("li", {}, smart ? "Onglet Messages : écrivez directement votre signalement, il est enregistré en un SMS (« bonjour » ouvre le menu)." : "Touche Messages, puis Écrire : votre signalement directement, enregistré en un SMS (« bonjour » ouvre le menu)."),
     smart ? h("li", {}, "Le micro de Messages enregistre un message vocal, transcrit par le navigateur.") : h("li", {}, "Le clavier de l'ordinateur marche quand le téléphone a le focus : Entrée appelle, Échap raccroche."),
     h("li", {}, "Côté Mairie, ouvrez un signalement et passez-le « Résolu » : le chef reçoit un SMS dans ce téléphone."),
     h("li", {}, "Le bouton Assistant ouvre une page pour interroger les fiches, à l'écrit ou à la voix."),
