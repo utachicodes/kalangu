@@ -46,6 +46,13 @@ export interface SessionRecord {
    */
   languageSuggestion?: { code: string; input: string; stepId: string; question?: string; start?: boolean } | null;
   /**
+   * The text of the SMS that started a conversation, held through the
+   * language menu for `onMessage`, which runs it once a language is chosen
+   * (docs/first-message-design.md §5). Part of the position: dropped when the
+   * session resets.
+   */
+  heldMessage?: string | null;
+  /**
    * The language codes in the order the language menu on screen listed them,
    * so a choice means what the caller saw even if the order has changed since.
    */

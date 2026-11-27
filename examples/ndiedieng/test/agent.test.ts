@@ -99,6 +99,38 @@ describe("the village chiefs' agent", () => {
   });
 });
 
+describe("a report in one SMS (onMessage)", () => {
+  it("records a chief's first SMS straight away, with no menu", async () => {
+    const { phone, commune } = await setup();
+    await phone.sendSms("Le forage est en panne depuis hier, plus d'eau au village");
+    expect(phone.inbox.at(-1)!.text).toBe("Message reçu (S-0001) : eau, forage, urgence haute. Merci.");
+    expect(commune.signalement("S-0001")).toMatchObject({ canal: "sms", categorie: "eau" });
+  });
+
+  it("still opens the menu for a greeting or \"menu\"", async () => {
+    const { phone, commune } = await setup();
+    await phone.sendSms("bonjour");
+    expect(phone.inbox.at(-1)!.text).toMatch(/^Mairie de Ndiédieng\n1\. Signaler une panne/);
+    await phone.sendSms("1"); // Signaler une panne: the menu answers as before
+    expect(commune.signalements()).toHaveLength(0);
+  });
+
+  it("holds a new number's first report through the language menu, and answers in Wolof", async () => {
+    const { phone, commune } = await setup(chefPhone(7), null);
+    expect((await phone.sendSms("forage bi dafa yàqu, amul ndox"), phone.inbox.at(-1)!.text)).toMatch(/^Langue/);
+    await phone.sendSms("2"); // Wolof
+    expect(phone.inbox.at(-1)!.text).toMatch(/^Bataaxal bi agsi na \(S-0001\)/);
+    expect(commune.signalements()).toHaveLength(1);
+  });
+
+  it("refuses a report from a number that is not a chief's", async () => {
+    const { phone, commune } = await setup("+221000000999");
+    await phone.sendSms("Le forage est en panne depuis hier");
+    expect(phone.inbox.at(-1)!.text).toBe(NOT_REGISTERED);
+    expect(commune.signalements()).toHaveLength(0);
+  });
+});
+
 describe("Wolof", () => {
   it("asks a new number its language first, French first in Senegal", async () => {
     const { phone } = await setup(chefPhone(7), null);

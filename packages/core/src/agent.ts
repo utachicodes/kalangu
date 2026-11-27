@@ -93,6 +93,16 @@ export interface AgentConfig<M = any> {
   /** Steps that handlers return but that aren't reachable from `start`. */
   steps?: readonly Step[];
   /**
+   * Called with the text of an SMS that starts a conversation (nothing is
+   * waiting for an answer), instead of showing the start straight away
+   * (docs/first-message-design.md). Its reply works like any handler's;
+   * returning nothing shows the start, as without it. Never called on USSD,
+   * for an SMS that answers a waiting question, or during a deferral. For a
+   * number that has not chosen a language, the message is held through the
+   * language menu and handled in the language chosen.
+   */
+  onMessage?: Handler<M>;
+  /**
    * Payments (docs/payments-design.md). Required when the agent has a `pay`
    * step. Needs a provider, a durable store, a payee name and a policy.
    */
@@ -207,7 +217,12 @@ function buildAgent<M>(config: AgentConfig<M> & { sessionStore: SessionStore }):
     ? createPaymentController(config.payments, { clock, logger, mask, onFinal: (payment) => deliverPayment(payment) })
     : undefined;
 
+  if (config.onMessage !== undefined && typeof config.onMessage !== "function") {
+    throw new TypeError("`onMessage` must be a function: (text, ctx) => reply");
+  }
+
   const deps: Omit<RunDeps<M>, "saved"> = {
+    onMessage: config.onMessage,
     languages: languageConfig,
     languageStep,
     payments,
@@ -472,6 +487,8 @@ function checkDeadline(ms: number, logger: Logger): number {
 }
 
 interface RunDeps<M> {
+  /** Handles the text of a conversation-starting SMS, when the agent has one. */
+  onMessage: Handler<M> | undefined;
   /** The agent's languages, checked at startup. */
   languages: { supported: readonly Language[]; priors: LanguagePriors; detection?: Required<LanguageDetection> } | undefined;
   /** The menu shown before the start step until the user has chosen. */
@@ -834,20 +851,33 @@ class TurnRun<M> {
   /**
    * An SMS that starts a conversation (languages design §5). A new number gets
    * the language menu with the language its message looks like listed first;
-   * nothing is chosen for it. A number with a language gets the start step,
-   * or first an offer to continue in the language it wrote in, under the same
-   * rules as for typed answers. The message itself answers nothing.
+   * nothing is chosen for it. A number with a language gets the start, or
+   * first an offer to continue in the language it wrote in, under the same
+   * rules as for typed answers. With `onMessage`, the start is that handler run
+   * on the message, and a message that waits for a language choice is held
+   * until it is made (docs/first-message-design.md §4, §5).
    */
   private async startFromMessage(input: string): Promise<Outcome> {
     const entry = this.entry();
+    const message = this.deps.onMessage ? input.trim() : "";
     if (entry.type === "language") {
       const hint = await this.detectLanguage(input, entry.languages ?? this.deps.languages?.supported ?? []);
-      return this.showLanguage(entry, hint?.code);
+      const outcome = await this.showLanguage(entry, hint?.code);
+      // Set after showLanguage, whose showTurn moves the position.
+      this.record.heldMessage = message || null;
+      return outcome;
     }
-    if (this.record.languageSuggestionDeclined || this.record.languageOffered) return this.showStep(entry);
+    if (this.record.languageSuggestionDeclined || this.record.languageOffered) return this.startConversation(message);
     const language = await this.detectLanguage(input, this.deps.languages?.supported ?? []);
-    if (!language || language.code === this.record.locale) return this.showStep(entry);
-    return this.offerLanguage(language, null, { start: true });
+    if (!language || language.code === this.record.locale) return this.startConversation(message);
+    return this.offerLanguage(language, null, { start: true, message });
+  }
+
+  /** The start of a conversation: `onMessage` on its first SMS when there is one, else the start step. */
+  private async startConversation(message: string): Promise<Outcome> {
+    const onMessage = this.deps.onMessage;
+    if (!onMessage || message === "") return this.showStep(this.entry());
+    return this.runHandler(onMessage, message, this.deps.steps.start);
   }
 
   private async suggestLanguage(input: string, step: Step): Promise<Outcome | null> {
@@ -869,7 +899,7 @@ class TurnRun<M> {
   private async offerLanguage(
     language: Language,
     step: Step | null,
-    held: { input: string } | { start: true },
+    held: { input: string } | { start: true; message?: string },
   ): Promise<Outcome> {
     const stepId = step ? (this.deps.steps.id(step) ?? null) : null;
     // Asked in the suggested language, which is the point: the user reads it if it is theirs.
@@ -886,7 +916,7 @@ class TurnRun<M> {
     // Set after showTurn, which clears any earlier suggestion.
     this.record.languageSuggestion =
       "start" in held
-        ? { code: language.code, input: "", stepId: "", start: true }
+        ? { code: language.code, input: held.message ?? "", stepId: "", start: true }
         : { code: language.code, input: held.input, stepId: stepId ?? "", question: step ? questionKey(step) : "" };
     this.record.languageOffered = true;
     // Detection took time: if a newer turn saved this session meanwhile, it wins.
@@ -900,13 +930,14 @@ class TurnRun<M> {
     this.record.languageSuggestion = null;
     if (!suggestion) return this.showStep(this.entry());
     if (suggestion.start) {
-      // Offered on a conversation's first message: nothing is held, so answer and start.
+      // Offered on a conversation's first message: answer, then start, with the
+      // message itself when `onMessage` held it.
       this.settleSuggestion(suggestion.code, accept);
       if (!(await this.claim())) {
         // The first answer already settled it; show the same start, unsaved.
         return this.yieldToNewer("Duplicate answer to a language suggestion ignored", () => this.showStep(this.entry()));
       }
-      return this.showStep(this.entry());
+      return this.startConversation(suggestion.input);
     }
     // Only the question the offer was made on: after a tree change the held
     // answer might reach a different handler, so the offer lapses, unanswered.
@@ -985,6 +1016,16 @@ class TurnRun<M> {
     this.record.languageChosen = true;
     this.t = this.deps.catalog.translator(language.code);
     this.deps.logger.info("Language chosen", { language: language.code, channel: this.channel.id });
+    const held = this.record.heldMessage;
+    if (held) {
+      this.record.heldMessage = null;
+      // onMessage is for SMS: a choice made on USSD drops the message.
+      if (this.channel.kind === "sms") {
+        // Claim it first: of two answers read from the same session, only one runs it.
+        if (!(await this.claim())) return this.yieldToNewer("Duplicate answer to the language menu; its held message runs once");
+        return this.startConversation(held);
+      }
+    }
     if (step.then === undefined) return this.finish(undefined, step);
     return this.go(step.then, language.name, step);
   }
@@ -1270,7 +1311,17 @@ function recordOutcome(record: SessionRecord, paymentId: string, text: string): 
 }
 
 /** Where a session is in its conversation: what an outcome may move only if nothing is waiting. */
-const POSITION_KEYS = ["stepId", "turn", "page", "turnId", "languageSuggestion", "languageCodes", "payIntent", "channel"] as const;
+const POSITION_KEYS = [
+  "stepId",
+  "turn",
+  "page",
+  "turnId",
+  "languageSuggestion",
+  "languageCodes",
+  "heldMessage",
+  "payIntent",
+  "channel",
+] as const;
 
 /**
  * Saves `mine`, a session changed from `base` (what was loaded; null for a
@@ -1387,6 +1438,7 @@ function resetPosition(record: SessionRecord): void {
   record.languageSuggestion = null;
   record.languageCodes = null;
   record.languageOffered = false;
+  record.heldMessage = null;
 }
 
 /** What an ask step asks, as a string, to tell whether it is still the same question. */

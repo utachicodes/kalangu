@@ -168,6 +168,26 @@ what happens next:</p>
 <td>The agent&#39;s logger</td>
 </tr>
 </tbody></table></div>
+<h2 id="the-first-sms">The first SMS<a class="anchor" href="#the-first-sms" aria-label="Link to this section">#</a></h2>
+<p>An SMS that starts a conversation (nothing is waiting for an answer) shows the
+agent&#39;s start, whatever it says. An agent that takes free-text reports can
+read it instead with <code>onMessage</code>:</p>
+<pre><code class="language-js">createAgent({
+  start,
+  onMessage: async (text, ctx) =&gt; {
+    if (text.length &lt; 15) return;            // &quot;hi&quot;, &quot;menu&quot;: the start, as before
+    const report = await saveReport(ctx.phone, text);
+    return `Report ${report.code} received. Thank you.`;
+  },
+  // ...
+});
+</code></pre>
+<p>Its reply works like any handler&#39;s: a string ends the conversation, a step is
+shown next, and nothing shows the start. It is never called on USSD, for an
+SMS that answers a waiting question, or while a deferred answer is on its way.
+For a number that has not chosen a language, the message waits through the
+language menu and runs in the language chosen. The
+<a href="/docs/design/first-message/">first-message design</a> has the details.</p>
 <h2 id="how-screens-are-made">How screens are made<a class="anchor" href="#how-screens-are-made" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><strong>USSD:</strong> each screen fits 160 characters (<code>maxScreenChars</code> on the
@@ -350,7 +370,7 @@ exists.</li>
       <span>Generated from <code>docs/agents.md</code></span>
     </footer>
   </main>
-  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#steps">Steps</a></li><li><a href="#handlers">Handlers</a></li><li><a href="#how-screens-are-made">How screens are made</a></li><li><a href="#slow-answers">Slow answers</a></li><li><a href="#sessions">Sessions</a></li><li><a href="#languages">Languages</a></li><li><a href="#payments-experimental">Payments (experimental)</a></li><li><a href="#channels">Channels</a></li><li><a href="#testing">Testing</a></li><li><a href="#before-production">Before production</a></li></ul></nav>
+  <nav class="toc" aria-label="On this page"><p class="group-name">On this page</p><ul><li><a href="#steps">Steps</a></li><li><a href="#handlers">Handlers</a></li><li><a href="#the-first-sms">The first SMS</a></li><li><a href="#how-screens-are-made">How screens are made</a></li><li><a href="#slow-answers">Slow answers</a></li><li><a href="#sessions">Sessions</a></li><li><a href="#languages">Languages</a></li><li><a href="#payments-experimental">Payments (experimental)</a></li><li><a href="#channels">Channels</a></li><li><a href="#testing">Testing</a></li><li><a href="#before-production">Before production</a></li></ul></nav>
 </div>
 <script>
 // On a phone the menu starts closed, so the page's content comes first. Without

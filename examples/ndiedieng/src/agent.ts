@@ -217,6 +217,14 @@ export function createNdiediengAgent(options: NdiediengOptions): NdiediengAgent 
   const agent = createAgent({
     start,
     steps: [urgencyMenu, birthDate, birthDateRetry, deathDate, deathDateRetry],
+    // A report in one SMS (docs/first-message-design.md §6): a chief's first
+    // message is sorted and recorded at once. A greeting, "menu" or anything
+    // short still opens the menu, as before.
+    onMessage: async (text: string, ctx: Ctx) => {
+      if (text.length < 15 || /^(menu|aide|help)$/i.test(text)) return;
+      const done = await recordFreeText(commune, classifier, ctx.phone, text, canal(ctx), lang(ctx));
+      return done ? done.reply : notRegistered(ctx);
+    },
     defaultLocale: "fr",
     // Asked once per number, at the first call or SMS, and remembered.
     languages: { supported: LANGUAGES },
